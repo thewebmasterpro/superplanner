@@ -1,0 +1,27 @@
+{
+  "name": "superplanner",
+  "version": "1.0.0",
+  "description": "Superplanner - Task Management & CRM for small business",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && node --watch index.js",
+    "dev:client": "cd client && vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && vite build",
+    "build:server": "cd server && npm install",
+    "start": "node server/index.js",
+    "setup-db": "node server/scripts/setup-db.js",
+    "preview": "cd client && vite preview"
+  },
+  "keywords": ["crm", "task-management", "planning"],
+  "author": "Anouar",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
