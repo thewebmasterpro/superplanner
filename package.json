@@ -1,0 +1,20 @@
+{
+  "name": "superplanner",
+  "version": "1.0.0",
+  "description": "Superplanner - Task Management & CRM for small business",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "keywords": [
+    "crm",
+    "task-management",
+    "planning"
+  ],
+  "author": "Anouar",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
