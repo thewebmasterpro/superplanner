@@ -2,10 +2,12 @@
   "name": "superplanner",
   "version": "1.0.0",
   "description": "Superplanner - Task Management & CRM for small business",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "npm run setup-db",
+    "setup-db": "node scripts/setup-db.js"
   },
   "keywords": [
     "crm",
@@ -16,5 +18,10 @@
   "license": "MIT",
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "dependencies": {
+    "mysql2": "^3.6.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {}
 }
