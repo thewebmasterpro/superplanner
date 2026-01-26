@@ -6,9 +6,11 @@ Hostinger **should now automatically detect Vite** when you connect this reposit
 
 ### What Changed
 
-1. **Added Vite to root `package.json`**
-   - `vite` and `@vitejs/plugin-react` are now in `devDependencies`
-   - This allows Hostinger to recognize this as a Vite project
+1. **Added Vite to root `package.json` dependencies**
+   - `vite` and `@vitejs/plugin-react` are in `dependencies` (not devDependencies)
+   - **Why?** Hostinger uses `npm install --production` which ignores devDependencies
+   - Vite is needed to build the frontend in production, so it must be in dependencies
+   - This allows Hostinger to recognize this as a Vite project and execute builds
 
 2. **Created `vite.config.js` at root**
    - Configures Vite to build from `client/` folder
@@ -81,17 +83,24 @@ superplanner/
 
 ## Troubleshooting
 
+### "vite: command not found" Error
+This means Vite wasn't installed. Check:
+1. Vite is in `dependencies` (not devDependencies) in root `package.json`
+2. `npm install` completed successfully
+3. Hostinger isn't using `--production` flag incorrectly
+
 ### "Framework not supported"
 If Hostinger still doesn't detect Vite:
 1. Ensure you've pushed the latest changes to GitHub
 2. Refresh the GitHub connection in Hostinger
-3. Check that `package.json` contains `vite` in devDependencies
+3. Check that `package.json` contains `vite` in **dependencies**
 4. Manually set build settings as shown above
 
 ### Build Fails
-- Check Hostinger build logs
-- Ensure all dependencies are in `package.json`
+- Check Hostinger build logs for specific errors
+- Ensure all dependencies are in `package.json` dependencies
 - Verify Node.js version is 18.x
+- Check that `client/` and `server/` folders exist
 
 ### Database Connection Issues
 - Verify database credentials in Hostinger environment variables
