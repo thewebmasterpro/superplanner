@@ -304,68 +304,116 @@ function AppSupabase() {
               <p className="empty">No tasks yet. Create one to get started!</p>
             ) : (
               <div className="task-list">
-                {tasks.map(task => (
-                  <div key={task.id} className="task-card">
-                    {editingTask?.id === task.id ? (
-                      // Edit Mode
-                      <div className="task-edit">
+                <div key={task.id} className="task-card">
+                  {editingTask?.id === task.id ? (
+                    // Edit Mode - All Fields
+                    <div className="task-edit">
+                      <input
+                        type="text"
+                        value={editingTask.title}
+                        onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                        className="form-input"
+                        placeholder="Title"
+                      />
+                      <input
+                        type="text"
+                        value={editingTask.description || ''}
+                        onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                        className="form-input"
+                        placeholder="Description"
+                      />
+                      <div className="form-row">
+                        <select
+                          value={editingTask.status}
+                          onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
+                          className="form-select"
+                        >
+                          <option value="todo">To Do</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="done">Done</option>
+                          <option value="blocked">Blocked</option>
+                        </select>
+                        <select
+                          value={editingTask.priority}
+                          onChange={(e) => setEditingTask({ ...editingTask, priority: parseInt(e.target.value) })}
+                          className="form-select"
+                        >
+                          <option value="1">Priority 1</option>
+                          <option value="2">Priority 2</option>
+                          <option value="3">Priority 3</option>
+                          <option value="4">Priority 4</option>
+                          <option value="5">Priority 5</option>
+                        </select>
                         <input
-                          type="text"
-                          value={editingTask.title}
-                          onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                          type="number"
+                          placeholder="Duration (min)"
+                          value={editingTask.duration || 60}
+                          onChange={(e) => setEditingTask({ ...editingTask, duration: parseInt(e.target.value) || 60 })}
                           className="form-input"
+                          min="5"
+                          step="5"
+                        />
+                      </div>
+                      <div className="form-row">
+                        <input
+                          type="date"
+                          value={editingTask.due_date || ''}
+                          onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
+                          className="form-input"
+                          placeholder="Due date"
                         />
                         <input
-                          type="text"
-                          value={editingTask.description || ''}
-                          onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                          type="datetime-local"
+                          value={editingTask.scheduled_time || ''}
+                          onChange={(e) => setEditingTask({ ...editingTask, scheduled_time: e.target.value })}
                           className="form-input"
-                          placeholder="Description"
+                          placeholder="Schedule time"
                         />
-                        <div className="task-actions">
-                          <button onClick={() => updateTask(task.id, editingTask)} className="btn-success">
-                            ✓ Save
-                          </button>
-                          <button onClick={() => setEditingTask(null)} className="btn-secondary">
-                            ✕ Cancel
-                          </button>
+                      </div>
+                      <div className="task-actions">
+                        <button onClick={() => updateTask(task.id, editingTask)} className="btn-success">
+                          ✓ Save
+                        </button>
+                        <button onClick={() => setEditingTask(null)} className="btn-secondary">
+                          ✕ Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // View Mode
+                    <>
+                      <div className="task-content">
+                        <div className="task-header">
+                          <h3 className="task-title">{task.title}</h3>
+                          <span
+                            className={`task-status status-${task.status}`}
+                            onClick={() => toggleStatus(task)}
+                            title="Click to change status"
+                          >
+                            {task.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        {task.description && (
+                          <p className="task-description">{task.description}</p>
+                        )}
+                        <div className="task-meta">
+                          <span className="task-priority">Priority: {task.priority}</span>
+                          {task.due_date && (
+                            <span className="task-due-date">Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      // View Mode
-                      <>
-                        <div className="task-content">
-                          <div className="task-header">
-                            <h3 className="task-title">{task.title}</h3>
-                            <span
-                              className={`task-status status-${task.status}`}
-                              onClick={() => toggleStatus(task)}
-                              title="Click to change status"
-                            >
-                              {task.status.replace('_', ' ')}
-                            </span>
-                          </div>
-                          {task.description && (
-                            <p className="task-description">{task.description}</p>
-                          )}
-                          <div className="task-meta">
-                            <span className="task-priority">Priority: {task.priority}</span>
-                            {task.due_date && (
-                              <span className="task-due-date">Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="task-actions">
-                          <button onClick={() => setEditingTask(task)} className="btn-edit">
-                            ✏️ Edit
-                          </button>
-                          <button onClick={() => deleteTask(task.id)} className="btn-delete">
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                      <div className="task-actions">
+                        <button onClick={() => setEditingTask(task)} className="btn-edit">
+                          ✏️ Edit
+                        </button>
+                        <button onClick={() => deleteTask(task.id)} className="btn-delete">
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
                 ))}
               </div>
             )}

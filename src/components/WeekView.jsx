@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import './Calendar.css'
 
 function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
     const hours = Array.from({ length: 15 }, (_, i) => i + 7) // 7h to 21h
+    const [draggedTask, setDraggedTask] = useState(null)
 
     const getWeekDays = () => {
         const weekStart = getWeekStart(currentDate)
@@ -47,6 +49,32 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
         })).filter(prayer => prayer.hour >= 7 && prayer.hour <= 21)
     }
 
+    const handleDragStart = (e, task) => {
+        setDraggedTask(task)
+        e.dataTransfer.effectAllowed = 'move'
+    }
+
+    const handleDragOver = (e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+    }
+
+    const handleDrop = (e, day, hour) => {
+        e.preventDefault()
+        if (!draggedTask) return
+
+        // Create new scheduled time
+        const newScheduledTime = new Date(day)
+        newScheduledTime.setHours(hour, 0, 0, 0)
+
+        // Update task
+        onTaskUpdate(draggedTask.id, {
+            scheduled_time: newScheduledTime.toISOString()
+        })
+
+        setDraggedTask(null)
+    }
+
     const weekDays = getWeekDays()
     const today = new Date()
 
@@ -80,7 +108,12 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
                                 const prayerInSlot = prayersForDay.find(p => p.hour === hour)
 
                                 return (
-                                    <div key={hour} className="hour-slot">
+                                    <div
+                                        key={hour}
+                                        className="hour-slot"
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, day, hour)}
+                                    >
                                         {/* Prayer blocks */}
                                         {prayerInSlot && (
                                             <div className="event-block prayer-block">
@@ -94,9 +127,11 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
                                             return (
                                                 <div
                                                     key={task.id}
-                                                    className={`event-block task-block status-${task.status}`}
+                                                    className={`event-block task-block status-${task.status} ${draggedTask?.id === task.id ? 'dragging' : ''}`}
                                                     style={{ height: `${heightPercent}%` }}
                                                     title={task.description || task.title}
+                                                    draggable
+                                                    onDragStart={(e) => handleDragStart(e, task)}
                                                 >
                                                     <div className="task-block-title">{task.title}</div>
                                                     <div className="task-block-time">{task.duration}min</div>
