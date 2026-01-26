@@ -71,7 +71,7 @@ function TaskTimer({ tasks }) {
                 <div className="timer-time">{formatTime(seconds)}</div>
                 {selectedTask && (
                     <div className="timer-task-info">
-                        <span className="task-badge status-{selectedTask.status}">
+                        <span className={`task-badge status-${selectedTask.status}`}>
                             {selectedTask.status.replace('_', ' ')}
                         </span>
                     </div>
