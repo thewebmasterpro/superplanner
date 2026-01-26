@@ -1,19 +1,11 @@
 {
   "name": "superplanner",
   "version": "1.0.0",
-  "description": "Superplanner - Task Management & CRM for small business with Vite + React + Express",
-  "main": "server/index.js",
+  "description": "Superplanner - Task Management & CRM for small business with Vite + React + Supabase",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && node --watch index.js",
-    "dev:client": "vite",
+    "dev": "vite",
     "build": "vite build",
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ..",
-    "build:client": "vite build",
-    "build:server": "cd server && npm install",
-    "start": "node server/index.js",
-    "setup-db": "node server/scripts/setup-db.js",
     "preview": "vite preview"
   },
   "keywords": [
