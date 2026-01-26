@@ -216,9 +216,6 @@ function AppSupabase() {
             </button>
           </div>
         </div>
-        <div className="status status-ok">
-          ✅ Connected to Supabase
-        </div>
       </header>
 
       <main className="container">
