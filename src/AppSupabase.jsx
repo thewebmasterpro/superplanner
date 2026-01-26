@@ -9,6 +9,19 @@ function AppSupabase() {
   const [loading, setLoading] = useState(true)
   const [tasks, setTasks] = useState([])
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+
+  // Form state
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    status: 'todo',
+    priority: 1,
+    due_date: ''
+  })
+
+  // Edit state
+  const [editingTask, setEditingTask] = useState(null)
 
   useEffect(() => {
     // Get initial session
@@ -46,8 +59,86 @@ function AppSupabase() {
       setTasks(data || [])
     } catch (err) {
       console.error('Error loading tasks:', err)
-      setError('Failed to load tasks')
+      showError('Failed to load tasks')
     }
+  }
+
+  const createTask = async (e) => {
+    e.preventDefault()
+    if (!newTask.title.trim()) {
+      showError('Title is required')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .insert({
+          ...newTask,
+          user_id: user.id
+        })
+
+      if (error) throw error
+
+      setNewTask({ title: '', description: '', status: 'todo', priority: 1, due_date: '' })
+      loadTasks()
+      showSuccess('Task created!')
+    } catch (err) {
+      console.error('Error creating task:', err)
+      showError('Failed to create task')
+    }
+  }
+
+  const updateTask = async (id, updates) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update(updates)
+        .eq('id', id)
+
+      if (error) throw error
+
+      loadTasks()
+      setEditingTask(null)
+      showSuccess('Task updated!')
+    } catch (err) {
+      console.error('Error updating task:', err)
+      showError('Failed to update task')
+    }
+  }
+
+  const deleteTask = async (id) => {
+    if (!confirm('Are you sure you want to delete this task?')) return
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      loadTasks()
+      showSuccess('Task deleted!')
+    } catch (err) {
+      console.error('Error deleting task:', err)
+      showError('Failed to delete task')
+    }
+  }
+
+  const toggleStatus = (task) => {
+    const statusFlow = { todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'todo' }
+    updateTask(task.id, { status: statusFlow[task.status] })
+  }
+
+  const showError = (message) => {
+    setError(message)
+    setTimeout(() => setError(null), 3000)
+  }
+
+  const showSuccess = (message) => {
+    setSuccess(message)
+    setTimeout(() => setSuccess(null), 3000)
   }
 
   const handleLoginSuccess = (data) => {
@@ -102,22 +193,133 @@ function AppSupabase() {
       <main className="container">
         <section className="tasks">
           <h2>Tasks</h2>
-          {error && (
-            <div className="error-message">
-              {error}
+
+          {/* Notifications */}
+          {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
+
+          {/* Create Task Form */}
+          <form onSubmit={createTask} className="task-form">
+            <div className="form-row">
+              <input
+                type="text"
+                placeholder="Task title *"
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                className="form-input"
+                required
+              />
+              <select
+                value={newTask.status}
+                onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                className="form-select"
+              >
+                <option value="todo">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+                <option value="blocked">Blocked</option>
+              </select>
+              <select
+                value={newTask.priority}
+                onChange={(e) => setNewTask({ ...newTask, priority: parseInt(e.target.value) })}
+                className="form-select"
+              >
+                <option value="1">Priority 1</option>
+                <option value="2">Priority 2</option>
+                <option value="3">Priority 3</option>
+                <option value="4">Priority 4</option>
+                <option value="5">Priority 5</option>
+              </select>
             </div>
-          )}
+            <div className="form-row">
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                className="form-input"
+              />
+              <input
+                type="date"
+                value={newTask.due_date}
+                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                className="form-input"
+              />
+              <button type="submit" className="btn-primary">
+                ➕ Add Task
+              </button>
+            </div>
+          </form>
+
+          {/* Task List */}
           {tasks.length === 0 ? (
             <p className="empty">No tasks yet. Create one to get started!</p>
           ) : (
-            <ul className="task-list">
+            <div className="task-list">
               {tasks.map(task => (
-                <li key={task.id} className="task-item">
-                  <span className="task-title">{task.title}</span>
-                  <span className={`task-status status-${task.status}`}>{task.status}</span>
-                </li>
+                <div key={task.id} className="task-card">
+                  {editingTask?.id === task.id ? (
+                    // Edit Mode
+                    <div className="task-edit">
+                      <input
+                        type="text"
+                        value={editingTask.title}
+                        onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                        className="form-input"
+                      />
+                      <input
+                        type="text"
+                        value={editingTask.description || ''}
+                        onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                        className="form-input"
+                        placeholder="Description"
+                      />
+                      <div className="task-actions">
+                        <button onClick={() => updateTask(task.id, editingTask)} className="btn-success">
+                          ✓ Save
+                        </button>
+                        <button onClick={() => setEditingTask(null)} className="btn-secondary">
+                          ✕ Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // View Mode
+                    <>
+                      <div className="task-content">
+                        <div className="task-header">
+                          <h3 className="task-title">{task.title}</h3>
+                          <span
+                            className={`task-status status-${task.status}`}
+                            onClick={() => toggleStatus(task)}
+                            title="Click to change status"
+                          >
+                            {task.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        {task.description && (
+                          <p className="task-description">{task.description}</p>
+                        )}
+                        <div className="task-meta">
+                          <span className="task-priority">Priority: {task.priority}</span>
+                          {task.due_date && (
+                            <span className="task-due-date">Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="task-actions">
+                        <button onClick={() => setEditingTask(task)} className="btn-edit">
+                          ✏️ Edit
+                        </button>
+                        <button onClick={() => deleteTask(task.id)} className="btn-delete">
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </main>
