@@ -5,6 +5,7 @@ import PrayerTimes from './components/PrayerTimes'
 import Calendar from './components/Calendar'
 import Settings from './components/Settings'
 import PrayerCountdown from './components/PrayerCountdown'
+import Pomodoro from './components/Pomodoro'
 import TaskTimer from './components/TaskTimer'
 import './App.css'
 
@@ -35,6 +36,7 @@ function AppSupabase() {
 
   // Settings modal
   const [showSettings, setShowSettings] = useState(false)
+  const [userPreferences, setUserPreferences] = useState(null)
 
   useEffect(() => {
     // Get initial session
@@ -59,6 +61,7 @@ function AppSupabase() {
     if (user) {
       loadTasks()
       loadPrayerTimes()
+      loadPreferences()
     }
   }, [user])
 
@@ -90,6 +93,22 @@ function AppSupabase() {
       setPrayerTimes(data)
     } catch (err) {
       console.error('Error loading prayer times:', err)
+    }
+  }
+
+  const loadPreferences = async () => {
+    if (!user) return
+    try {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      setUserPreferences(data)
+    } catch (err) {
+      console.error('Error loading preferences:', err)
     }
   }
 
@@ -226,6 +245,7 @@ function AppSupabase() {
           <aside className="sidebar">
             <PrayerTimes />
             <PrayerCountdown prayerTimes={prayerTimes} />
+            <Pomodoro preferences={userPreferences} />
             <TaskTimer tasks={tasks} />
           </aside>
 
@@ -445,7 +465,8 @@ function AppSupabase() {
           user={user}
           onClose={() => {
             setShowSettings(false)
-            loadPrayerTimes() // Reload prayer times after settings change
+            loadPrayerTimes()
+            loadPreferences() // Reload preferences after settings change
           }}
         />
       )}

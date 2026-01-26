@@ -5,6 +5,8 @@ import './Settings.css'
 
 function Settings({ user, onClose }) {
     const [city, setCity] = useState('')
+    const [pomodoroWork, setPomodoroWork] = useState(25)
+    const [pomodoroBreak, setPomodoroBreak] = useState(5)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState(null)
@@ -29,6 +31,8 @@ function Settings({ user, onClose }) {
 
             if (data) {
                 setCity(data.city || '')
+                setPomodoroWork(data.pomodoro_work_duration || 25)
+                setPomodoroBreak(data.pomodoro_break_duration || 5)
             }
         } catch (err) {
             console.error('Error loading preferences:', err)
@@ -78,6 +82,8 @@ function Settings({ user, onClose }) {
                     city: city.trim(),
                     country: '',
                     calculation_method: 3,
+                    pomodoro_work_duration: parseInt(pomodoroWork),
+                    pomodoro_break_duration: parseInt(pomodoroBreak),
                     updated_at: new Date().toISOString()
                 }, {
                     onConflict: 'user_id'
@@ -197,6 +203,34 @@ function Settings({ user, onClose }) {
                             </div>
                         </div>
                     )}
+                </div>
+
+                <div className="settings-section">
+                    <h3>🍅 Pomodoro Configuration</h3>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Work Duration (min)</label>
+                            <input
+                                type="number"
+                                value={pomodoroWork}
+                                onChange={(e) => setPomodoroWork(e.target.value)}
+                                min="1"
+                                max="60"
+                                className="form-input"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Break Duration (min)</label>
+                            <input
+                                type="number"
+                                value={pomodoroBreak}
+                                onChange={(e) => setPomodoroBreak(e.target.value)}
+                                min="1"
+                                max="30"
+                                className="form-input"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
