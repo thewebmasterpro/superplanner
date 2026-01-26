@@ -148,6 +148,24 @@
   min-width: 520px;
 }
 
+.widget-sub-row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 100%;
+}
+
+.widget-sub-row>* {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .widget-sub-row {
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 1200px) {
   .widgets-row>.span-2 {
     flex: 1;
