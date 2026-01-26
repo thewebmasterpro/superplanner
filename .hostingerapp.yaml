@@ -1,4 +1,10 @@
-# Hostinger will auto-detect Vite from package.json
-# Build command: npm run build
-# Output directory: server/public
-# Start command: npm start
+build:
+  command: npm install && npm run build
+  outputDirectory: server/public
+
+start:
+  command: npm start
+  port: 3000
+
+environment:
+  NODE_ENV: production
