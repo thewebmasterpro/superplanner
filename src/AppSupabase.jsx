@@ -250,10 +250,12 @@ function AppSupabase() {
             <QuranVerse />
           </div>
           <div className="widget-col span-2">
-            <Pomodoro preferences={userPreferences} />
+            <div className="widget-sub-row">
+              <Pomodoro preferences={userPreferences} />
+              <TaskTimer tasks={tasks} />
+            </div>
             <SpotifyPlayer playlistUrl={userPreferences?.spotify_playlist_url} />
           </div>
-          <TaskTimer tasks={tasks} />
         </div>
 
         <div className="dashboard-grid">
