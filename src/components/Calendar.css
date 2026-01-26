@@ -9,7 +9,53 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.btn-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #475569;
+}
+
+.btn-nav:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.nav-arrow {
+    font-size: 1.5em;
+    line-height: 1;
+}
+
+.nav-label {
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.calendar-title {
+    font-size: 1.25em;
+    font-weight: 700;
+    color: #1e293b;
+    min-width: 250px;
+    text-align: center;
 }
 
 .week-view {
@@ -43,17 +89,20 @@
 .time-slot-hour {
     height: 60px;
     position: relative;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #eee;
 }
 
 .time-label {
     position: absolute;
-    right: 10px;
-    top: -8px;
-    font-size: 0.75em;
-    color: #6b7280;
-    background: #f9fafb;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #4b5563;
+    /* Darker more visible gray */
     padding: 0 4px;
+    z-index: 10;
 }
 
 .time-slot-quarters {

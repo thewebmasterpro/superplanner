@@ -53,9 +53,15 @@ function Calendar({ tasks, prayerTimes, onTaskUpdate, onTaskEdit }) {
         <div className="calendar">
             <div className="calendar-header">
                 <div className="calendar-nav">
-                    <button onClick={goToPrevious} className="btn-nav">‹</button>
+                    <button onClick={goToPrevious} className="btn-nav">
+                        <span className="nav-arrow">‹</span>
+                        <span className="nav-label">{view === 'week' ? 'Semaine préc.' : 'Mois préc.'}</span>
+                    </button>
                     <h2 className="calendar-title">{getDateRangeText()}</h2>
-                    <button onClick={goToNext} className="btn-nav">›</button>
+                    <button onClick={goToNext} className="btn-nav">
+                        <span className="nav-label">{view === 'week' ? 'Semaine suiv.' : 'Mois suiv.'}</span>
+                        <span className="nav-arrow">›</span>
+                    </button>
                 </div>
                 <div className="calendar-controls">
                     <button onClick={goToToday} className="btn-today">Today</button>
