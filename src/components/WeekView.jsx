@@ -89,11 +89,11 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
         const rect = e.currentTarget.querySelector('.day-content').getBoundingClientRect()
         const y = e.clientY - rect.top
 
-        // Snap to 15 minutes (1px = 1min)
-        let totalMinutes = Math.round(y / 15) * 15
+        // Snap to 30 minutes (1px = 1min)
+        let totalMinutes = Math.round(y / 30) * 30
 
-        // Clamp between 0 and 23:45
-        totalMinutes = Math.max(0, Math.min(totalMinutes, 23 * 60 + 45))
+        // Clamp between 0 and 23:30
+        totalMinutes = Math.max(0, Math.min(totalMinutes, 23 * 60 + 30))
 
         const hour = Math.floor(totalMinutes / 60)
         const minute = totalMinutes % 60
@@ -120,10 +120,8 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
                     {hours.map(hour => (
                         <div key={hour} className="time-slot-hour">
                             <span className="time-label">{String(hour).padStart(2, '0')}:00</span>
-                            <div className="time-slot-quarters">
-                                <div className="quarter-line"></div>
-                                <div className="quarter-line"></div>
-                                <div className="quarter-line"></div>
+                            <div className="time-slot-halves">
+                                <div className="half-line"></div>
                             </div>
                         </div>
                     ))}
@@ -152,9 +150,7 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
                                 {/* Grid Lines */}
                                 {hours.map(h => (
                                     <div key={h} className="grid-hour-line">
-                                        <div className="grid-quarter-line"></div>
-                                        <div className="grid-quarter-line"></div>
-                                        <div className="grid-quarter-line"></div>
+                                        <div className="grid-half-line"></div>
                                     </div>
                                 ))}
 
