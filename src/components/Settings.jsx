@@ -14,9 +14,27 @@ function Settings({ user, onClose }) {
     const [success, setSuccess] = useState(null)
     const [previewTimes, setPreviewTimes] = useState(null)
 
+    // Category Management
+    const [categories, setCategories] = useState([])
+    const [newCategoryName, setNewCategoryName] = useState('')
+
     useEffect(() => {
         loadPreferences()
+        loadCategories()
     }, [user])
+
+    const loadCategories = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('task_categories')
+                .select('*')
+                .order('name', { ascending: true })
+            if (error) throw error
+            setCategories(data || [])
+        } catch (err) {
+            console.error('Error loading categories:', err)
+        }
+    }
 
     const loadPreferences = async () => {
         try {
@@ -121,6 +139,37 @@ function Settings({ user, onClose }) {
             setError(err.message || 'Failed to save settings. Check console for details.')
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return
+        try {
+            const { error } = await supabase
+                .from('task_categories')
+                .insert({ user_id: user.id, name: newCategoryName.trim() })
+            if (error) throw error
+            setNewCategoryName('')
+            loadCategories()
+            setSuccess('Catégorie ajoutée !')
+        } catch (err) {
+            console.error('Error adding category:', err)
+            setError('Échec de l\'ajout de la catégorie')
+        }
+    }
+
+    const handleDeleteCategory = async (id) => {
+        try {
+            const { error } = await supabase
+                .from('task_categories')
+                .delete()
+                .eq('id', id)
+            if (error) throw error
+            loadCategories()
+            setSuccess('Catégorie supprimée')
+        } catch (err) {
+            console.error('Error deleting category:', err)
+            setError('Échec de la suppression')
         }
     }
 
@@ -245,6 +294,50 @@ function Settings({ user, onClose }) {
                         <small style={{ color: '#6b7280', fontSize: '0.85em', display: 'block', marginTop: '5px' }}>
                             Paste your favorite Spotify playlist link here.
                         </small>
+                    </div>
+                </div>
+
+                <div className="settings-section">
+                    <h3>📁 Gestion des Catégories</h3>
+                    <div className="category-manager">
+                        <div className="form-row" style={{ alignItems: 'flex-end', marginBottom: '15px' }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label>Nom de la catégorie</label>
+                                <input
+                                    type="text"
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                    placeholder="ex: Travail, Perso, Clients..."
+                                    className="form-input"
+                                />
+                            </div>
+                            <button onClick={handleAddCategory} className="btn-primary" style={{ padding: '10px 15px' }}>
+                                ➕ Ajouter
+                            </button>
+                        </div>
+                        <div className="category-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {categories.map(cat => (
+                                <div key={cat.id} className="category-chip" style={{
+                                    background: '#f1f5f9',
+                                    padding: '5px 12px',
+                                    borderRadius: '20px',
+                                    fontSize: '0.9em',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    border: '1px solid #e2e8f0'
+                                }}>
+                                    <span>{cat.name}</span>
+                                    <button
+                                        onClick={() => handleDeleteCategory(cat.id)}
+                                        style={{ background: 'none', border: 'none', padding: 0, color: '#ef4444', fontSize: '1.2em', cursor: 'pointer' }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                            {categories.length === 0 && <p className="empty">Aucune catégorie configurée.</p>}
+                        </div>
                     </div>
                 </div>
             </div>

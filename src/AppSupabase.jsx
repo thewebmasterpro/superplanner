@@ -27,8 +27,13 @@ function AppSupabase() {
     priority: 1,
     due_date: '',
     duration: 60,
-    scheduled_time: ''
+    scheduled_time: '',
+    category_id: '',
+    project_id: ''
   })
+
+  const [categories, setCategories] = useState([])
+  const [projects, setProjects] = useState([])
 
   // Edit state
   const [editingTask, setEditingTask] = useState(null)
@@ -45,7 +50,9 @@ function AppSupabase() {
     status: 'all',
     priority: 'all',
     search: '',
-    dueDate: ''
+    dueDate: '',
+    category: 'all',
+    project: 'all'
   })
 
   const filteredTasks = tasks.filter(task => {
@@ -54,7 +61,9 @@ function AppSupabase() {
     const matchSearch = task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
       (task.description?.toLowerCase() || '').includes(filters.search.toLowerCase())
     const matchDate = filters.dueDate === '' || task.due_date === filters.dueDate
-    return matchStatus && matchPriority && matchSearch && matchDate
+    const matchCategory = filters.category === 'all' || task.category_id === filters.category
+    const matchProject = filters.project === 'all' || task.project_id === filters.project
+    return matchStatus && matchPriority && matchSearch && matchDate && matchCategory && matchProject
   })
 
   useEffect(() => {
@@ -81,14 +90,46 @@ function AppSupabase() {
       loadTasks()
       loadPrayerTimes()
       loadPreferences()
+      loadCategories()
+      loadProjects()
     }
   }, [user])
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('task_categories')
+        .select('*')
+        .order('name', { ascending: true })
+      if (error) throw error
+      setCategories(data || [])
+    } catch (err) {
+      console.error('Error loading categories:', err)
+    }
+  }
+
+  const loadProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('name', { ascending: true })
+      if (error) throw error
+      setProjects(data || [])
+    } catch (err) {
+      console.error('Error loading projects:', err)
+    }
+  }
 
   const loadTasks = async () => {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select('*')
+        .select(`
+          *,
+          category:task_categories(name, color),
+          project:projects(name)
+        `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -143,6 +184,8 @@ function AppSupabase() {
         description: newTask.description?.trim() || null,
         due_date: newTask.due_date || null,
         scheduled_time: newTask.scheduled_time || null,
+        category_id: newTask.category_id || null,
+        project_id: newTask.project_id || null,
         user_id: user.id
       }
 
@@ -159,7 +202,9 @@ function AppSupabase() {
         priority: 1,
         due_date: '',
         duration: 60,
-        scheduled_time: ''
+        scheduled_time: '',
+        category_id: '',
+        project_id: ''
       })
       loadTasks()
       showSuccess('Tâche créée !')
@@ -176,6 +221,8 @@ function AppSupabase() {
       if (sanitizedUpdates.description === '') sanitizedUpdates.description = null
       if (sanitizedUpdates.due_date === '') sanitizedUpdates.due_date = null
       if (sanitizedUpdates.scheduled_time === '') sanitizedUpdates.scheduled_time = null
+      if (sanitizedUpdates.category_id === '') sanitizedUpdates.category_id = null
+      if (sanitizedUpdates.project_id === '') sanitizedUpdates.project_id = null
 
       const { error } = await supabase
         .from('tasks')
@@ -385,7 +432,35 @@ function AppSupabase() {
                     className="form-input"
                   />
                 </div>
-                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-end', height: '44px' }}>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Catégorie</label>
+                  <select
+                    value={newTask.category_id}
+                    onChange={(e) => setNewTask({ ...newTask, category_id: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Aucune catégorie</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Projet</label>
+                  <select
+                    value={newTask.project_id}
+                    onChange={(e) => setNewTask({ ...newTask, project_id: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Aucun projet</option>
+                    {projects.map(proj => (
+                      <option key={proj.id} value={proj.id}>{proj.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-end', height: '44px', flex: 0.5 }}>
                   ➕ Ajouter
                 </button>
               </div>
@@ -441,10 +516,36 @@ function AppSupabase() {
                   className="form-input"
                 />
               </div>
+              <div className="form-group">
+                <label>Catégorie</label>
+                <select
+                  value={filters.category}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="all">Toutes les catégories</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Projet</label>
+                <select
+                  value={filters.project}
+                  onChange={(e) => setFilters({ ...filters, project: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="all">Tous les projets</option>
+                  {projects.map(proj => (
+                    <option key={proj.id} value={proj.id}>{proj.name}</option>
+                  ))}
+                </select>
+              </div>
               <button
                 className="btn-secondary"
                 style={{ height: '44px' }}
-                onClick={() => setFilters({ status: 'all', priority: 'all', search: '', dueDate: '' })}
+                onClick={() => setFilters({ status: 'all', priority: 'all', search: '', dueDate: '', category: 'all', project: 'all' })}
               >
                 Reset
               </button>
@@ -541,12 +642,40 @@ function AppSupabase() {
                           />
                         </div>
                       </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Catégorie</label>
+                          <select
+                            value={editingTask.category_id || ''}
+                            onChange={(e) => setEditingTask({ ...editingTask, category_id: e.target.value })}
+                            className="form-select"
+                          >
+                            <option value="">Aucune catégorie</option>
+                            {categories.map(cat => (
+                              <option key={cat.id} value={cat.id}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Projet</label>
+                          <select
+                            value={editingTask.project_id || ''}
+                            onChange={(e) => setEditingTask({ ...editingTask, project_id: e.target.value })}
+                            className="form-select"
+                          >
+                            <option value="">Aucun projet</option>
+                            {projects.map(proj => (
+                              <option key={proj.id} value={proj.id}>{proj.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
                       <div className="task-actions">
                         <button onClick={() => updateTask(task.id, editingTask)} className="btn-success">
-                          ✓ Save
+                          ✓ Enregistrer
                         </button>
                         <button onClick={() => setEditingTask(null)} className="btn-secondary">
-                          ✕ Cancel
+                          ✕ Annuler
                         </button>
                       </div>
                     </div>
@@ -555,7 +684,21 @@ function AppSupabase() {
                     <>
                       <div className="task-content">
                         <div className="task-header">
-                          <h3 className="task-title">{task.title}</h3>
+                          <div className="task-title-group">
+                            <h3 className="task-title">{task.title}</h3>
+                            <div className="task-badges">
+                              {task.category && (
+                                <span className="category-badge" style={{ backgroundColor: task.category.color || '#e2e8f0' }}>
+                                  {task.category.name}
+                                </span>
+                              )}
+                              {task.project && (
+                                <span className="project-badge">
+                                  📁 {task.project.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <span
                             className={`task-status status-${task.status}`}
                             onClick={() => toggleStatus(task)}
