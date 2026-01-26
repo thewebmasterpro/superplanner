@@ -5,27 +5,20 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Vite configuration for Hostinger deployment
-// This config allows Hostinger to detect Vite as the framework
+// Vite configuration for Hostinger static deployment
 export default defineConfig({
-  // Use client folder as root for sources
-  root: path.resolve(__dirname, 'client'),
+  // Source files are in client folder
+  root: 'client',
 
   plugins: [react()],
 
   server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
-      }
-    }
+    port: 5173
   },
 
   build: {
-    // Output to dist for static hosting
-    outDir: path.resolve(__dirname, 'dist'),
+    // Output to dist in project root (one level up from client)
+    outDir: '../dist',
     emptyOutDir: true,
     // Generate source maps for production debugging
     sourcemap: false,

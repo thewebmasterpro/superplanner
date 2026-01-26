@@ -30,7 +30,7 @@
   },
   "buildConfig": {
     "framework": "vite",
-    "outputDir": "server/public",
+    "outputDir": "dist",
     "buildCommand": "npm run build"
   },
   "dependencies": {
