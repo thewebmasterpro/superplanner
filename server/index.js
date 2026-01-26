@@ -3,11 +3,6 @@ import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
-import { router as taskRouter } from './routes/tasks.js'
-import { router as healthRouter } from './routes/health.js'
-import { router as authRouter } from './routes/auth.js'
-import { router as debugRouter } from './routes/debug.js'
-import { authenticate } from './middleware/auth.js'
 
 dotenv.config()
 
@@ -23,13 +18,15 @@ app.use(express.urlencoded({ extended: true }))
 // Serve static files from public directory (Vite build output)
 app.use(express.static(path.join(__dirname, 'public')))
 
-// Public API Routes (no authentication required)
-app.use('/api/auth', authRouter)
-app.use('/api/health', healthRouter)
-app.use('/api/debug', debugRouter)
-
-// Protected API Routes (authentication required)
-app.use('/api/tasks', authenticate, taskRouter)
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'Superplanner',
+    version: '1.0.0'
+  })
+})
 
 // Root API info
 app.get('/api', (req, res) => {
@@ -37,22 +34,18 @@ app.get('/api', (req, res) => {
     status: 'ok',
     message: 'Superplanner API v1.0.0',
     timestamp: new Date().toISOString(),
+    note: 'This app uses Supabase for backend services (auth, database, API)',
     endpoints: {
-      auth: '/api/auth/login',
-      tasks: '/api/tasks (protected)',
       health: '/api/health'
-    },
-    authentication: {
-      methods: ['JWT Token', 'API Key'],
-      header: 'Authorization: Bearer <token_or_api_key>'
     }
   })
 })
 
-// Fallback to index.html for Vite SPA
+// Fallback to index.html for Vite SPA (must be last)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'), err => {
     if (err) {
+      console.error('Error serving index.html:', err)
       res.status(500).json({ error: 'Could not load page' })
     }
   })
@@ -65,6 +58,7 @@ app.use((err, req, res, next) => {
 })
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 Superplanner API running on http://0.0.0.0:${port}`)
-  console.log(`📊 API docs: http://localhost:${port}/api`)
+  console.log(`🚀 Superplanner running on http://0.0.0.0:${port}`)
+  console.log(`📊 Health check: http://localhost:${port}/api/health`)
+  console.log(`🔥 Using Supabase for backend services`)
 })
