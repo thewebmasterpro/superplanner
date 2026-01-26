@@ -137,44 +137,64 @@ function AppSupabase() {
     }
 
     try {
+      // Sanitize empty strings to null for the database
+      const taskToSave = {
+        ...newTask,
+        description: newTask.description?.trim() || null,
+        due_date: newTask.due_date || null,
+        scheduled_time: newTask.scheduled_time || null,
+        user_id: user.id
+      }
+
       const { error } = await supabase
         .from('tasks')
-        .insert({
-          ...newTask,
-          user_id: user.id
-        })
+        .insert(taskToSave)
 
       if (error) throw error
 
-      setNewTask({ title: '', description: '', status: 'todo', priority: 1, due_date: '' })
+      setNewTask({
+        title: '',
+        description: '',
+        status: 'todo',
+        priority: 1,
+        due_date: '',
+        duration: 60,
+        scheduled_time: ''
+      })
       loadTasks()
-      showSuccess('Task created!')
+      showSuccess('Tâche créée !')
     } catch (err) {
       console.error('Error creating task:', err)
-      showError('Failed to create task')
+      showError(`Erreur : ${err.message || 'Échec de la création'}`)
     }
   }
 
   const updateTask = async (id, updates) => {
     try {
+      // Sanitize updates
+      const sanitizedUpdates = { ...updates }
+      if (sanitizedUpdates.description === '') sanitizedUpdates.description = null
+      if (sanitizedUpdates.due_date === '') sanitizedUpdates.due_date = null
+      if (sanitizedUpdates.scheduled_time === '') sanitizedUpdates.scheduled_time = null
+
       const { error } = await supabase
         .from('tasks')
-        .update(updates)
+        .update(sanitizedUpdates)
         .eq('id', id)
 
       if (error) throw error
 
       loadTasks()
       setEditingTask(null)
-      showSuccess('Task updated!')
+      showSuccess('Tâche mise à jour !')
     } catch (err) {
       console.error('Error updating task:', err)
-      showError('Failed to update task')
+      showError(`Erreur : ${err.message || 'Échec de la mise à jour'}`)
     }
   }
 
   const deleteTask = async (id) => {
-    if (!confirm('Are you sure you want to delete this task?')) return
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) return
 
     try {
       const { error } = await supabase
@@ -185,10 +205,10 @@ function AppSupabase() {
       if (error) throw error
 
       loadTasks()
-      showSuccess('Task deleted!')
+      showSuccess('Tâche supprimée !')
     } catch (err) {
       console.error('Error deleting task:', err)
-      showError('Failed to delete task')
+      showError('Échec de la suppression')
     }
   }
 
