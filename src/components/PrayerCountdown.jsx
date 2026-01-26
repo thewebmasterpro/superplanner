@@ -78,7 +78,7 @@ function PrayerCountdown({ prayerTimes }) {
     if (!prayerTimes) {
         return (
             <div className="prayer-countdown-widget">
-                <h3>⏱️ Prayer Countdown</h3>
+                <h3>⏱️ Prières</h3>
                 <p className="no-data">Configure prayer times in Settings</p>
             </div>
         )
@@ -86,19 +86,19 @@ function PrayerCountdown({ prayerTimes }) {
 
     return (
         <div className={`prayer-countdown-widget ${isNearPrayer() ? 'near-prayer' : ''}`}>
-            <h3>⏱️ Prayer Countdown</h3>
+            <h3>⏱️ Prières</h3>
 
             <div className="current-time">
-                <div className="time-label">Current Time</div>
+                <div className="prayer-time-label">Heure Actuelle</div>
                 <div className="time-display">{formatTime(currentTime)}</div>
             </div>
 
             {nextPrayer && (
                 <div className="next-prayer">
                     <div className="prayer-info">
-                        <span className="prayer-label">Next Prayer:</span>
+                        <span className="prayer-label">Prochaine prière :</span>
                         <span className="prayer-name">{nextPrayer.name}</span>
-                        {nextPrayer.tomorrow && <span className="tomorrow-badge">Tomorrow</span>}
+                        {nextPrayer.tomorrow && <span className="tomorrow-badge">Demain</span>}
                     </div>
                     <div className="prayer-time">{nextPrayer.time}</div>
                     <div className="countdown-display">
