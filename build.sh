@@ -4,19 +4,16 @@
 
 set -e  # Exit on error
 
-echo "📦 Installing root dependencies..."
+echo "📦 Installing all dependencies..."
 npm install
 
 echo "📦 Installing client dependencies..."
-cd client
-npm install
+cd client && npm install && cd ..
+
+echo "📦 Installing server dependencies..."
+cd server && npm install && cd ..
 
 echo "🔨 Building Vite frontend..."
 npm run build
 
-echo "📦 Installing server dependencies..."
-cd ../server
-npm install
-
-cd ..
 echo "✅ Build complete! Output in server/public/"

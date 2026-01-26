@@ -7,15 +7,14 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && node --watch index.js",
-    "dev:client": "cd client && vite",
-    "build": "npm run install:all && npm run build:client",
+    "dev:client": "vite",
+    "build": "vite build",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ..",
-    "build:client": "cd client && vite build",
+    "build:client": "vite build",
     "build:server": "cd server && npm install",
     "start": "node server/index.js",
     "setup-db": "node server/scripts/setup-db.js",
-    "preview": "cd client && vite preview",
-    "postinstall": "npm run install:all"
+    "preview": "vite preview"
   },
   "keywords": ["crm", "task-management", "planning", "vite", "react", "express", "mysql"],
   "author": "Anouar <thewebmaster.pro>",
@@ -34,7 +33,18 @@
     "outputDir": "server/public",
     "buildCommand": "npm run build"
   },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "axios": "^1.6.2"
+  },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8"
   }
 }
