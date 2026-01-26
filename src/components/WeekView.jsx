@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './Calendar.css'
 
 function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit }) {
@@ -7,13 +7,13 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
     const scrollContainerRef = useRef(null)
 
     // Scroll to 07:00 on mount
-    useState(() => {
+    useEffect(() => {
         setTimeout(() => {
             if (scrollContainerRef.current) {
                 scrollContainerRef.current.scrollTop = 7 * 60 // 60px per hour
             }
         }, 100)
-    })
+    }, [])
 
     const getWeekDays = () => {
         const weekStart = getWeekStart(currentDate)

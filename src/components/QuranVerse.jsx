@@ -10,10 +10,11 @@ function QuranVerse() {
     const fetchVerse = async () => {
         setLoading(true)
         setError(null)
+        setVerse(null) // Clear current verse to show loader clearly
         setShowModal(true)
         try {
-            // Fetch random ayah in French (Hamidullah translation)
-            const response = await fetch('https://api.alquran.cloud/v1/ayah/random/fr.hamidullah')
+            // Fetch random ayah in French (Hamidullah translation) with cache buster
+            const response = await fetch(`https://api.alquran.cloud/v1/ayah/random/fr.hamidullah?t=${Date.now()}`)
             const data = await response.json()
 
             if (data.code === 200) {
