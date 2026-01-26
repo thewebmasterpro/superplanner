@@ -249,7 +249,7 @@ function AppSupabase() {
             <PrayerCountdown prayerTimes={prayerTimes} />
             <QuranVerse />
           </div>
-          <div className="widget-col">
+          <div className="widget-col span-2">
             <Pomodoro preferences={userPreferences} />
             <SpotifyPlayer playlistUrl={userPreferences?.spotify_playlist_url} />
           </div>

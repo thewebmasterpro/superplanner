@@ -143,6 +143,18 @@
   gap: 20px;
 }
 
+.widgets-row>.span-2 {
+  flex: 2;
+  min-width: 520px;
+}
+
+@media (max-width: 1200px) {
+  .widgets-row>.span-2 {
+    flex: 1;
+    min-width: 250px;
+  }
+}
+
 .calendar-section {
   grid-column: 1;
 }
