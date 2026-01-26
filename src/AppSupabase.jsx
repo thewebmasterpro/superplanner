@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import LoginSupabase from './components/LoginSupabase'
 import PrayerTimes from './components/PrayerTimes'
 import Calendar from './components/Calendar'
+import Settings from './components/Settings'
 import './App.css'
 
 function AppSupabase() {
@@ -29,6 +30,9 @@ function AppSupabase() {
 
   // Prayer times for calendar
   const [prayerTimes, setPrayerTimes] = useState(null)
+
+  // Settings modal
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     // Get initial session
@@ -204,6 +208,9 @@ function AppSupabase() {
                 👤 {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
               </span>
             )}
+            <button onClick={() => setShowSettings(true)} className="settings-button">
+              ⚙️ Settings
+            </button>
             <button onClick={handleLogout} className="logout-button">
               Logout
             </button>
@@ -430,6 +437,17 @@ function AppSupabase() {
           </section>
         </div>
       </main>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings
+          user={user}
+          onClose={() => {
+            setShowSettings(false)
+            loadPrayerTimes() // Reload prayer times after settings change
+          }}
+        />
+      )}
     </div>
   )
 }
