@@ -27,6 +27,9 @@ function AppSupabase() {
   // Edit state
   const [editingTask, setEditingTask] = useState(null)
 
+  // Prayer times for calendar
+  const [prayerTimes, setPrayerTimes] = useState(null)
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
