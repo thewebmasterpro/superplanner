@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import LoginSupabase from './components/LoginSupabase'
 import PrayerTimes from './components/PrayerTimes'
+import Calendar from './components/Calendar'
 import './App.css'
 
 function AppSupabase() {
@@ -18,7 +19,9 @@ function AppSupabase() {
     description: '',
     status: 'todo',
     priority: 1,
-    due_date: ''
+    due_date: '',
+    duration: 60,
+    scheduled_time: ''
   })
 
   // Edit state
@@ -46,6 +49,7 @@ function AppSupabase() {
   useEffect(() => {
     if (user) {
       loadTasks()
+      loadPrayerTimes()
     }
   }, [user])
 
@@ -61,6 +65,22 @@ function AppSupabase() {
     } catch (err) {
       console.error('Error loading tasks:', err)
       showError('Failed to load tasks')
+    }
+  }
+
+  const loadPrayerTimes = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('prayer_schedule')
+        .select('*')
+        .eq('date', today)
+        .single()
+
+      if (error) throw error
+      setPrayerTimes(data)
+    } catch (err) {
+      console.error('Error loading prayer times:', err)
     }
   }
 
@@ -252,6 +272,23 @@ function AppSupabase() {
                   value={newTask.due_date}
                   onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
                   className="form-input"
+                  placeholder="Due date"
+                />
+                <input
+                  type="number"
+                  placeholder="Duration (min)"
+                  value={newTask.duration}
+                  onChange={(e) => setNewTask({ ...newTask, duration: parseInt(e.target.value) || 60 })}
+                  className="form-input"
+                  min="5"
+                  step="5"
+                />
+                <input
+                  type="datetime-local"
+                  value={newTask.scheduled_time}
+                  onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
+                  className="form-input"
+                  placeholder="Schedule time"
                 />
                 <button type="submit" className="btn-primary">
                   ➕ Add Task
@@ -329,6 +366,15 @@ function AppSupabase() {
                 ))}
               </div>
             )}
+          </section>
+
+          {/* Calendar Section */}
+          <section className="calendar-section">
+            <Calendar
+              tasks={tasks}
+              prayerTimes={prayerTimes}
+              onTaskUpdate={updateTask}
+            />
           </section>
         </div>
       </main>

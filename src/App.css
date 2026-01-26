@@ -100,22 +100,22 @@
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 350px 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: start;
 }
 
+.sidebar {
+  max-width: 400px;
+}
+
+.calendar-section {
+  grid-column: 1;
+}
+
 @media (max-width: 968px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
   .sidebar {
-    order: 2;
-  }
-
-  .tasks {
-    order: 1;
+    max-width: 100%;
   }
 }
 

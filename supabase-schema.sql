@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   frequency VARCHAR(20) DEFAULT 'weekly' CHECK (frequency IN ('daily', 'weekly', 'monthly')),
   priority INTEGER DEFAULT 1,
   due_date DATE,
+  duration INTEGER DEFAULT 60,  -- Duration in minutes
+  scheduled_time TIMESTAMP WITH TIME ZONE,  -- When task is scheduled on calendar
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
