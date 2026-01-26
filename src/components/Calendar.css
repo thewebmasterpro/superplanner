@@ -58,12 +58,20 @@
     text-align: center;
 }
 
-.week-view {
+.week-view,
+.day-view {
     overflow-y: auto;
     max-height: 800px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     background: white;
+}
+
+.day-view-grid {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    min-width: 600px;
+    position: relative;
 }
 
 .week-grid {
@@ -199,7 +207,84 @@
     font-size: 0.85em;
 }
 
-/* Task Block */
+/* Month View Styles */
+.month-view {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    padding: 10px;
+}
+
+.month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: minmax(120px, auto);
+    gap: 8px;
+}
+
+.weekday-header {
+    text-align: center;
+    font-weight: 700;
+    padding: 10px;
+    background: #f8fafc;
+    border-radius: 6px;
+    color: #475569;
+    font-size: 0.9em;
+}
+
+.month-day {
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 8px;
+    min-height: 120px;
+    background: white;
+    transition: all 0.2s;
+}
+
+.month-day:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.month-day.other-month {
+    background: #f9fafb;
+    opacity: 0.5;
+}
+
+.month-day.today {
+    border: 2px solid #667eea;
+}
+
+.month-day-number {
+    font-weight: 700;
+    font-size: 1em;
+    margin-bottom: 8px;
+}
+
+.month-day-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.month-task {
+    font-size: 0.75em;
+    padding: 3px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+
+.month-task-more {
+    font-size: 0.7em;
+    color: #64748b;
+    text-align: center;
+    font-weight: 600;
+    margin-top: 2px;
+}
+/* Task Block Base */
 .calendar-task-block {
     position: absolute;
     left: 4px;
@@ -245,25 +330,25 @@
 }
 
 /* Status Colors */
-.calendar-task-block.status-todo {
+.calendar-task-block.status-todo, .month-task.status-todo {
     background: #eff6ff;
     color: #1e40af;
     border-left: 4px solid #3b82f6;
 }
 
-.calendar-task-block.status-in_progress {
+.calendar-task-block.status-in_progress, .month-task.status-in_progress {
     background: #fffbeb;
     color: #92400e;
     border-left: 4px solid #f59e0b;
 }
 
-.calendar-task-block.status-done {
+.calendar-task-block.status-done, .month-task.status-done {
     background: #f0fdf4;
     color: #166534;
     border-left: 4px solid #22c55e;
 }
 
-.calendar-task-block.status-blocked {
+.calendar-task-block.status-blocked, .month-task.status-blocked {
     background: #fef2f2;
     color: #991b1b;
     border-left: 4px solid #ef4444;

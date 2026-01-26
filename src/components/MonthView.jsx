@@ -59,7 +59,7 @@ function MonthView({ currentDate, tasks, onTaskEdit }) {
         <div className="month-view">
             <div className="month-grid">
                 {/* Weekday headers */}
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
                     <div key={day} className="weekday-header">{day}</div>
                 ))}
 
@@ -89,7 +89,7 @@ function MonthView({ currentDate, tasks, onTaskEdit }) {
                                     </div>
                                 ))}
                                 {moreTasks > 0 && (
-                                    <div className="month-task-more">+{moreTasks} more</div>
+                                    <div className="month-task-more">+{moreTasks} de plus</div>
                                 )}
                             </div>
                         </div>
