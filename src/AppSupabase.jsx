@@ -268,69 +268,88 @@ function AppSupabase() {
             {/* Create Task Form */}
             <form onSubmit={createTask} className="task-form">
               <div className="form-row">
-                <input
-                  type="text"
-                  placeholder="Task title *"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="form-input"
-                  required
-                />
-                <select
-                  value={newTask.status}
-                  onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                  className="form-select"
-                >
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="done">Done</option>
-                  <option value="blocked">Blocked</option>
-                </select>
-                <select
-                  value={newTask.priority}
-                  onChange={(e) => setNewTask({ ...newTask, priority: parseInt(e.target.value) })}
-                  className="form-select"
-                >
-                  <option value="1">Priority 1</option>
-                  <option value="2">Priority 2</option>
-                  <option value="3">Priority 3</option>
-                  <option value="4">Priority 4</option>
-                  <option value="5">Priority 5</option>
-                </select>
+                <div className="form-group">
+                  <label>Titre *</label>
+                  <input
+                    type="text"
+                    placeholder="Titre de la tâche"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    className="form-input"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Statut</label>
+                  <select
+                    value={newTask.status}
+                    onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="todo">À faire</option>
+                    <option value="in_progress">En cours</option>
+                    <option value="done">Terminé</option>
+                    <option value="blocked">Bloqué</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Priorité</label>
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) => setNewTask({ ...newTask, priority: parseInt(e.target.value) })}
+                    className="form-select"
+                  >
+                    <option value="1">Priorité 1 (Basse)</option>
+                    <option value="2">Priorité 2</option>
+                    <option value="3">Priorité 3 (Moyenne)</option>
+                    <option value="4">Priorité 4</option>
+                    <option value="5">Priorité 5 (Haute)</option>
+                  </select>
+                </div>
               </div>
               <div className="form-row">
-                <input
-                  type="text"
-                  placeholder="Description (optional)"
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="form-input"
-                />
-                <input
-                  type="date"
-                  value={newTask.due_date}
-                  onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                  className="form-input"
-                  placeholder="Due date"
-                />
-                <input
-                  type="number"
-                  placeholder="Duration (min)"
-                  value={newTask.duration}
-                  onChange={(e) => setNewTask({ ...newTask, duration: parseInt(e.target.value) || 60 })}
-                  className="form-input"
-                  min="5"
-                  step="5"
-                />
-                <input
-                  type="datetime-local"
-                  value={newTask.scheduled_time}
-                  onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
-                  className="form-input"
-                  placeholder="Schedule time"
-                />
-                <button type="submit" className="btn-primary">
-                  ➕ Add Task
+                <div className="form-group">
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    placeholder="Description (optionnel)"
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Échéance</label>
+                  <input
+                    type="date"
+                    value={newTask.due_date}
+                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Durée (min)</label>
+                  <input
+                    type="number"
+                    placeholder="Durée"
+                    value={newTask.duration}
+                    onChange={(e) => setNewTask({ ...newTask, duration: parseInt(e.target.value) || 60 })}
+                    className="form-input"
+                    min="5"
+                    step="5"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Programmation</label>
+                  <input
+                    type="datetime-local"
+                    value={newTask.scheduled_time}
+                    onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-end', height: '44px' }}>
+                  ➕ Ajouter
                 </button>
               </div>
             </form>
@@ -345,67 +364,86 @@ function AppSupabase() {
                   {editingTask?.id === task.id ? (
                     // Edit Mode - All Fields
                     <div className="task-edit">
-                      <input
-                        type="text"
-                        value={editingTask.title}
-                        onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                        className="form-input"
-                        placeholder="Title"
-                      />
-                      <input
-                        type="text"
-                        value={editingTask.description || ''}
-                        onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                        className="form-input"
-                        placeholder="Description"
-                      />
-                      <div className="form-row">
-                        <select
-                          value={editingTask.status}
-                          onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
-                          className="form-select"
-                        >
-                          <option value="todo">To Do</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="done">Done</option>
-                          <option value="blocked">Blocked</option>
-                        </select>
-                        <select
-                          value={editingTask.priority}
-                          onChange={(e) => setEditingTask({ ...editingTask, priority: parseInt(e.target.value) })}
-                          className="form-select"
-                        >
-                          <option value="1">Priority 1</option>
-                          <option value="2">Priority 2</option>
-                          <option value="3">Priority 3</option>
-                          <option value="4">Priority 4</option>
-                          <option value="5">Priority 5</option>
-                        </select>
+                      <div className="form-group">
+                        <label>Titre *</label>
                         <input
-                          type="number"
-                          placeholder="Duration (min)"
-                          value={editingTask.duration || 60}
-                          onChange={(e) => setEditingTask({ ...editingTask, duration: parseInt(e.target.value) || 60 })}
+                          type="text"
+                          value={editingTask.title}
+                          onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
                           className="form-input"
-                          min="5"
-                          step="5"
+                          placeholder="Titre"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Description</label>
+                        <input
+                          type="text"
+                          value={editingTask.description || ''}
+                          onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                          className="form-input"
+                          placeholder="Description"
                         />
                       </div>
                       <div className="form-row">
-                        <input
-                          type="date"
-                          value={editingTask.due_date || ''}
-                          onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
-                          className="form-input"
-                          placeholder="Due date"
-                        />
-                        <input
-                          type="datetime-local"
-                          value={editingTask.scheduled_time || ''}
-                          onChange={(e) => setEditingTask({ ...editingTask, scheduled_time: e.target.value })}
-                          className="form-input"
-                          placeholder="Schedule time"
-                        />
+                        <div className="form-group">
+                          <label>Statut</label>
+                          <select
+                            value={editingTask.status}
+                            onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
+                            className="form-select"
+                          >
+                            <option value="todo">À faire</option>
+                            <option value="in_progress">En cours</option>
+                            <option value="done">Terminé</option>
+                            <option value="blocked">Bloqué</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Priorité</label>
+                          <select
+                            value={editingTask.priority}
+                            onChange={(e) => setEditingTask({ ...editingTask, priority: parseInt(e.target.value) })}
+                            className="form-select"
+                          >
+                            <option value="1">Priorité 1</option>
+                            <option value="2">Priorité 2</option>
+                            <option value="3">Priorité 3</option>
+                            <option value="4">Priorité 4</option>
+                            <option value="5">Priorité 5</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Durée (min)</label>
+                          <input
+                            type="number"
+                            placeholder="Durée"
+                            value={editingTask.duration || 60}
+                            onChange={(e) => setEditingTask({ ...editingTask, duration: parseInt(e.target.value) || 60 })}
+                            className="form-input"
+                            min="5"
+                            step="5"
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Échéance</label>
+                          <input
+                            type="date"
+                            value={editingTask.due_date || ''}
+                            onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
+                            className="form-input"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Programmation</label>
+                          <input
+                            type="datetime-local"
+                            value={editingTask.scheduled_time || ''}
+                            onChange={(e) => setEditingTask({ ...editingTask, scheduled_time: e.target.value })}
+                            className="form-input"
+                          />
+                        </div>
                       </div>
                       <div className="task-actions">
                         <button onClick={() => updateTask(task.id, editingTask)} className="btn-success">

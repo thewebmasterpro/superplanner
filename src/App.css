@@ -252,6 +252,21 @@
   margin-bottom: 0;
 }
 
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-group label {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #475569;
+  margin-left: 2px;
+}
+
 .form-input,
 .form-select {
   flex: 1;
