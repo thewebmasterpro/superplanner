@@ -1,0 +1,40 @@
+# Hostinger Application Configuration
+# https://www.hostinger.com/tutorials/deploy-nodejs-app
+
+# Framework detection
+framework:
+  name: vite
+  version: latest
+
+# Build configuration
+build:
+  # Install dependencies for all parts
+  install:
+    - npm install
+    - cd client && npm install
+    - cd ../server && npm install
+
+  # Build frontend
+  build:
+    - npm run build:client
+
+  # Output directory (where Vite builds to)
+  output: server/public
+
+# Runtime configuration
+runtime:
+  # Node.js application
+  type: nodejs
+  # Entry point
+  entry: server/index.js
+  # Node version
+  nodeVersion: 18
+  # Port for the application
+  port: 3000
+
+# Environment
+environment:
+  NODE_ENV: production
+
+# Static files are served from server/public (Vite build output)
+# API routes are handled by Express server

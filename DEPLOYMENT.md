@@ -1,10 +1,36 @@
 # Deployment Guide - Superplanner on Hostinger
 
+## Framework Detection & Auto-Deploy
+
+This project includes configuration files that help Hostinger automatically detect and deploy the Vite + React + Express application.
+
+**Key Configuration Files:**
+- `.hostingerapp.yaml` - Hostinger deployment configuration (framework: vite)
+- `.nvmrc` - Node.js version specification (v18)
+- `build.sh` - Build script for deployment
+- `package.json` - Contains buildConfig metadata for framework detection
+
+**How Hostinger Detects the Framework:**
+
+Hostinger will automatically:
+1. Detect Vite as the frontend framework via `.hostingerapp.yaml`
+2. Read Node.js version from `.nvmrc` file
+3. Run `npm run build` which executes `build.sh`
+4. Build Vite frontend to `server/public`
+5. Start Node.js server from `server/index.js` on port 3000
+6. Serve static files from `server/public` and proxy API routes
+
+**If framework is not detected:**
+- Ensure `.hostingerapp.yaml` is present in root
+- Check that `package.json` contains `buildConfig` section
+- Verify `build` script is defined in `package.json`
+
 ## Prerequisites
 
 - Hostinger hosting account with Node.js support
 - MySQL database
 - Domain: `sp.thewebmaster.pro`
+- Node.js >= 18.0.0
 
 ## Step 1: Create MySQL Database on Hostinger
 
@@ -25,14 +51,22 @@
 
 ## Step 2: Deploy via Git (Recommended)
 
-### Option A: Hostinger Git Integration
+### Option A: Hostinger Git Integration (Recommended)
 
 1. **Hostinger Dashboard → Websites → Your Site → Git**
 2. Click "Connect to GitHub"
-3. Select: `thewebmasterpro/superplanner`
+3. Select repository: `thewebmasterpro/superplanner`
 4. Set branch: `main`
 5. Deployment folder: `/` (root)
 6. Enable auto-deploy on push
+7. **Framework Detection:**
+   - Hostinger should automatically detect "Vite" as the framework
+   - If not detected, click "Configure Build Settings" and set:
+     - Build command: `npm run build`
+     - Output directory: `server/public`
+     - Install command: `npm run install:all`
+8. Add environment variables in Hostinger dashboard:
+   - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `PORT`, `NODE_ENV`
 
 ### Option B: Manual SSH Deploy
 
