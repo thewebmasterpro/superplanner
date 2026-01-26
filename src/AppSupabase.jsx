@@ -44,7 +44,8 @@ function AppSupabase() {
   const [filters, setFilters] = useState({
     status: 'all',
     priority: 'all',
-    search: ''
+    search: '',
+    dueDate: ''
   })
 
   const filteredTasks = tasks.filter(task => {
@@ -52,7 +53,8 @@ function AppSupabase() {
     const matchPriority = filters.priority === 'all' || task.priority === parseInt(filters.priority)
     const matchSearch = task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
       (task.description?.toLowerCase() || '').includes(filters.search.toLowerCase())
-    return matchStatus && matchPriority && matchSearch
+    const matchDate = filters.dueDate === '' || task.due_date === filters.dueDate
+    return matchStatus && matchPriority && matchSearch && matchDate
   })
 
   useEffect(() => {
@@ -410,6 +412,22 @@ function AppSupabase() {
                   <option value="5">Priorité 5</option>
                 </select>
               </div>
+              <div className="form-group">
+                <label>Échéance</label>
+                <input
+                  type="date"
+                  value={filters.dueDate}
+                  onChange={(e) => setFilters({ ...filters, dueDate: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <button
+                className="btn-secondary"
+                style={{ height: '44px' }}
+                onClick={() => setFilters({ status: 'all', priority: 'all', search: '', dueDate: '' })}
+              >
+                Reset
+              </button>
             </div>
 
             {/* Task List */}
