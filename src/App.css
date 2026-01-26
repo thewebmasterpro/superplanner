@@ -137,6 +137,12 @@
   min-width: 250px;
 }
 
+.widget-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .calendar-section {
   grid-column: 1;
 }

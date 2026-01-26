@@ -7,6 +7,7 @@ import Settings from './components/Settings'
 import PrayerCountdown from './components/PrayerCountdown'
 import Pomodoro from './components/Pomodoro'
 import TaskTimer from './components/TaskTimer'
+import QuranVerse from './components/QuranVerse'
 import './App.css'
 
 function AppSupabase() {
@@ -243,7 +244,10 @@ function AppSupabase() {
         {/* Top Widgets Row */}
         <div className="widgets-row">
           <PrayerTimes />
-          <PrayerCountdown prayerTimes={prayerTimes} />
+          <div className="widget-col">
+            <PrayerCountdown prayerTimes={prayerTimes} />
+            <QuranVerse />
+          </div>
           <Pomodoro preferences={userPreferences} />
           <TaskTimer tasks={tasks} />
         </div>
