@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './Calendar.css'
 
-function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit }) {
+function WeekView({ currentDate, tasks, prayerSchedule, onTaskUpdate, onTaskEdit }) {
     const hours = Array.from({ length: 24 }, (_, i) => i) // Full 24h view
     const [draggedTask, setDraggedTask] = useState(null)
     const scrollContainerRef = useRef(null)
@@ -42,13 +42,19 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
     }
 
     const getPrayersForDay = (day) => {
-        if (!prayerTimes) return []
+        if (!prayerSchedule || prayerSchedule.length === 0) return []
+
+        const dayStr = day.toISOString().split('T')[0]
+        const prayers = prayerSchedule.find(p => p.date === dayStr)
+
+        if (!prayers) return []
+
         return [
-            { name: 'Fajr', time: prayerTimes.fajr, icon: '🌅' },
-            { name: 'Dhuhr', time: prayerTimes.dhuhr, icon: '☀️' },
-            { name: 'Asr', time: prayerTimes.asr, icon: '⛅' },
-            { name: 'Maghrib', time: prayerTimes.maghrib, icon: '🌇' },
-            { name: 'Isha', time: prayerTimes.isha, icon: '🌙' }
+            { name: 'Fajr', time: prayers.fajr, icon: '🌅' },
+            { name: 'Dhuhr', time: prayers.dhuhr, icon: '☀️' },
+            { name: 'Asr', time: prayers.asr, icon: '⛅' },
+            { name: 'Maghrib', time: prayers.maghrib, icon: '🌇' },
+            { name: 'Isha', time: prayers.isha, icon: '🌙' }
         ]
     }
 

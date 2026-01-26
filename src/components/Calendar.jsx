@@ -3,7 +3,7 @@ import WeekView from './WeekView'
 import MonthView from './MonthView'
 import './Calendar.css'
 
-function Calendar({ tasks, prayerTimes, onTaskUpdate, onTaskEdit }) {
+function Calendar({ tasks, prayerSchedule, onTaskUpdate, onTaskEdit }) {
     const [view, setView] = useState('week') // 'week' or 'month'
     const [currentDate, setCurrentDate] = useState(new Date())
 
@@ -87,7 +87,7 @@ function Calendar({ tasks, prayerTimes, onTaskUpdate, onTaskEdit }) {
                     <WeekView
                         currentDate={currentDate}
                         tasks={tasks}
-                        prayerTimes={prayerTimes}
+                        prayerSchedule={prayerSchedule}
                         onTaskUpdate={onTaskUpdate}
                         onTaskEdit={onTaskEdit}
                     />

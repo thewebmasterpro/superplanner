@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { fetchPrayerTimesByCity } from '../services/prayerTimesApi'
+import { fetchPrayerTimesByCity, fetchMonthlyPrayerTimesByCity } from '../services/prayerTimesApi'
 import './Settings.css'
 
 function Settings({ user, onClose }) {
@@ -73,8 +73,11 @@ function Settings({ user, onClose }) {
         setSuccess(null)
 
         try {
-            // Fetch prayer times (Muslim World League = method 3)
-            const times = await fetchPrayerTimesByCity(city, '', 3)
+            // Fetch monthly prayer times
+            const now = new Date()
+            const month = now.getMonth() + 1
+            const year = now.getFullYear()
+            const monthlyTimes = await fetchMonthlyPrayerTimesByCity(city, '', 3, month, year)
 
             // Save preferences
             const { error: prefError } = await supabase
@@ -97,18 +100,10 @@ function Settings({ user, onClose }) {
                 throw new Error(`Database error: ${prefError.message}`)
             }
 
-            // Save today's prayer times
-            const today = new Date().toISOString().split('T')[0]
+            // Save monthly prayer times
             const { error: scheduleError } = await supabase
                 .from('prayer_schedule')
-                .upsert({
-                    date: today,
-                    fajr: times.fajr,
-                    dhuhr: times.dhuhr,
-                    asr: times.asr,
-                    maghrib: times.maghrib,
-                    isha: times.isha
-                }, {
+                .upsert(monthlyTimes, {
                     onConflict: 'date'
                 })
 

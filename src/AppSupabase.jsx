@@ -33,8 +33,8 @@ function AppSupabase() {
   // Edit state
   const [editingTask, setEditingTask] = useState(null)
 
-  // Prayer times for calendar
-  const [prayerTimes, setPrayerTimes] = useState(null)
+  // Prayer schedule for calendar (multiple days)
+  const [prayerSchedule, setPrayerSchedule] = useState([])
 
   // Settings modal
   const [showSettings, setShowSettings] = useState(false)
@@ -84,15 +84,13 @@ function AppSupabase() {
 
   const loadPrayerTimes = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0]
       const { data, error } = await supabase
         .from('prayer_schedule')
         .select('*')
-        .eq('date', today)
-        .single()
+        .order('date', { ascending: true })
 
       if (error) throw error
-      setPrayerTimes(data)
+      setPrayerSchedule(data || [])
     } catch (err) {
       console.error('Error loading prayer times:', err)
     }
@@ -246,7 +244,7 @@ function AppSupabase() {
         <div className="widgets-row">
           <PrayerTimes />
           <div className="widget-col">
-            <PrayerCountdown prayerTimes={prayerTimes} />
+            <PrayerCountdown prayerTimes={prayerSchedule.find(p => p.date === new Date().toISOString().split('T')[0])} />
             <QuranVerse />
           </div>
           <div className="widget-col span-2">
@@ -462,7 +460,7 @@ function AppSupabase() {
           <section className="calendar-section">
             <Calendar
               tasks={tasks}
-              prayerTimes={prayerTimes}
+              prayerSchedule={prayerSchedule}
               onTaskUpdate={updateTask}
               onTaskEdit={setEditingTask}
             />

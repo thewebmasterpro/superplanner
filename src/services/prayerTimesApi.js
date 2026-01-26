@@ -46,6 +46,38 @@ export async function fetchPrayerTimesByCity(city, country = '', method = 2) {
 }
 
 /**
+ * Fetch monthly prayer times for a specific city and country
+ */
+export async function fetchMonthlyPrayerTimesByCity(city, country = '', method = 2, month, year) {
+    try {
+        const params = new URLSearchParams({
+            city,
+            country,
+            method: method.toString(),
+            month: month.toString(),
+            year: year.toString()
+        })
+
+        const response = await fetch(`${ALADHAN_API_BASE}/calendarByCity?${params}`)
+        if (!response.ok) throw new Error(`API error: ${response.status}`)
+        const data = await response.json()
+        if (data.code !== 200 || !data.data) throw new Error('Invalid API response')
+
+        return data.data.map(day => ({
+            date: day.date.gregorian.date.split('-').reverse().join('-'), // format YYYY-MM-DD
+            fajr: day.timings.Fajr.split(' ')[0],
+            dhuhr: day.timings.Dhuhr.split(' ')[0],
+            asr: day.timings.Asr.split(' ')[0],
+            maghrib: day.timings.Maghrib.split(' ')[0],
+            isha: day.timings.Isha.split(' ')[0]
+        }))
+    } catch (error) {
+        console.error('Error fetching monthly prayer times:', error)
+        throw error
+    }
+}
+
+/**
  * Fetch prayer times by coordinates
  * @param {number} latitude 
  * @param {number} longitude 
