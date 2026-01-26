@@ -303,7 +303,8 @@ function AppSupabase() {
             {tasks.length === 0 ? (
               <p className="empty">No tasks yet. Create one to get started!</p>
             ) : (
-              <div className="task-list">
+              <div className="task-list">{tasks.map(task => (
+
                 <div key={task.id} className="task-card">
                   {editingTask?.id === task.id ? (
                     // Edit Mode - All Fields
@@ -414,7 +415,7 @@ function AppSupabase() {
                     </>
                   )}
                 </div>
-                ))}
+              ))}
               </div>
             )}
           </section>
