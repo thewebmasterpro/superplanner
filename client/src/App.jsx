@@ -1,20 +1,35 @@
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 import './App.css'
 
 function App() {
   const [status, setStatus] = useState('loading')
   const [tasks, setTasks] = useState([])
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetch('/api/health')
-      .then(r => r.json())
-      .then(() => setStatus('ok'))
-      .catch(() => setStatus('error'))
+    const checkHealth = async () => {
+      try {
+        await axios.get('/api/health')
+        setStatus('ok')
+      } catch (err) {
+        setStatus('error')
+        setError('Unable to connect to server')
+      }
+    }
 
-    fetch('/api/tasks')
-      .then(r => r.json())
-      .then(data => setTasks(data || []))
-      .catch(console.error)
+    const loadTasks = async () => {
+      try {
+        const response = await axios.get('/api/tasks')
+        setTasks(response.data || [])
+      } catch (err) {
+        console.error('Failed to load tasks:', err)
+        setError('Failed to load tasks')
+      }
+    }
+
+    checkHealth()
+    loadTasks()
   }, [])
 
   return (
@@ -32,6 +47,11 @@ function App() {
       <main className="container">
         <section className="tasks">
           <h2>Tasks</h2>
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
           {tasks.length === 0 ? (
             <p className="empty">No tasks yet. Create one to get started!</p>
           ) : (
