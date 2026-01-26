@@ -1,0 +1,38 @@
+.spotify-player-widget {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    height: 152px;
+}
+
+.spotify-player-widget.empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f9fafb;
+    border: 2px dashed #e5e7eb;
+}
+
+.spotify-placeholder {
+    text-align: center;
+    padding: 20px;
+    color: #6b7280;
+}
+
+.spotify-icon {
+    font-size: 2em;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.spotify-placeholder p {
+    font-weight: 600;
+    font-size: 0.9em;
+    margin: 0;
+}
+
+.spotify-player-widget iframe {
+    border-radius: 12px;
+}

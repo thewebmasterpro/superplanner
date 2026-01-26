@@ -8,6 +8,7 @@ import PrayerCountdown from './components/PrayerCountdown'
 import Pomodoro from './components/Pomodoro'
 import TaskTimer from './components/TaskTimer'
 import QuranVerse from './components/QuranVerse'
+import SpotifyPlayer from './components/SpotifyPlayer'
 import './App.css'
 
 function AppSupabase() {
@@ -248,7 +249,10 @@ function AppSupabase() {
             <PrayerCountdown prayerTimes={prayerTimes} />
             <QuranVerse />
           </div>
-          <Pomodoro preferences={userPreferences} />
+          <div className="widget-col">
+            <Pomodoro preferences={userPreferences} />
+            <SpotifyPlayer playlistUrl={userPreferences?.spotify_playlist_url} />
+          </div>
           <TaskTimer tasks={tasks} />
         </div>
 

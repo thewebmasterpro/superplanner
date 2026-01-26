@@ -7,6 +7,7 @@ function Settings({ user, onClose }) {
     const [city, setCity] = useState('')
     const [pomodoroWork, setPomodoroWork] = useState(25)
     const [pomodoroBreak, setPomodoroBreak] = useState(5)
+    const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState(null)
@@ -21,7 +22,7 @@ function Settings({ user, onClose }) {
         try {
             const { data, error } = await supabase
                 .from('user_preferences')
-                .select('city')
+                .select('*')
                 .eq('user_id', user.id)
                 .single()
 
@@ -33,6 +34,7 @@ function Settings({ user, onClose }) {
                 setCity(data.city || '')
                 setPomodoroWork(data.pomodoro_work_duration || 25)
                 setPomodoroBreak(data.pomodoro_break_duration || 5)
+                setSpotifyPlaylistUrl(data.spotify_playlist_url || '')
             }
         } catch (err) {
             console.error('Error loading preferences:', err)
@@ -84,6 +86,7 @@ function Settings({ user, onClose }) {
                     calculation_method: 3,
                     pomodoro_work_duration: parseInt(pomodoroWork),
                     pomodoro_break_duration: parseInt(pomodoroBreak),
+                    spotify_playlist_url: spotifyPlaylistUrl.trim(),
                     updated_at: new Date().toISOString()
                 }, {
                     onConflict: 'user_id'
@@ -230,6 +233,23 @@ function Settings({ user, onClose }) {
                                 className="form-input"
                             />
                         </div>
+                    </div>
+                </div>
+
+                <div className="settings-section">
+                    <h3>🎵 Spotify Integration</h3>
+                    <div className="form-group">
+                        <label>Playlist URL</label>
+                        <input
+                            type="text"
+                            value={spotifyPlaylistUrl}
+                            onChange={(e) => setSpotifyPlaylistUrl(e.target.value)}
+                            placeholder="https://open.spotify.com/playlist/..."
+                            className="form-input"
+                        />
+                        <small style={{ color: '#6b7280', fontSize: '0.85em', display: 'block', marginTop: '5px' }}>
+                            Paste your favorite Spotify playlist link here.
+                        </small>
                     </div>
                 </div>
             </div>
