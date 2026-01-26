@@ -1,0 +1,135 @@
+.prayer-countdown-widget {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.prayer-countdown-widget.near-prayer {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.prayer-countdown-widget h3 {
+    margin: 0 0 15px 0;
+    color: #667eea;
+    font-size: 1.1em;
+}
+
+.current-time {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.time-label {
+    font-size: 0.85em;
+    color: #6b7280;
+    margin-bottom: 5px;
+}
+
+.time-display {
+    font-size: 2em;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #667eea;
+    letter-spacing: 2px;
+}
+
+.next-prayer {
+    text-align: center;
+}
+
+.prayer-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.prayer-label {
+    font-size: 0.9em;
+    color: #6b7280;
+}
+
+.prayer-name {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.tomorrow-badge {
+    background: #fbbf24;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.prayer-time {
+    font-size: 1.5em;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #374151;
+    margin-bottom: 10px;
+}
+
+.countdown-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.countdown-icon {
+    font-size: 1.2em;
+}
+
+.countdown-text {
+    font-size: 1.3em;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
+
+.no-data {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.9em;
+    padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+    .time-display {
+        font-size: 1.5em;
+    }
+
+    .prayer-time {
+        font-size: 1.2em;
+    }
+
+    .countdown-text {
+        font-size: 1.1em;
+    }
+}

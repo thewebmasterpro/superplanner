@@ -1,0 +1,163 @@
+.task-timer-widget {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+}
+
+.task-timer-widget.running {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+}
+
+.task-timer-widget h3 {
+    margin: 0 0 15px 0;
+    color: #667eea;
+    font-size: 1.1em;
+}
+
+.task-selector {
+    margin-bottom: 20px;
+}
+
+.task-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95em;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.task-select:hover:not(:disabled) {
+    border-color: #667eea;
+}
+
+.task-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.timer-display {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    color: white;
+}
+
+.timer-time {
+    font-size: 2.5em;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+}
+
+.timer-task-info {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.task-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.3);
+    text-transform: capitalize;
+}
+
+.timer-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.btn-timer {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-start {
+    background: #22c55e;
+    color: white;
+}
+
+.btn-start:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+}
+
+.btn-stop {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-stop:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+}
+
+.btn-reset {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-reset:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+.running-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #3b82f6;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+@media (max-width: 768px) {
+    .timer-time {
+        font-size: 2em;
+    }
+
+    .timer-controls {
+        flex-direction: column;
+    }
+}

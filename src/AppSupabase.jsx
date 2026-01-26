@@ -4,6 +4,8 @@ import LoginSupabase from './components/LoginSupabase'
 import PrayerTimes from './components/PrayerTimes'
 import Calendar from './components/Calendar'
 import Settings from './components/Settings'
+import PrayerCountdown from './components/PrayerCountdown'
+import TaskTimer from './components/TaskTimer'
 import './App.css'
 
 function AppSupabase() {
@@ -223,6 +225,8 @@ function AppSupabase() {
           {/* Prayer Times Widget */}
           <aside className="sidebar">
             <PrayerTimes />
+            <PrayerCountdown prayerTimes={prayerTimes} />
+            <TaskTimer tasks={tasks} />
           </aside>
 
           {/* Tasks Section */}
