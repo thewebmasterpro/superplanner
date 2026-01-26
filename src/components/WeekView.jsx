@@ -6,11 +6,11 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
     const [draggedTask, setDraggedTask] = useState(null)
     const scrollContainerRef = useRef(null)
 
-    // Scroll to 07:00 on mount
+    // Scroll to 06:00 on mount
     useEffect(() => {
         setTimeout(() => {
             if (scrollContainerRef.current) {
-                scrollContainerRef.current.scrollTop = 7 * 60 // 60px per hour
+                scrollContainerRef.current.scrollTop = 6 * 60 // 60px per hour
             }
         }, 100)
     }, [])
