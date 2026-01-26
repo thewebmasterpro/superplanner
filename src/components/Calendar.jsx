@@ -83,12 +83,14 @@ function Calendar({ tasks, prayerTimes, onTaskUpdate }) {
                         tasks={tasks}
                         prayerTimes={prayerTimes}
                         onTaskUpdate={onTaskUpdate}
+                        onTaskEdit={onTaskEdit}
                     />
                 ) : (
                     <MonthView
                         currentDate={currentDate}
                         tasks={tasks}
                         onTaskUpdate={onTaskUpdate}
+                        onTaskEdit={onTaskEdit}
                     />
                 )}
             </div>

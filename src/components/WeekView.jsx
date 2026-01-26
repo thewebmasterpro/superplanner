@@ -1,9 +1,19 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './Calendar.css'
 
-function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
-    const hours = Array.from({ length: 15 }, (_, i) => i + 7) // 7h to 21h
+function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit }) {
+    const hours = Array.from({ length: 24 }, (_, i) => i) // Full 24h view
     const [draggedTask, setDraggedTask] = useState(null)
+    const scrollContainerRef = useRef(null)
+
+    // Scroll to 07:00 on mount
+    useState(() => {
+        setTimeout(() => {
+            if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTop = 7 * 60 // 60px per hour
+            }
+        }, 100)
+    })
 
     const getWeekDays = () => {
         const weekStart = getWeekStart(currentDate)
@@ -21,32 +31,36 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
         return new Date(d.setDate(diff))
     }
 
-    const getTasksForSlot = (day, hour) => {
+    const getTasksForDay = (day) => {
         return tasks.filter(task => {
             if (!task.scheduled_time) return false
             const taskDate = new Date(task.scheduled_time)
             return taskDate.getDate() === day.getDate() &&
                 taskDate.getMonth() === day.getMonth() &&
-                taskDate.getFullYear() === day.getFullYear() &&
-                taskDate.getHours() === hour
+                taskDate.getFullYear() === day.getFullYear()
         })
     }
 
     const getPrayersForDay = (day) => {
         if (!prayerTimes) return []
-
-        const prayers = [
-            { name: 'Fajr', time: prayerTimes.fajr },
-            { name: 'Dhuhr', time: prayerTimes.dhuhr },
-            { name: 'Asr', time: prayerTimes.asr },
-            { name: 'Maghrib', time: prayerTimes.maghrib },
-            { name: 'Isha', time: prayerTimes.isha }
+        return [
+            { name: 'Fajr', time: prayerTimes.fajr, icon: '🌅' },
+            { name: 'Dhuhr', time: prayerTimes.dhuhr, icon: '☀️' },
+            { name: 'Asr', time: prayerTimes.asr, icon: '⛅' },
+            { name: 'Maghrib', time: prayerTimes.maghrib, icon: '🌇' },
+            { name: 'Isha', time: prayerTimes.isha, icon: '🌙' }
         ]
+    }
 
-        return prayers.map(prayer => ({
-            ...prayer,
-            hour: parseInt(prayer.time.split(':')[0])
-        })).filter(prayer => prayer.hour >= 7 && prayer.hour <= 21)
+    const getTimePosition = (timeStr) => {
+        if (!timeStr) return 0
+        const [h, m] = timeStr.split(':').map(Number)
+        return h * 60 + m // 1px per minute
+    }
+
+    const getDateTimePosition = (dateIso) => {
+        const date = new Date(dateIso)
+        return date.getHours() * 60 + date.getMinutes()
     }
 
     const handleDragStart = (e, task) => {
@@ -59,15 +73,21 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
         e.dataTransfer.dropEffect = 'move'
     }
 
-    const handleDrop = (e, day, hour) => {
+    const handleDrop = (e, day) => {
         e.preventDefault()
         if (!draggedTask) return
 
-        // Create new scheduled time
-        const newScheduledTime = new Date(day)
-        newScheduledTime.setHours(hour, 0, 0, 0)
+        const rect = e.currentTarget.getBoundingClientRect()
+        const y = e.clientY - rect.top
 
-        // Update task
+        // Snap to 15 minutes
+        const totalMinutes = Math.round(y / 15) * 15
+        const hour = Math.floor(totalMinutes / 60)
+        const minute = totalMinutes % 60
+
+        const newScheduledTime = new Date(day)
+        newScheduledTime.setHours(hour, minute, 0, 0)
+
         onTaskUpdate(draggedTask.id, {
             scheduled_time: newScheduledTime.toISOString()
         })
@@ -76,71 +96,98 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate }) {
     }
 
     const weekDays = getWeekDays()
-    const today = new Date()
+    const today = new Date().toDateString()
 
     return (
-        <div className="week-view">
+        <div className="week-view" ref={scrollContainerRef}>
             <div className="week-grid">
                 {/* Time column */}
                 <div className="time-column">
                     <div className="time-header"></div>
                     {hours.map(hour => (
-                        <div key={hour} className="time-slot">
-                            {hour}:00
+                        <div key={hour} className="time-slot-hour">
+                            <span className="time-label">{String(hour).padStart(2, '0')}:00</span>
+                            <div className="time-slot-quarters">
+                                <div className="quarter-line"></div>
+                                <div className="quarter-line"></div>
+                                <div className="quarter-line"></div>
+                            </div>
                         </div>
                     ))}
                 </div>
 
                 {/* Day columns */}
                 {weekDays.map((day, dayIndex) => {
-                    const isToday = day.toDateString() === today.toDateString()
+                    const isToday = day.toDateString() === today
                     const prayersForDay = getPrayersForDay(day)
+                    const tasksForDay = getTasksForDay(day)
 
                     return (
-                        <div key={dayIndex} className="day-column">
+                        <div
+                            key={dayIndex}
+                            className="day-column"
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, day)}
+                        >
                             <div className={`day-header ${isToday ? 'today' : ''}`}>
                                 <div className="day-name">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>
                                 <div className="day-number">{day.getDate()}</div>
                             </div>
 
-                            {hours.map(hour => {
-                                const tasksInSlot = getTasksForSlot(day, hour)
-                                const prayerInSlot = prayersForDay.find(p => p.hour === hour)
-
-                                return (
-                                    <div
-                                        key={hour}
-                                        className="hour-slot"
-                                        onDragOver={handleDragOver}
-                                        onDrop={(e) => handleDrop(e, day, hour)}
-                                    >
-                                        {/* Prayer blocks */}
-                                        {prayerInSlot && (
-                                            <div className="event-block prayer-block">
-                                                🕌 {prayerInSlot.name}
-                                            </div>
-                                        )}
-
-                                        {/* Task blocks */}
-                                        {tasksInSlot.map(task => {
-                                            const heightPercent = Math.min((task.duration / 60) * 100, 100)
-                                            return (
-                                                <div
-                                                    key={task.id}
-                                                    className={`event-block task-block status-${task.status} ${draggedTask?.id === task.id ? 'dragging' : ''}`}
-                                                    style={{ height: `${heightPercent}%` }}
-                                                    title={task.description || task.title}
-                                                    draggable
-                                                    onDragStart={(e) => handleDragStart(e, task)}
-                                                >
-                                                    <div className="task-block-title">{task.title}</div>
-                                                    <div className="task-block-time">{task.duration}min</div>
-                                                </div>
-                                            )
-                                        })}
+                            <div className="day-content">
+                                {/* Grid Lines */}
+                                {hours.map(h => (
+                                    <div key={h} className="grid-hour-line">
+                                        <div className="grid-quarter-line"></div>
+                                        <div className="grid-quarter-line"></div>
+                                        <div className="grid-quarter-line"></div>
                                     </div>
-                                )
-                            })}
+                                ))}
+
+                                {/* Prayer blocks */}
+                                {prayersForDay.map(prayer => (
+                                    <div
+                                        key={prayer.name}
+                                        className="prayer-block-fixed"
+                                        style={{
+                                            top: `${getTimePosition(prayer.time)}px`,
+                                            height: '20px' // Slim fixed height for prayer calls
+                                        }}
+                                    >
+                                        <span className="prayer-icon-cal">{prayer.icon}</span>
+                                        <span className="prayer-name-cal">{prayer.name}</span>
+                                        <span className="prayer-time-cal">{prayer.time}</span>
+                                    </div>
+                                ))}
+
+                                {/* Task blocks */}
+                                {tasksForDay.map(task => {
+                                    const top = getDateTimePosition(task.scheduled_time)
+                                    const height = task.duration || 60
+
+                                    return (
+                                        <div
+                                            key={task.id}
+                                            className={`calendar-task-block status-${task.status} ${draggedTask?.id === task.id ? 'dragging' : ''}`}
+                                            style={{
+                                                top: `${top}px`,
+                                                height: `${height}px`,
+                                                zIndex: draggedTask?.id === task.id ? 10 : 1
+                                            }}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, task)}
+                                            onClick={() => onTaskEdit && onTaskEdit(task)}
+                                        >
+                                            <div className="task-block-inner">
+                                                <div className="task-block-title">{task.title}</div>
+                                                {height >= 30 && (
+                                                    <div className="task-block-time">{task.duration}m</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
                         </div>
                     )
                 })}

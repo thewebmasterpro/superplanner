@@ -1,6 +1,6 @@
 import './Calendar.css'
 
-function MonthView({ currentDate, tasks }) {
+function MonthView({ currentDate, tasks, onTaskEdit }) {
     const getMonthDays = () => {
         const year = currentDate.getFullYear()
         const month = currentDate.getMonth()
@@ -8,7 +8,7 @@ function MonthView({ currentDate, tasks }) {
         const firstDay = new Date(year, month, 1)
         const lastDay = new Date(year, month + 1, 0)
 
-        const firstDayOfWeek = firstDay.getDay()
+        const firstDayOfWeek = (firstDay.getDay() + 6) % 7 // Adjust to start Monday
         const daysInMonth = lastDay.getDate()
 
         const days = []
@@ -17,7 +17,7 @@ function MonthView({ currentDate, tasks }) {
         const prevMonthLastDay = new Date(year, month, 0).getDate()
         for (let i = firstDayOfWeek - 1; i >= 0; i--) {
             days.push({
-                date: new Date(year, month - 1, prevMonthLastDay - i),
+                date: new Date(year, month, -i),
                 isCurrentMonth: false
             })
         }
@@ -53,7 +53,7 @@ function MonthView({ currentDate, tasks }) {
     }
 
     const monthDays = getMonthDays()
-    const today = new Date()
+    const today = new Date().toDateString()
 
     return (
         <div className="month-view">
@@ -65,7 +65,7 @@ function MonthView({ currentDate, tasks }) {
 
                 {/* Day cells */}
                 {monthDays.map((day, index) => {
-                    const isToday = day.date.toDateString() === today.toDateString()
+                    const isToday = day.date.toDateString() === today
                     const dayTasks = getTasksForDay(day.date)
                     const visibleTasks = dayTasks.slice(0, 3)
                     const moreTasks = dayTasks.length - 3
@@ -82,6 +82,8 @@ function MonthView({ currentDate, tasks }) {
                                         key={task.id}
                                         className={`month-task status-${task.status}`}
                                         title={`${task.title} - ${task.duration}min`}
+                                        onClick={() => onTaskEdit && onTaskEdit(task)}
+                                        style={{ cursor: 'pointer' }}
                                     >
                                         {task.title}
                                     </div>

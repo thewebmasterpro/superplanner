@@ -458,6 +458,7 @@ function AppSupabase() {
               tasks={tasks}
               prayerTimes={prayerTimes}
               onTaskUpdate={updateTask}
+              onTaskEdit={setEditingTask}
             />
           </section>
         </div>
