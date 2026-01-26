@@ -66,22 +66,35 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
     const handleDragStart = (e, task) => {
         setDraggedTask(task)
         e.dataTransfer.effectAllowed = 'move'
+        // Create a transparent image to avoid default drag ghosting issues if needed
+        // but standard is usually fine.
     }
 
     const handleDragOver = (e) => {
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
+        e.currentTarget.classList.add('drag-over')
+    }
+
+    const handleDragLeave = (e) => {
+        e.currentTarget.classList.remove('drag-over')
     }
 
     const handleDrop = (e, day) => {
         e.preventDefault()
+        e.currentTarget.classList.remove('drag-over')
+
         if (!draggedTask) return
 
-        const rect = e.currentTarget.getBoundingClientRect()
+        const rect = e.currentTarget.querySelector('.day-content').getBoundingClientRect()
         const y = e.clientY - rect.top
 
-        // Snap to 15 minutes
-        const totalMinutes = Math.round(y / 15) * 15
+        // Snap to 15 minutes (1px = 1min)
+        let totalMinutes = Math.round(y / 15) * 15
+
+        // Clamp between 0 and 23:45
+        totalMinutes = Math.max(0, Math.min(totalMinutes, 23 * 60 + 45))
+
         const hour = Math.floor(totalMinutes / 60)
         const minute = totalMinutes % 60
 
@@ -127,6 +140,7 @@ function WeekView({ currentDate, tasks, prayerTimes, onTaskUpdate, onTaskEdit })
                             key={dayIndex}
                             className="day-column"
                             onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
                             onDrop={(e) => handleDrop(e, day)}
                         >
                             <div className={`day-header ${isToday ? 'today' : ''}`}>
