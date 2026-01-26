@@ -7,13 +7,16 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "setup-db": "node scripts/setup-db.js"
+    "setup-db": "node scripts/setup-db.js",
+    "create-user": "node scripts/create-user.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "mysql2": "^3.6.5",
     "dotenv": "^16.3.1",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "bcrypt": "^5.1.1"
   },
   "engines": {
     "node": ">=18.0.0"

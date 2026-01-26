@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 import { router as taskRouter } from './routes/tasks.js'
 import { router as healthRouter } from './routes/health.js'
+import { router as authRouter } from './routes/auth.js'
+import { authenticate } from './middleware/auth.js'
 
 dotenv.config()
 
@@ -20,9 +22,12 @@ app.use(express.urlencoded({ extended: true }))
 // Serve static files from public directory (Vite build output)
 app.use(express.static(path.join(__dirname, 'public')))
 
-// API Routes
-app.use('/api/tasks', taskRouter)
+// Public API Routes (no authentication required)
+app.use('/api/auth', authRouter)
 app.use('/api/health', healthRouter)
+
+// Protected API Routes (authentication required)
+app.use('/api/tasks', authenticate, taskRouter)
 
 // Root API info
 app.get('/api', (req, res) => {
@@ -31,8 +36,13 @@ app.get('/api', (req, res) => {
     message: 'Superplanner API v1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: {
-      tasks: '/api/tasks',
+      auth: '/api/auth/login',
+      tasks: '/api/tasks (protected)',
       health: '/api/health'
+    },
+    authentication: {
+      methods: ['JWT Token', 'API Key'],
+      header: 'Authorization: Bearer <token_or_api_key>'
     }
   })
 })

@@ -81,6 +81,36 @@ async function setupDatabase() {
       )
     `)
 
+    // Users table for authentication
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX (username),
+        INDEX (email)
+      )
+    `)
+
+    // API Keys table for bot access
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        key_hash VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        is_active BOOLEAN DEFAULT true,
+        last_used_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NULL,
+        INDEX (key_hash)
+      )
+    `)
+
     // Insert default project
     await connection.query(`
       INSERT IGNORE INTO projects (id, name, slug) VALUES (1, 'Default', 'default')

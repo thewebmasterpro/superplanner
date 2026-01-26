@@ -1,13 +1,38 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import Login from './components/Login'
 import './App.css'
 
+// Configure axios to send auth token with all requests
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState(null)
   const [status, setStatus] = useState('loading')
   const [tasks, setTasks] = useState([])
   const [error, setError] = useState(null)
 
+  // Check if user is already logged in
   useEffect(() => {
+    const token = localStorage.getItem('auth_token')
+    const savedUser = localStorage.getItem('user')
+
+    if (token && savedUser) {
+      setIsAuthenticated(true)
+      setUser(JSON.parse(savedUser))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+
     const checkHealth = async () => {
       try {
         await axios.get('/api/health')
@@ -22,21 +47,55 @@ function App() {
       try {
         const response = await axios.get('/api/tasks')
         setTasks(response.data || [])
+        setError(null)
       } catch (err) {
         console.error('Failed to load tasks:', err)
-        setError('Failed to load tasks')
+        if (err.response?.status === 401) {
+          // Token expired or invalid
+          handleLogout()
+        } else {
+          setError('Failed to load tasks')
+        }
       }
     }
 
     checkHealth()
     loadTasks()
-  }, [])
+  }, [isAuthenticated])
+
+  const handleLoginSuccess = (data) => {
+    setIsAuthenticated(true)
+    setUser(data.user)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user')
+    setIsAuthenticated(false)
+    setUser(null)
+    setTasks([])
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={handleLoginSuccess} />
+  }
 
   return (
     <div className="app">
       <header className="header">
-        <h1>🚀 Superplanner</h1>
-        <p>Task Management & CRM for Small Business</p>
+        <div className="header-content">
+          <div>
+            <h1>🚀 Superplanner</h1>
+            <p>Task Management & CRM for Small Business</p>
+          </div>
+          <div className="header-actions">
+            {user && <span className="user-name">👤 {user.username}</span>}
+            <button onClick={handleLogout} className="logout-button">
+              Logout
+            </button>
+          </div>
+        </div>
         <div className={`status status-${status}`}>
           {status === 'ok' && '✅ Connected'}
           {status === 'loading' && '⏳ Loading...'}
