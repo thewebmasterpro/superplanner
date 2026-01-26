@@ -96,19 +96,16 @@
 
 .time-label {
     position: absolute;
-    right: 12px;
+    right: 15px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 0.9em;
+    font-size: 0.95em;
     font-weight: 800;
-    color: #0f172a;
-    /* Deep black-blue */
-    background: white;
-    padding: 4px 8px;
-    border-radius: 6px;
+    color: #000000;
+    /* Pure Black */
+    background: transparent;
+    padding: 0;
     z-index: 60;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
 }
 
 .time-slot-halves {
