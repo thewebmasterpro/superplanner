@@ -1,10 +1,6 @@
 build:
   command: npm install && npm run build
-  outputDirectory: server/public
-
-start:
-  command: npm start
-  port: 3000
+  outputDirectory: dist
 
 environment:
   NODE_ENV: production

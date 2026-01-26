@@ -24,8 +24,8 @@ export default defineConfig({
   },
 
   build: {
-    // Output to server/public for Express to serve
-    outDir: path.resolve(__dirname, 'server/public'),
+    // Output to dist for static hosting
+    outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
     // Generate source maps for production debugging
     sourcemap: false,
