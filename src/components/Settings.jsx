@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { fetchPrayerTimesByCity, CALCULATION_METHODS } from '../services/prayerTimesApi'
+import { fetchPrayerTimesByCity } from '../services/prayerTimesApi'
 import './Settings.css'
 
 function Settings({ user, onClose }) {
-    const [preferences, setPreferences] = useState({
-        city: '',
-        country: '',
-        calculation_method: 2
-    })
+    const [city, setCity] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState(null)
@@ -23,52 +19,45 @@ function Settings({ user, onClose }) {
         try {
             const { data, error } = await supabase
                 .from('user_preferences')
-                .select('*')
+                .select('city')
                 .eq('user_id', user.id)
                 .single()
 
-            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-                throw error
+            if (error && error.code !== 'PGRST116') {
+                console.error('Load error:', error)
             }
 
             if (data) {
-                setPreferences({
-                    city: data.city || '',
-                    country: data.country || '',
-                    calculation_method: data.calculation_method || 2
-                })
+                setCity(data.city || '')
             }
         } catch (err) {
             console.error('Error loading preferences:', err)
-            setError('Failed to load preferences')
         } finally {
             setLoading(false)
         }
     }
 
     const handlePreview = async () => {
-        if (!preferences.city) {
+        if (!city.trim()) {
             setError('Please enter a city')
             return
         }
 
         try {
             setError(null)
-            const times = await fetchPrayerTimesByCity(
-                preferences.city,
-                preferences.country,
-                preferences.calculation_method
-            )
+            // Muslim World League = method 3
+            const times = await fetchPrayerTimesByCity(city, '', 3)
             setPreviewTimes(times)
             setSuccess('Prayer times loaded successfully!')
         } catch (err) {
+            console.error('Preview error:', err)
             setError('Failed to fetch prayer times. Please check city name.')
             setPreviewTimes(null)
         }
     }
 
     const handleSave = async () => {
-        if (!preferences.city) {
+        if (!city.trim()) {
             setError('Please enter a city')
             return
         }
@@ -78,25 +67,26 @@ function Settings({ user, onClose }) {
         setSuccess(null)
 
         try {
-            // Fetch prayer times first
-            const times = await fetchPrayerTimesByCity(
-                preferences.city,
-                preferences.country,
-                preferences.calculation_method
-            )
+            // Fetch prayer times (Muslim World League = method 3)
+            const times = await fetchPrayerTimesByCity(city, '', 3)
 
             // Save preferences
             const { error: prefError } = await supabase
                 .from('user_preferences')
                 .upsert({
                     user_id: user.id,
-                    city: preferences.city,
-                    country: preferences.country,
-                    calculation_method: preferences.calculation_method,
+                    city: city.trim(),
+                    country: '',
+                    calculation_method: 3,
                     updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id'
                 })
 
-            if (prefError) throw prefError
+            if (prefError) {
+                console.error('Preferences error:', prefError)
+                throw new Error(`Database error: ${prefError.message}`)
+            }
 
             // Save today's prayer times
             const today = new Date().toISOString().split('T')[0]
@@ -109,17 +99,22 @@ function Settings({ user, onClose }) {
                     asr: times.asr,
                     maghrib: times.maghrib,
                     isha: times.isha
+                }, {
+                    onConflict: 'date'
                 })
 
-            if (scheduleError) throw scheduleError
+            if (scheduleError) {
+                console.error('Schedule error:', scheduleError)
+                throw new Error(`Schedule error: ${scheduleError.message}`)
+            }
 
             setSuccess('Settings saved successfully!')
             setTimeout(() => {
                 if (onClose) onClose()
             }, 1500)
         } catch (err) {
-            console.error('Error saving preferences:', err)
-            setError('Failed to save settings')
+            console.error('Save error:', err)
+            setError(err.message || 'Failed to save settings. Check console for details.')
         } finally {
             setSaving(false)
         }
@@ -148,40 +143,22 @@ function Settings({ user, onClose }) {
 
                 <div className="settings-section">
                     <h3>🕌 Prayer Times Configuration</h3>
+                    <p style={{ color: '#6b7280', fontSize: '0.9em', marginBottom: '15px' }}>
+                        Using <strong>Muslim World League</strong> calculation method
+                    </p>
 
                     <div className="form-group">
                         <label>City *</label>
                         <input
                             type="text"
-                            value={preferences.city}
-                            onChange={(e) => setPreferences({ ...preferences, city: e.target.value })}
-                            placeholder="e.g., Paris, London, New York"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            placeholder="e.g., Paris, London, Casablanca, Dubai"
                             className="form-input"
                         />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Country (optional)</label>
-                        <input
-                            type="text"
-                            value={preferences.country}
-                            onChange={(e) => setPreferences({ ...preferences, country: e.target.value })}
-                            placeholder="e.g., France, UK, USA"
-                            className="form-input"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Calculation Method</label>
-                        <select
-                            value={preferences.calculation_method}
-                            onChange={(e) => setPreferences({ ...preferences, calculation_method: parseInt(e.target.value) })}
-                            className="form-select"
-                        >
-                            {Object.entries(CALCULATION_METHODS).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
+                        <small style={{ color: '#6b7280', fontSize: '0.85em', display: 'block', marginTop: '5px' }}>
+                            Enter your city name to calculate prayer times
+                        </small>
                     </div>
 
                     <div className="button-group">
