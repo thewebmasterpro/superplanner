@@ -1,14 +1,15 @@
 .prayer-countdown-widget {
-    background: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
     border-radius: 10px;
     padding: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     transition: all 0.3s;
 }
 
 .prayer-countdown-widget.near-prayer {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.4);
     animation: pulse 2s infinite;
 }
 
@@ -26,7 +27,7 @@
 
 .prayer-countdown-widget h3 {
     margin: 0 0 15px 0;
-    color: #667eea;
+    color: white;
     font-size: 1.1em;
 }
 
@@ -34,12 +35,12 @@
     text-align: center;
     margin-bottom: 20px;
     padding-bottom: 15px;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .time-label {
     font-size: 0.85em;
-    color: #6b7280;
+    color: rgba(255, 255, 255, 0.8);
     margin-bottom: 5px;
 }
 
@@ -47,7 +48,7 @@
     font-size: 2em;
     font-weight: 700;
     font-family: 'Courier New', monospace;
-    color: #667eea;
+    color: white;
     letter-spacing: 2px;
 }
 
@@ -65,13 +66,13 @@
 
 .prayer-label {
     font-size: 0.9em;
-    color: #6b7280;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .prayer-name {
     font-size: 1.2em;
     font-weight: 700;
-    color: #667eea;
+    color: white;
 }
 
 .tomorrow-badge {
@@ -87,7 +88,7 @@
     font-size: 1.5em;
     font-weight: 700;
     font-family: 'Courier New', monospace;
-    color: #374151;
+    color: white;
     margin-bottom: 10px;
 }
 
@@ -96,7 +97,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: rgba(255, 255, 255, 0.15);
     color: white;
     padding: 12px 20px;
     border-radius: 8px;

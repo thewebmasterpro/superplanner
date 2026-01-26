@@ -240,15 +240,15 @@ function AppSupabase() {
       </header>
 
       <main className="container">
-        <div className="dashboard-grid">
-          {/* Prayer Times Widget */}
-          <aside className="sidebar">
-            <PrayerTimes />
-            <PrayerCountdown prayerTimes={prayerTimes} />
-            <Pomodoro preferences={userPreferences} />
-            <TaskTimer tasks={tasks} />
-          </aside>
+        {/* Top Widgets Row */}
+        <div className="widgets-row">
+          <PrayerTimes />
+          <PrayerCountdown prayerTimes={prayerTimes} />
+          <Pomodoro preferences={userPreferences} />
+          <TaskTimer tasks={tasks} />
+        </div>
 
+        <div className="dashboard-grid">
           {/* Tasks Section */}
           <section className="tasks">
             <h2>Tasks</h2>
