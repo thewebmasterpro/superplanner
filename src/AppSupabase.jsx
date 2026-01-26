@@ -40,6 +40,21 @@ function AppSupabase() {
   const [showSettings, setShowSettings] = useState(false)
   const [userPreferences, setUserPreferences] = useState(null)
 
+  // Filter state
+  const [filters, setFilters] = useState({
+    status: 'all',
+    priority: 'all',
+    search: ''
+  })
+
+  const filteredTasks = tasks.filter(task => {
+    const matchStatus = filters.status === 'all' || task.status === filters.status
+    const matchPriority = filters.priority === 'all' || task.priority === parseInt(filters.priority)
+    const matchSearch = task.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+      (task.description?.toLowerCase() || '').includes(filters.search.toLowerCase())
+    return matchStatus && matchPriority && matchSearch
+  })
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -354,11 +369,54 @@ function AppSupabase() {
               </div>
             </form>
 
+            {/* Task Filters */}
+            <div className="task-filters">
+              <div className="form-group">
+                <label>Recherche</label>
+                <input
+                  type="text"
+                  placeholder="Rechercher une tâche..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Statut</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="all">Tous les statuts</option>
+                  <option value="todo">À faire</option>
+                  <option value="in_progress">En cours</option>
+                  <option value="done">Terminé</option>
+                  <option value="blocked">Bloqué</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Priorité</label>
+                <select
+                  value={filters.priority}
+                  onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="all">Toutes les priorités</option>
+                  <option value="1">Priorité 1</option>
+                  <option value="2">Priorité 2</option>
+                  <option value="3">Priorité 3</option>
+                  <option value="4">Priorité 4</option>
+                  <option value="5">Priorité 5</option>
+                </select>
+              </div>
+            </div>
+
             {/* Task List */}
-            {tasks.length === 0 ? (
-              <p className="empty">No tasks yet. Create one to get started!</p>
+            {filteredTasks.length === 0 ? (
+              <p className="empty">Aucune tâche trouvée.</p>
             ) : (
-              <div className="task-list">{tasks.map(task => (
+              <div className="task-list">{filteredTasks.map(task => (
 
                 <div key={task.id} className="task-card">
                   {editingTask?.id === task.id ? (

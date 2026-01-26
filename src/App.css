@@ -252,6 +252,21 @@
   margin-bottom: 0;
 }
 
+.task-filters {
+  display: flex;
+  gap: 15px;
+  background: #f1f5f9;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.task-filters .form-group {
+  min-width: 150px;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
