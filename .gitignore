@@ -1,17 +1,23 @@
-# Environment
-.env
-.env.local
-.env.*.local
-
 # Dependencies
 node_modules/
-package-lock.json
-yarn.lock
+client/node_modules/
+server/node_modules/
+
+# Environment variables (IMPORTANT - NE JAMAIS COMMITER)
+.env
+.env.local
+.env.production
+.env.development
+client/.env
+client/.env.local
+server/.env
+server/.env.local
+var.env
 
 # Build outputs
 dist/
 build/
-.next/
+client/dist/
 server/public/
 
 # Logs
@@ -19,21 +25,35 @@ server/public/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# IDE
-.idea/
-.vscode/
-*.iml
-.claude/
-
-# Misc
+# Temporary files
+*.tmp
+*.temp
 .cache/
-temp/
-tmp/
+
+# Old MySQL files (déjà supprimés mais au cas où)
+setup-auth.php
+reset-password.sql
+server/test-*.js
+server/generate-hash.js
+
+# Supabase local
+.supabase/
+
+# Scripts de cleanup
+cleanup-*.sh
+
+# AI context files (local only)
+.claude/

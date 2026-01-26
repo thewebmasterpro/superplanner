@@ -1,116 +1,152 @@
-# Superplanner
+# Superplanner 🚀
 
-Task Management & CRM for Small Business with Prayer Schedule Integration
+Task Management & CRM pour Small Business avec authentification Google OAuth
 
-## Tech Stack
+## 🎯 Stack Technique
 
 - **Frontend:** Vite + React
-- **Backend:** Express.js + Node.js
-- **Database:** MySQL
-- **Deployment:** Hostinger
+- **Backend:** Supabase (PostgreSQL + Auth + API)
+- **Authentification:** Supabase Auth (Email + Google OAuth)
+- **Déploiement:** Hostinger
 
-## Quick Start
+## ✨ Fonctionnalités
 
-### Development
+- ✅ Authentification Email/Password
+- ✅ Connexion Google OAuth (2 clics)
+- ✅ Gestion des tâches
+- ✅ Gestion des projets
+- ✅ Gestion des clients
+- ✅ Horaires de prière
+- ✅ Row Level Security (chaque utilisateur voit uniquement ses données)
+- ✅ API auto-générée
+- ✅ Temps réel (updates automatiques)
+
+## 🚀 Démarrage Rapide
+
+### 1. Installation
 
 ```bash
-# Install dependencies
+# Cloner le repo
+git clone https://github.com/thewebmasterpro/superplanner.git
+cd superplanner
+
+# Installer les dépendances
 npm install
-cd client && npm install && cd ../server && npm install && cd ..
+cd client && npm install && cd ..
+```
 
-# Setup database (one time)
-npm run setup-db
+### 2. Configuration Supabase
 
-# Start dev servers (Vite + Express with hot reload)
+1. Créez un compte sur [supabase.com](https://supabase.com)
+2. Créez un nouveau projet
+3. Copiez vos clés API (Project URL + anon key)
+4. Créez `client/.env` :
+   ```env
+   VITE_SUPABASE_URL=votre_url_supabase
+   VITE_SUPABASE_ANON_KEY=votre_anon_key
+   ```
+
+5. Créez les tables :
+   - Allez dans **SQL Editor** dans Supabase Dashboard
+   - Copiez-collez le contenu de [supabase-schema.sql](supabase-schema.sql)
+   - Exécutez (Ctrl+Enter)
+
+### 3. Activer Google OAuth (optionnel)
+
+Voir [ACTIVER-GOOGLE-OAUTH.md](ACTIVER-GOOGLE-OAUTH.md) pour les instructions détaillées (5 min)
+
+### 4. Lancer en développement
+
+```bash
 npm run dev
 ```
 
-Server runs on `http://localhost:3000`
-Client runs on `http://localhost:5173` (proxied to server)
+Ouvrez [http://localhost:5173](http://localhost:5173)
 
-### Production
+## 📚 Documentation
 
-```bash
-# Build Vite frontend
-npm run build:client
+- **[QUICK-START-SUPABASE.md](QUICK-START-SUPABASE.md)** - Démarrage rapide (10 min)
+- **[SUPABASE-SETUP.md](SUPABASE-SETUP.md)** - Guide complet de configuration
+- **[ACTIVER-GOOGLE-OAUTH.md](ACTIVER-GOOGLE-OAUTH.md)** - Activer Google OAuth
+- **[MIGRATION-SUPABASE.md](MIGRATION-SUPABASE.md)** - Détails de la migration vers Supabase
 
-# Start server
-npm start
-```
-
-Frontend is served from `/server/public`
-
-## Project Structure
+## 🏗️ Structure du Projet
 
 ```
 superplanner/
-├─ client/                  # Vite + React frontend
-│  ├─ src/
-│  │  ├─ App.jsx
-│  │  ├─ App.css
-│  │  └─ main.jsx
-│  ├─ index.html
-│  ├─ vite.config.js
-│  └─ package.json
-├─ server/                  # Express API backend
-│  ├─ index.js
-│  ├─ routes/
-│  │  ├─ tasks.js
-│  │  └─ health.js
-│  ├─ config/
-│  │  └─ database.js
-│  ├─ scripts/
-│  │  └─ setup-db.js
-│  └─ package.json
-├─ package.json
-├─ .env.example
-└─ README.md
+├── client/                 # Frontend Vite + React
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── LoginSupabase.jsx    # Page de connexion
+│   │   │   └── Login.css
+│   │   ├── lib/
+│   │   │   └── supabase.js          # Config Supabase
+│   │   ├── AppSupabase.jsx          # App principale
+│   │   └── main.jsx
+│   ├── .env                 # Variables d'environnement
+│   └── package.json
+├── supabase-schema.sql     # Schema de la base de données
+└── package.json
 ```
 
-## API Endpoints
+## 🔒 Sécurité
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api` | API info |
-| GET | `/api/health` | Health check |
-| GET | `/api/tasks` | List all tasks |
-| GET | `/api/tasks/:id` | Get task by ID |
-| POST | `/api/tasks` | Create new task |
-| PUT | `/api/tasks/:id` | Update task |
-| DELETE | `/api/tasks/:id` | Delete task |
+- ✅ Row Level Security (RLS) activé
+- ✅ Chaque utilisateur voit uniquement ses propres données
+- ✅ Authentification sécurisée par Supabase
+- ✅ Tokens JWT gérés automatiquement
+- ✅ Variables d'environnement (.env) jamais commitées
 
-## Database Schema
+## 🚀 Déploiement
 
-### projects
-- id, name, slug, created_at, updated_at
+### Hostinger
 
-### tasks
-- id, project_id, title, description, status, frequency, priority, due_date, created_at, updated_at
+```bash
+# Build du client
+cd client
+npm run build
+cd ..
 
-### clients
-- id, name, email, phone, notes, created_at, updated_at
-
-### prayer_schedule
-- id, date, fajr, dhuhr, asr, maghrib, isha, created_at
-
-## Deployment
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for Hostinger setup instructions.
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in your values:
-
-```env
-DB_HOST=localhost
-DB_USER=sp_user
-DB_PASSWORD=your_password
-DB_NAME=superplanner
-DB_PORT=3306
-PORT=3000
-NODE_ENV=production
+# Déployer les fichiers
+# - client/dist/ → vers public_html sur Hostinger
+# - Configurer client/.env sur le serveur
 ```
 
-## Author
+Voir [SUPABASE-SETUP.md](SUPABASE-SETUP.md) pour les instructions détaillées.
 
-Anouar - Thewebmaster.pro
+## 🔄 API (via Supabase)
+
+Supabase génère automatiquement une API REST :
+
+```javascript
+// Créer une tâche
+const { data, error } = await supabase
+  .from('tasks')
+  .insert({ title: 'Ma tâche', status: 'todo' })
+
+// Lire les tâches
+const { data, error } = await supabase
+  .from('tasks')
+  .select('*')
+```
+
+Pas besoin de créer des routes Express ! 🎉
+
+## 📊 Base de données
+
+### Tables
+
+- **projects** - Projets de l'utilisateur
+- **tasks** - Tâches liées aux projets
+- **clients** - Clients CRM
+- **prayer_schedule** - Horaires de prière (public)
+
+Toutes les tables ont Row Level Security activé.
+
+## 👨‍💻 Auteur
+
+**Anouar** - [thewebmaster.pro](https://thewebmaster.pro)
+
+---
+
+**Démarrage rapide :** Consultez [QUICK-START-SUPABASE.md](QUICK-START-SUPABASE.md) pour être opérationnel en 10 minutes ! ⚡

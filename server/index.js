@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import { router as taskRouter } from './routes/tasks.js'
 import { router as healthRouter } from './routes/health.js'
 import { router as authRouter } from './routes/auth.js'
+import { router as debugRouter } from './routes/debug.js'
 import { authenticate } from './middleware/auth.js'
 
 dotenv.config()
@@ -25,6 +26,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 // Public API Routes (no authentication required)
 app.use('/api/auth', authRouter)
 app.use('/api/health', healthRouter)
+app.use('/api/debug', debugRouter)
 
 // Protected API Routes (authentication required)
 app.use('/api/tasks', authenticate, taskRouter)

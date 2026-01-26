@@ -97,6 +97,33 @@
   cursor: not-allowed;
 }
 
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  color: #999;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.divider span {
+  padding: 0 16px;
+}
+
+.google-login-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
 .login-footer {
   margin-top: 20px;
   text-align: center;
@@ -116,6 +143,40 @@
   border-left: 4px solid #dc2626;
   font-weight: 500;
   font-size: 0.9em;
+  margin-bottom: 20px;
+}
+
+/* Supabase Auth UI wrapper */
+.supabase-auth-wrapper {
+  width: 100%;
+}
+
+/* Override Supabase Auth UI styles */
+.supabase-auth-wrapper button {
+  width: 100%;
+}
+
+.supabase-auth-wrapper input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Logout button */
+.logout-button {
+  padding: 10px 20px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
 }
 
 @media (max-width: 480px) {
