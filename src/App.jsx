@@ -10,6 +10,7 @@ import { Contacts } from './pages/Contacts'
 import { Settings } from './pages/Settings'
 import { Trash } from './pages/Trash'
 import { ArchivePage } from './pages/Archive'
+import { LandingPage } from './pages/LandingPage'
 import LoginSupabase from './components/LoginSupabase'
 import { useUserStore } from './stores/userStore'
 import './globals.css'
@@ -37,6 +38,7 @@ const routes = {
 
 function AppContent() {
   const [session, setSession] = useState(null)
+  const [showLogin, setShowLogin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { setUser } = useUserStore()
@@ -101,13 +103,26 @@ function AppContent() {
     )
   }
 
-  // Show login if not authenticated
+  // Show login or landing if not authenticated
   if (!session) {
-    return <LoginSupabase onLoginSuccess={(data) => {
-      console.log('Login success:', data.user?.email)
-      setSession(data.session)
-      setUser(data.user)
-    }} />
+    if (showLogin) {
+      return (
+        <div className="relative">
+          <button
+            onClick={() => setShowLogin(false)}
+            className="absolute top-4 left-4 z-50 text-sm hover:underline text-muted-foreground"
+          >
+            ← Back to Home
+          </button>
+          <LoginSupabase onLoginSuccess={(data) => {
+            console.log('Login success:', data.user?.email)
+            setSession(data.session)
+            setUser(data.user)
+          }} />
+        </div>
+      )
+    }
+    return <LandingPage onLoginClick={() => setShowLogin(true)} />
   }
 
   // Show app with MainLayout
