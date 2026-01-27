@@ -362,120 +362,17 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                 />
               </div>
 
-              {/* Description OR Agenda Items based on type */}
-              {formData.type === 'meeting' ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>📝 Meeting Agenda Items</Label>
-                    {isEditing && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowAgendaForm(!showAgendaForm)}
-                      >
-                        {showAgendaForm ? 'Cancel' : '+ Add Item'}
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Existing Agenda Items */}
-                  {isEditing && agendaItems.length > 0 && (
-                    <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
-                      {agendaItems.map((item) => (
-                        <div key={item.id} className="flex items-start gap-2 group">
-                          <input
-                            type="checkbox"
-                            checked={item.status === 'done'}
-                            onChange={() => toggleAgendaItemStatus(item.id, item.status)}
-                            className="mt-1 cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <p className={`font-medium ${item.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                              {item.title}
-                            </p>
-                            {item.description && (
-                              <p className="text-sm text-muted-foreground">{item.description}</p>
-                            )}
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            P{item.priority}
-                          </Badge>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteAgendaItem(item.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Add New Agenda Item Form */}
-                  {isEditing && showAgendaForm && (
-                    <div className="border rounded-lg p-3 space-y-2 bg-background">
-                      <Input
-                        placeholder="Agenda item title *"
-                        value={newAgendaItem.title}
-                        onChange={(e) => setNewAgendaItem({ ...newAgendaItem, title: e.target.value })}
-                      />
-                      <Textarea
-                        placeholder="Description (optional)"
-                        value={newAgendaItem.description}
-                        onChange={(e) => setNewAgendaItem({ ...newAgendaItem, description: e.target.value })}
-                        rows={2}
-                      />
-                      <div className="flex gap-2">
-                        <Select
-                          value={String(newAgendaItem.priority)}
-                          onValueChange={(value) => setNewAgendaItem({ ...newAgendaItem, priority: parseInt(value) })}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Priority 1</SelectItem>
-                            <SelectItem value="2">Priority 2</SelectItem>
-                            <SelectItem value="3">Priority 3</SelectItem>
-                            <SelectItem value="4">Priority 4</SelectItem>
-                            <SelectItem value="5">Priority 5</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          type="button"
-                          onClick={createAgendaItem}
-                          size="sm"
-                          disabled={!newAgendaItem.title.trim()}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Info message for new meetings */}
-                  {!isEditing && (
-                    <p className="text-sm text-muted-foreground italic">
-                      Save the meeting first, then you can add agenda items.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Task description (optional)"
-                    rows={3}
-                  />
-                </div>
-              )}
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Task description (optional)"
+                  rows={3}
+                />
+              </div>
 
               {/* Row 1: Status, Priority */}
               <div className="grid grid-cols-2 gap-4">
