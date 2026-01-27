@@ -25,6 +25,7 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
 import { BlockerManager } from './BlockerManager'
+import { MeetingAgendaManager } from './MeetingAgendaManager'
 import { useContextStore } from '../stores/contextStore'
 import toast from 'react-hot-toast'
 
@@ -317,8 +318,11 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className={`grid w-full mb-4 ${formData.type === 'meeting' ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="details">Details</TabsTrigger>
+            {formData.type === 'meeting' && (
+              <TabsTrigger value="agenda" disabled={!isEditing}>Agenda</TabsTrigger>
+            )}
             <TabsTrigger value="blockers" disabled={!isEditing}>Blockers</TabsTrigger>
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
@@ -720,6 +724,19 @@ export function TaskModal({ open, onOpenChange, task = null }) {
               </DialogFooter>
             </form>
           </TabsContent>
+
+          {/* Agenda Tab (for meetings only) */}
+          {formData.type === 'meeting' && (
+            <TabsContent value="agenda" className="min-h-[300px]">
+              {isEditing ? (
+                <MeetingAgendaManager meetingId={task.id} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <p>Please create the meeting first to manage the agenda.</p>
+                </div>
+              )}
+            </TabsContent>
+          )}
 
           <TabsContent value="blockers" className="min-h-[300px]">
             {isEditing ? (
