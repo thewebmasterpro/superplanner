@@ -537,6 +537,17 @@ export function Settings() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Sticky Save Button */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 flex justify-end md:left-64">
+        <Button
+          onClick={() => toast.success('Preferences saved successfully!')}
+          className="px-8"
+        >
+          💾 Save Preferences
+        </Button>
+      </div>
+      <div className="h-20" /> {/* Spacer for sticky button */}
     </div>
   )
 }
