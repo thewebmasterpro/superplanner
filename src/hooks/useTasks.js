@@ -32,10 +32,10 @@ export function useTasks() {
       } else if (activeContextId === 'archive') {
         query = query.is('deleted_at', null).not('archived_at', 'is', null)
       } else {
-        // Default view: Not deleted, Not archived
+        // Default view (Global or Context): Not deleted, Not archived
         query = query.is('deleted_at', null).is('archived_at', null)
 
-        // Context filter (normal)
+        // Filter by specific context if selected (and not 'all')
         if (activeContextId && activeContextId !== 'all') {
           query = query.eq('context_id', activeContextId)
         }
@@ -43,7 +43,10 @@ export function useTasks() {
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching tasks details:', error)
+        throw error
+      }
       return data || []
     },
   })
