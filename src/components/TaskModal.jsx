@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertCircle, Archive, Trash2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
+import { TaskComments } from './TaskComments'
 import { BlockerManager } from './BlockerManager'
 import { MeetingAgendaManager } from './MeetingAgendaManager'
 import { useContextStore } from '../stores/contextStore'
@@ -371,12 +372,13 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className={`grid w-full mb-4 ${formData.type === 'meeting' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full mb-4 ${formData.type === 'meeting' ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="details">Details</TabsTrigger>
             {formData.type === 'meeting' && (
               <TabsTrigger value="agenda" disabled={!isEditing}>Agenda</TabsTrigger>
             )}
             <TabsTrigger value="blockers" disabled={!isEditing}>Blockers</TabsTrigger>
+            <TabsTrigger value="comments" disabled={!isEditing}>💬 Comments</TabsTrigger>
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="space-y-4">
@@ -749,6 +751,16 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             )}
           </TabsContent>
 
+          <TabsContent value="comments" className="h-[400px]">
+            {isEditing ? (
+              <TaskComments taskId={task.id} />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <p>Please create the task first to add comments.</p>
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="notes" className="h-[400px]">
             {isEditing ? (
               <TaskNotes taskId={task.id} />
@@ -759,7 +771,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             )}
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </DialogContent >
+    </Dialog >
   )
 }
