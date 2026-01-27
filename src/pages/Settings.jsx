@@ -346,7 +346,7 @@ export function Settings() {
                   placeholder="123456789"
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 To get your Chat ID: Send <code className="bg-muted px-1 py-0.5 rounded">/start</code> to <a href="https://t.me/Henry_anouar_bot" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@Henry_anouar_bot</a> on Telegram
+                  💡 To get your Chat ID: Send <code className="bg-muted px-1 py-0.5 rounded">/start</code> to your bot (Lisa) on Telegram
                 </p>
               </div>
 

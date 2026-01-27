@@ -68,7 +68,7 @@ export function useTelegramNotifications() {
             return { success: false, error: 'Chat ID not configured' }
         }
 
-        const message = `🧪 Test de notification\n✅ Votre configuration Telegram fonctionne correctement!\n🤖 @Henry_anouar_bot est prêt à vous envoyer des rappels.`
+        const message = `🧪 Test de notification\n✅ Votre configuration Telegram fonctionne correctement!\n👩‍💼 Lisa est prête à vous envoyer des rappels.`
 
         return await sendTelegramMessage(preferences.telegram.chatId, message)
     }
