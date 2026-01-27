@@ -10,6 +10,8 @@ import {
 } from "./ui/select"
 import { cn } from '../lib/utils'
 import { useTimerStore } from '../stores/timerStore'
+import { useTimeTracking } from '../hooks/useTimeTracking'
+import { Loader2 } from 'lucide-react'
 
 function TaskTimer({ tasks }) {
     const { taskTimer, setTaskTimerState, resetTaskTimer } = useTimerStore()
@@ -23,18 +25,22 @@ function TaskTimer({ tasks }) {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
     }
 
+    const { startTimer, stopTimer } = useTimeTracking()
+
     const handleStart = () => {
-        if (!selectedTaskId) {
-            return
-        }
-        setTaskTimerState({ isRunning: true })
+        if (!selectedTaskId) return
+        startTimer.mutate(selectedTaskId)
     }
 
     const handleStop = () => {
-        setTaskTimerState({ isRunning: false })
+        stopTimer.mutate()
     }
 
     const handleReset = () => {
+        // If running, stop first? Or just forced reset
+        if (isRunning) {
+            handleStop()
+        }
         resetTaskTimer()
     }
 
@@ -88,18 +94,21 @@ function TaskTimer({ tasks }) {
                     {!isRunning ? (
                         <Button
                             onClick={handleStart}
-                            disabled={!selectedTaskId}
+                            disabled={!selectedTaskId || startTimer.isPending}
                             className={cn("w-28 gap-2", !selectedTaskId && "opacity-50")}
                         >
-                            <Play className="h-4 w-4" /> Démarrer
+                            {startTimer.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                            Démarrer
                         </Button>
                     ) : (
                         <Button
                             onClick={handleStop}
+                            disabled={stopTimer.isPending}
                             variant="destructive"
                             className="w-28 gap-2"
                         >
-                            <Pause className="h-4 w-4" /> Pause
+                            {stopTimer.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pause className="h-4 w-4" />}
+                            Pause
                         </Button>
                     )}
                     <Button onClick={handleReset} variant="outline" size="icon">

@@ -178,8 +178,22 @@ export function Tasks() {
                             </Badge>
                           )}
                         </div>
+                        {task.task_tags && task.task_tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {task.task_tags.map(({ tag }) => (
+                              <Badge
+                                key={tag.id}
+                                variant="outline"
+                                className="text-[10px] px-1 py-0 h-5 border-none"
+                                style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         {task.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">
+                          <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
                             {task.description}
                           </p>
                         )}

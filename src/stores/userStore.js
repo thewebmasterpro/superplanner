@@ -13,7 +13,7 @@ export const useUserStore = create(
         campaignReportingDaysAfter: 3,
         distriwebHours: { start: 9, end: 17 },
         thewebmasterHours: { start: 7.5, end: 15.5 },
-        enableCampaigns: false,
+        enableCampaigns: true,
         prayerLocation: { city: '', country: '' }, // Prayer times location
         telegram: {
           chatId: '',

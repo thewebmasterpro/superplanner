@@ -144,6 +144,20 @@ export function Calendar() {
       }
     }
 
+    // Style meetings differently
+    if (task.type === 'meeting') {
+      return {
+        style: {
+          backgroundColor: '#8b5cf6', // Violet
+          borderRadius: '5px',
+          color: 'white',
+          border: '2px solid #7c3aed',
+          display: 'block',
+          opacity: 0.9,
+        },
+      }
+    }
+
     return {
       style: {
         ...baseStyle,

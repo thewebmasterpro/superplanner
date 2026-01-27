@@ -15,7 +15,7 @@ async function sendTelegramMessage(chatId, message) {
     try {
         // Get Supabase project URL from the client
         const supabaseUrl = supabase.supabaseUrl || import.meta.env.VITE_SUPABASE_URL
-        const functionUrl = `${supabaseUrl}/functions/v1/send-telegram-notification`
+        const functionUrl = `${supabaseUrl}/functions/v1/telegram-bot`
 
         const response = await fetch(functionUrl, {
             method: 'POST',

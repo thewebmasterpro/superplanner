@@ -15,7 +15,8 @@ export function useTasks() {
           *,
           category:task_categories(name, color),
           project:projects(name),
-          parent_meeting:parent_meeting_id(id, title, type)
+          parent_meeting:parent_meeting_id(id, title, type),
+          task_tags(tag:tags(id, name, color))
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })

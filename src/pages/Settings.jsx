@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Settings as SettingsIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { TagManager } from '@/components/TagManager'
 
 export function Settings() {
   const { preferences, setPreferences } = useUserStore()
@@ -147,6 +148,7 @@ export function Settings() {
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
         </TabsList>
 
         {/* Preferences Tab */}
@@ -189,20 +191,7 @@ export function Settings() {
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="enableCampaigns"
-                  checked={preferences.enableCampaigns}
-                  onChange={(e) => setPreferences({
-                    enableCampaigns: e.target.checked
-                  })}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <Label htmlFor="enableCampaigns" className="font-normal">
-                  Enable Campaigns Module
-                </Label>
-              </div>
+              {/* Removed Campaign Actions toggle per user request - module is now core */}
             </CardContent>
           </Card>
 
@@ -659,6 +648,19 @@ export function Settings() {
                   ))
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tags Tab */}
+        <TabsContent value="tags" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Tags</CardTitle>
+              <CardDescription>Create and categorize your tasks with tags</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TagManager />
             </CardContent>
           </Card>
         </TabsContent>

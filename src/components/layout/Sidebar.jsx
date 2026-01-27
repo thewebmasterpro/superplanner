@@ -18,8 +18,9 @@ export function Sidebar() {
       label: 'Campaigns',
       icon: BarChart3,
       href: '/campaigns',
-      disabled: !preferences.enableCampaigns,
-      badge: !preferences.enableCampaigns ? 'Disabled' : null
+      href: '/campaigns',
+      disabled: false,
+      badge: null
     },
     { label: 'Settings', icon: Settings, href: '/settings' },
   ]
