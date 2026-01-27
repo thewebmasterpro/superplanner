@@ -157,22 +157,23 @@ export function TeamSettings() {
     }
 
     return (
-        <div className="container py-8 max-w-4xl animate-in fade-in">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Team Settings</h1>
+        <div className="container-tight py-8 space-y-6 animate-in fade-in">
+            <div className="flex items-center gap-2">
+                <Users className="w-8 h-8" />
+                <div className="flex-1">
+                    <h1 className="text-3xl font-bold">Team Settings</h1>
                     <p className="text-muted-foreground">Manage your team, members, and permissions.</p>
                 </div>
-                <Button variant="outline" onClick={loadTeams}>Refresh</Button>
+                <Button variant="outline" size="sm" onClick={loadTeams}>Refresh</Button>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-[250px_1fr]">
+            <div className="grid gap-6 md:grid-cols-[240px_1fr] items-start">
 
                 {/* Sidebar: List of Teams */}
                 <aside className="space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Your Teams</CardTitle>
+                    <Card className="overflow-hidden">
+                        <CardHeader className="bg-muted/50 py-3">
+                            <CardTitle className="text-sm font-medium">Your Teams</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
                             {teams.map(team => (
@@ -181,8 +182,8 @@ export function TeamSettings() {
                                     className={`p-3 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${currentTeam?.id === team.id ? 'bg-primary/10 border-primary border' : 'hover:bg-muted'}`}
                                     onClick={() => setCurrentTeam(team)}
                                 >
-                                    <div className="font-medium truncate">{team.name}</div>
-                                    {team.myRole === 'owner' && <Badge variant="secondary" className="text-xs">Owner</Badge>}
+                                    <div className="font-medium truncate text-sm">{team.name}</div>
+                                    {team.myRole === 'owner' && <Badge variant="secondary" className="text-[10px] m-0 h-5">Owner</Badge>}
                                 </div>
                             ))}
 
@@ -195,7 +196,7 @@ export function TeamSettings() {
                     </Card>
 
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="bg-muted/50 py-3">
                             <CardTitle className="text-sm font-medium">Create Team</CardTitle>
                         </CardHeader>
                         <CardContent>
