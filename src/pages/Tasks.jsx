@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Plus, Search, SlidersHorizontal, Loader2, Square, CheckSquare } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Search, Loader2, Filter, X } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { useUIStore } from '../stores/uiStore'
+import { useContextStore } from '../stores/contextStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -16,15 +17,43 @@ import {
 import { Card } from '@/components/ui/card'
 import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
+import { supabase } from '../lib/supabase'
 
 export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
   const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
+  const { contexts } = useContextStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
+  const [contextFilter, setContextFilter] = useState('all')
+  const [campaignFilter, setCampaignFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [tagFilter, setTagFilter] = useState('all')
+  const [dueDateFilter, setDueDateFilter] = useState('all')
   const [selectedTask, setSelectedTask] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Fetch tags and campaigns for filters
+  const [tags, setTags] = useState([])
+  const [campaigns, setCampaigns] = useState([])
+
+  useEffect(() => {
+    loadFilterOptions()
+  }, [])
+
+  const loadFilterOptions = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const [tagsRes, campaignsRes] = await Promise.all([
+      supabase.from('tags').select('id, name, color').eq('user_id', user.id).order('name'),
+      supabase.from('campaigns').select('id, name').eq('user_id', user.id).order('name')
+    ])
+
+    setTags(tagsRes.data || [])
+    setCampaigns(campaignsRes.data || [])
+  }
 
   const statusColors = {
     todo: 'bg-status-todo/20 text-status-todo border-status-todo/30',
@@ -42,17 +71,76 @@ export function Tasks() {
     5: 'bg-priority-5',
   }
 
-  // Filter tasks based on search and filters
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch = task.title?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || task.status === statusFilter
-    const matchesPriority = priorityFilter === 'all' || task.priority === parseInt(priorityFilter)
-    return matchesSearch && matchesStatus && matchesPriority
-  })
+  // Get today and week dates for due date filter
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(today)
+  endOfWeek.setDate(today.getDate() + 7)
+
+  // Filter tasks
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesSearch = task.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === 'all' || task.status === statusFilter
+      const matchesPriority = priorityFilter === 'all' || task.priority === parseInt(priorityFilter)
+      const matchesContext = contextFilter === 'all' ||
+        (contextFilter === 'none' ? !task.context_id : task.context_id === contextFilter)
+      const matchesCampaign = campaignFilter === 'all' ||
+        (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
+      const matchesType = typeFilter === 'all' || task.type === typeFilter
+      const matchesTag = tagFilter === 'all' ||
+        task.task_tags?.some(tt => tt.tag?.id === tagFilter)
+
+      // Due date filter
+      let matchesDueDate = true
+      if (dueDateFilter !== 'all' && task.due_date) {
+        const dueDate = new Date(task.due_date)
+        dueDate.setHours(0, 0, 0, 0)
+
+        if (dueDateFilter === 'overdue') {
+          matchesDueDate = dueDate < today && task.status !== 'done'
+        } else if (dueDateFilter === 'today') {
+          matchesDueDate = dueDate.getTime() === today.getTime()
+        } else if (dueDateFilter === 'week') {
+          matchesDueDate = dueDate >= today && dueDate <= endOfWeek
+        } else if (dueDateFilter === 'no_date') {
+          matchesDueDate = false
+        }
+      } else if (dueDateFilter === 'no_date') {
+        matchesDueDate = !task.due_date
+      }
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesContext &&
+        matchesCampaign && matchesType && matchesTag && matchesDueDate
+    })
+  }, [tasks, searchQuery, statusFilter, priorityFilter, contextFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter])
+
+  // Count active filters
+  const activeFilterCount = [
+    statusFilter !== 'all',
+    priorityFilter !== 'all',
+    contextFilter !== 'all',
+    campaignFilter !== 'all',
+    typeFilter !== 'all',
+    tagFilter !== 'all',
+    dueDateFilter !== 'all',
+  ].filter(Boolean).length
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchQuery('')
+    setStatusFilter('all')
+    setPriorityFilter('all')
+    setContextFilter('all')
+    setCampaignFilter('all')
+    setTypeFilter('all')
+    setTagFilter('all')
+    setDueDateFilter('all')
+  }
 
   // Selection handlers
   const toggleSelect = (taskId, e) => {
-    e.stopPropagation()
+    e?.stopPropagation?.()
     setSelectedIds(prev =>
       prev.includes(taskId)
         ? prev.filter(id => id !== taskId)
@@ -90,10 +178,10 @@ export function Tasks() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Search + Filter Toggle */}
       <Card className="p-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex-1 min-w-[200px]">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -105,47 +193,139 @@ export function Tasks() {
             </div>
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button
+            variant={showFilters ? "secondary" : "outline"}
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
 
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="5">Priority 5 (High)</SelectItem>
-              <SelectItem value="4">Priority 4</SelectItem>
-              <SelectItem value="3">Priority 3</SelectItem>
-              <SelectItem value="2">Priority 2</SelectItem>
-              <SelectItem value="1">Priority 1 (Low)</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {(searchQuery || statusFilter !== 'all' || priorityFilter !== 'all') && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setSearchQuery('')
-                setStatusFilter('all')
-                setPriorityFilter('all')
-              }}
-            >
-              Clear Filters
+          {(activeFilterCount > 0 || searchQuery) && (
+            <Button variant="ghost" onClick={clearAllFilters}>
+              <X className="w-4 h-4 mr-1" />
+              Clear
             </Button>
           )}
         </div>
+
+        {/* Expanded Filters */}
+        {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-4 pt-4 border-t">
+            {/* Status */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="todo">To Do</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+                <SelectItem value="done">Done</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Priority */}
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priority</SelectItem>
+                <SelectItem value="5">P5 (High)</SelectItem>
+                <SelectItem value="4">P4</SelectItem>
+                <SelectItem value="3">P3</SelectItem>
+                <SelectItem value="2">P2</SelectItem>
+                <SelectItem value="1">P1 (Low)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Context */}
+            <Select value={contextFilter} onValueChange={setContextFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Context" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Context</SelectItem>
+                <SelectItem value="none">No Context</SelectItem>
+                {contexts.map(ctx => (
+                  <SelectItem key={ctx.id} value={ctx.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color }} />
+                      {ctx.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Campaign */}
+            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Campaign</SelectItem>
+                <SelectItem value="none">No Campaign</SelectItem>
+                {campaigns.map(camp => (
+                  <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Type */}
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="task">✅ Tasks</SelectItem>
+                <SelectItem value="meeting">📅 Meetings</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Tag */}
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tags</SelectItem>
+                {tags.map(tag => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                      {tag.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Due Date */}
+            <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Due Date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
+                <SelectItem value="overdue">🔴 Overdue</SelectItem>
+                <SelectItem value="today">📅 Today</SelectItem>
+                <SelectItem value="week">📆 This Week</SelectItem>
+                <SelectItem value="no_date">No Date</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </Card>
 
       {/* Tasks Table */}
@@ -185,92 +365,102 @@ export function Tasks() {
                   </td>
                 </tr>
               ) : (
-                filteredTasks.map((task) => (
-                  <tr
-                    key={task.id}
-                    className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${selectedIds.includes(task.id) ? 'bg-primary/5' : ''
-                      }`}
-                    onClick={() => {
-                      setSelectedTask(task)
-                      setTaskModalOpen(true)
-                    }}
-                  >
-                    <td className="px-4 py-4">
-                      <Checkbox
-                        checked={selectedIds.includes(task.id)}
-                        onCheckedChange={(e) => toggleSelect(task.id, { stopPropagation: () => { } })}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select ${task.title}`}
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{task.title}</p>
-                          {task.parent_meeting && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedTask({ id: task.parent_meeting_id })
-                                setTaskModalOpen(true)
-                              }}
-                            >
-                              📅 {task.parent_meeting.title}
-                            </Badge>
-                          )}
-                          {task.campaign && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700"
-                            >
-                              🚀 {task.campaign.name}
-                            </Badge>
-                          )}
-                        </div>
-                        {task.task_tags && task.task_tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {task.task_tags.map(({ tag }) => (
+                filteredTasks.map((task) => {
+                  const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
+
+                  return (
+                    <tr
+                      key={task.id}
+                      className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${selectedIds.includes(task.id) ? 'bg-primary/5' : ''
+                        }`}
+                      onClick={() => {
+                        setSelectedTask(task)
+                        setTaskModalOpen(true)
+                      }}
+                    >
+                      <td className="px-4 py-4">
+                        <Checkbox
+                          checked={selectedIds.includes(task.id)}
+                          onCheckedChange={() => toggleSelect(task.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Select ${task.title}`}
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            {task.type === 'meeting' && <span>📅</span>}
+                            <p className="font-medium">{task.title}</p>
+                            {task.context && (
                               <Badge
-                                key={tag.id}
                                 variant="outline"
-                                className="text-[10px] px-1 py-0 h-5 border-none"
-                                style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                                className="text-xs"
+                                style={{
+                                  backgroundColor: `${task.context.color}15`,
+                                  borderColor: task.context.color,
+                                  color: task.context.color
+                                }}
                               >
-                                {tag.name}
+                                {task.context.name}
                               </Badge>
-                            ))}
+                            )}
+                            {task.campaign && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700"
+                              >
+                                🚀 {task.campaign.name}
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                            {task.description}
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge className={statusColors[task.status]}>
-                        {task.status.replace('_', ' ')}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${priorityColors[task.priority || 1]}`}
-                            style={{ width: `${((task.priority || 1) / 5) * 100}%` }}
-                          />
+                          {task.task_tags && task.task_tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {task.task_tags.map(({ tag }) => tag && (
+                                <Badge
+                                  key={tag.id}
+                                  variant="outline"
+                                  className="text-[10px] px-1 py-0 h-5 border-none"
+                                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                                >
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                              {task.description}
+                            </p>
+                          )}
                         </div>
-                        <span className="text-xs text-muted-foreground">{task.priority || 1}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge className={statusColors[task.status]}>
+                          {task.status?.replace('_', ' ')}
+                        </Badge>
+                      </td>
+                      <td className={`px-6 py-4 text-sm ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                        {task.due_date ? (
+                          <>
+                            {isOverdue && '🔴 '}
+                            {new Date(task.due_date).toLocaleDateString()}
+                          </>
+                        ) : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${priorityColors[task.priority || 1]}`}
+                              style={{ width: `${((task.priority || 1) / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground">{task.priority || 1}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
