@@ -669,12 +669,20 @@ export function Settings() {
         <Button
           onClick={async () => {
             try {
+              // Safety filter: Only send columns that exist in Prod DB
+              // This prevents 'Could not find column' errors if migrations haven't run
+              const safePayload = {
+                user_id: (await supabase.auth.getUser()).data.user.id,
+                telegram: preferences.telegram,
+                dashboardWidgets: preferences.dashboardWidgets,
+                prayerLocation: preferences.prayerLocation,
+                spotify_playlist_url: preferences.spotify_playlist_url
+                // Exclude campaigns and work hours until DB migrated
+              }
+
               const { error } = await supabase
                 .from('user_preferences')
-                .upsert({
-                  user_id: (await supabase.auth.getUser()).data.user.id,
-                  ...preferences
-                })
+                .upsert(safePayload)
 
               if (error) throw error
               toast.success('Preferences saved successfully!')
