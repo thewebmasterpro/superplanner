@@ -11,6 +11,7 @@ import { Settings } from './pages/Settings'
 import { Trash } from './pages/Trash'
 import { ArchivePage } from './pages/Archive'
 import { LandingPage } from './pages/LandingPage'
+import { TeamSettings } from './pages/TeamSettings'
 import { LoginModal } from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 import './globals.css'
@@ -33,7 +34,9 @@ const routes = {
   '/contacts': Contacts,
   '/settings': Settings,
   '/trash': Trash,
+  '/trash': Trash,
   '/archive': ArchivePage,
+  '/team': TeamSettings,
 }
 
 function AppContent() {

@@ -36,13 +36,22 @@ export const useUserStore = create(
       // Theme
       theme: 'light', // 'light', 'dark'
       setTheme: (theme) => set({ theme }),
+      // Teams
+      teams: [],
+      currentTeam: null,
+      setCurrentTeam: (team) => set({ currentTeam: team }),
+      setTeams: (teams) => set({ teams }),
+
+      // Actions
+      logout: () => set({ user: null, currentTeam: null, teams: [] }),
     }),
     {
       name: 'user-storage', // LocalStorage key
       partialize: (state) => ({
         preferences: state.preferences,
-        theme: state.theme
-      }), // Only persist preferences and theme, not user
+        theme: state.theme,
+        currentTeam: state.currentTeam // Persist selected team
+      }),
     }
   )
 )
