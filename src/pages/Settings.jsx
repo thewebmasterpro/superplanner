@@ -682,7 +682,7 @@ export function Settings() {
 
               const { error } = await supabase
                 .from('user_preferences')
-                .upsert(safePayload)
+                .upsert(safePayload, { onConflict: 'user_id' })
 
               if (error) throw error
               toast.success('Preferences saved successfully!')
