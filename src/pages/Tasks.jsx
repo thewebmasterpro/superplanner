@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Plus, Search, SlidersHorizontal, Loader2 } from 'lucide-react'
+import { Plus, Search, SlidersHorizontal, Loader2, Square, CheckSquare } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { useUIStore } from '../stores/uiStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { TaskModal } from '@/components/TaskModal'
+import { BulkActionsBar } from '@/components/BulkActionsBar'
 
 export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
@@ -22,6 +24,7 @@ export function Tasks() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [selectedTask, setSelectedTask] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
 
   const statusColors = {
     todo: 'bg-status-todo/20 text-status-todo border-status-todo/30',
@@ -46,6 +49,29 @@ export function Tasks() {
     const matchesPriority = priorityFilter === 'all' || task.priority === parseInt(priorityFilter)
     return matchesSearch && matchesStatus && matchesPriority
   })
+
+  // Selection handlers
+  const toggleSelect = (taskId, e) => {
+    e.stopPropagation()
+    setSelectedIds(prev =>
+      prev.includes(taskId)
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredTasks.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(filteredTasks.map(t => t.id))
+    }
+  }
+
+  const clearSelection = () => setSelectedIds([])
+
+  const isAllSelected = filteredTasks.length > 0 && selectedIds.length === filteredTasks.length
+  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < filteredTasks.length
 
   return (
     <div className="container-tight py-8 space-y-6">
@@ -128,6 +154,14 @@ export function Tasks() {
           <table className="w-full">
             <thead className="bg-muted/50 border-b">
               <tr>
+                <th className="px-4 py-3 text-left w-10">
+                  <Checkbox
+                    checked={isAllSelected}
+                    ref={el => el && (el.indeterminate = isSomeSelected)}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">Title</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">Due Date</th>
@@ -137,14 +171,14 @@ export function Tasks() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     <p>Loading tasks...</p>
                   </td>
                 </tr>
               ) : filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
                     {tasks.length === 0
                       ? 'No tasks yet. Create one to get started!'
                       : 'No tasks match your filters.'}
@@ -154,12 +188,21 @@ export function Tasks() {
                 filteredTasks.map((task) => (
                   <tr
                     key={task.id}
-                    className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                    className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${selectedIds.includes(task.id) ? 'bg-primary/5' : ''
+                      }`}
                     onClick={() => {
                       setSelectedTask(task)
                       setTaskModalOpen(true)
                     }}
                   >
+                    <td className="px-4 py-4">
+                      <Checkbox
+                        checked={selectedIds.includes(task.id)}
+                        onCheckedChange={(e) => toggleSelect(task.id, { stopPropagation: () => { } })}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Select ${task.title}`}
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div>
                         <div className="flex items-center gap-2">
@@ -239,6 +282,15 @@ export function Tasks() {
         <p className="text-sm text-muted-foreground text-center">
           Showing {filteredTasks.length} of {tasks.length} tasks
         </p>
+      )}
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <BulkActionsBar
+          selectedIds={selectedIds}
+          onClear={clearSelection}
+          onSuccess={clearSelection}
+        />
       )}
 
       {/* Task Modal */}
