@@ -535,15 +535,8 @@ export function Tasks() {
 
 // Task Row Component with polish
 function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
-  const [completeAnim, setCompleteAnim] = useState(false)
 
   const handleCheck = () => {
-    if (task.status !== 'done') {
-      setCompleteAnim(true)
-      setTimeout(() => {
-        onSelect() // Actually this logic should move status to done, but for now we just toggle selection or status
-      }, 300)
-    }
     onSelect()
   }
 
@@ -551,7 +544,6 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors,
     <tr
       className={`border-b transition-all duration-200 cursor-pointer group
         ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'}
-        ${completeAnim ? 'opacity-50 scale-[0.98]' : ''}
       `}
       onClick={onClick}
     >
@@ -561,7 +553,6 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors,
             checked={isSelected}
             onCheckedChange={handleCheck}
             onClick={(e) => e.stopPropagation()}
-            className={completeAnim ? 'animate-check' : ''}
           />
         </div>
       </td>
