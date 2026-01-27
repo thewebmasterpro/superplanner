@@ -98,11 +98,14 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
+            const { data: { user: authUser } } = await supabase.auth.getUser()
+            if (!authUser) throw new Error('Not authenticated')
+
             const { data, error } = await supabase
                 .from('teams')
                 .insert({
                     name: createTeamName,
-                    owner_id: user.id
+                    owner_id: authUser.id
                 })
                 .select()
                 .single()
@@ -113,8 +116,8 @@ export function TeamSettings() {
             setCreateTeamName('')
             loadTeams() // Refresh
         } catch (error) {
-            toast.error('Failed to create team')
-            console.error(error)
+            toast.error(`Failed to create team: ${error.message}`)
+            console.error('Create team error:', error)
         } finally {
             setLoading(false)
         }
@@ -126,26 +129,27 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
-            // Create invitation
-            const token = Math.random().toString(36).substring(2) + Date.now().toString(36)
-
-            const { error } = await supabase
-                .from('team_invitations')
-                .insert({
-                    team_id: currentTeam.id,
-                    email: inviteEmail,
-                    invited_by: user.id,
-                    role: 'member',
-                    token: token
-                })
+            // Use RPC to check for existing user and handle permissions
+            const { data, error } = await supabase.rpc('invite_user_to_team', {
+                _team_id: currentTeam.id,
+                _email: inviteEmail
+            })
 
             if (error) throw error
 
-            toast.success(`Invitation sent to ${inviteEmail}`)
+            if (data.status === 'success') {
+                toast.success(`Invitation sent to ${inviteEmail}`)
+                if (data.user_found) {
+                    toast.success('User found! They can accept it immediately.')
+                }
+            } else {
+                toast.error(data.message || 'Could not send invitation')
+            }
+
             setInviteEmail('')
             loadTeamDetails(currentTeam.id)
         } catch (error) {
-            toast.error('Failed to send invitation')
+            toast.error(`Error: ${error.message}`)
             console.error(error)
         } finally {
             setLoading(false)

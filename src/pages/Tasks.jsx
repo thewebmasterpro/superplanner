@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns } from 'lucide-react'
+import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns, User } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { useContactsList } from '../hooks/useContacts'
 import { useUIStore } from '../stores/uiStore'
@@ -26,6 +26,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { supabase } from '../lib/supabase'
 
 export function Tasks() {
@@ -42,6 +43,7 @@ export function Tasks() {
   const [tagFilter, setTagFilter] = useState('all')
   const [dueDateFilter, setDueDateFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
+  const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [sortOrder, setSortOrder] = useState('created_desc')
   const [visibleColumns, setVisibleColumns] = useState({
     status: true,
@@ -110,6 +112,21 @@ export function Tasks() {
       const matchesClient = clientFilter === 'all' ||
         task.contact_id === clientFilter
 
+      // Assignee Filter (My Tasks)
+      // We need current user ID. Assuming we fetch it or pass it. 
+      // For now, let's assume we filter by "assigned to me" if specific value 'me' is selected.
+      // But we need user ID.
+      // Let's use `supabase.auth.getUser()` in useEffect or store?
+      // Better: filter. assigneeFilter === 'me'
+      let matchesAssignee = true
+      // Note: we can't easily filter by 'me' without the ID synchronously here unless we store it.
+      // Assuming tasks have assigned_to UUID.
+      if (assigneeFilter === 'assigned') {
+        matchesAssignee = !!task.assigned_to
+      } else if (assigneeFilter === 'unassigned') {
+        matchesAssignee = !task.assigned_to
+      }
+
       // Due date filter
       let matchesDueDate = true
       if (dueDateFilter !== 'all' && task.due_date) {
@@ -130,7 +147,7 @@ export function Tasks() {
       }
 
       return matchesSearch && matchesStatus && matchesPriority && matchesContext &&
-        matchesCampaign && matchesType && matchesTag && matchesDueDate && matchesClient
+        matchesCampaign && matchesType && matchesTag && matchesDueDate && matchesClient && matchesAssignee
     })
 
     // Sort tasks
@@ -157,7 +174,7 @@ export function Tasks() {
           return new Date(b.created_at) - new Date(a.created_at)
       }
     })
-  }, [tasks, searchQuery, statusFilter, priorityFilter, contextFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, sortOrder])
+  }, [tasks, searchQuery, statusFilter, priorityFilter, contextFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
 
   // Count active filters
   const activeFilterCount = [
@@ -168,7 +185,10 @@ export function Tasks() {
     typeFilter !== 'all',
     tagFilter !== 'all',
     clientFilter !== 'all',
+    tagFilter !== 'all',
+    clientFilter !== 'all',
     dueDateFilter !== 'all',
+    assigneeFilter !== 'all',
   ].filter(Boolean).length
 
   // Clear all filters
@@ -181,7 +201,10 @@ export function Tasks() {
     setTypeFilter('all')
     setTagFilter('all')
     setDueDateFilter('all')
+    setTagFilter('all')
+    setDueDateFilter('all')
     setClientFilter('all')
+    setAssigneeFilter('all')
   }
 
   // Selection handlers
@@ -382,6 +405,18 @@ export function Tasks() {
                     {contact.name} {contact.company && `(${contact.company})`}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            {/* Assignee Filter */}
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tasks</SelectItem>
+                <SelectItem value="assigned">👷 Assigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
               </SelectContent>
             </Select>
 
@@ -592,6 +627,15 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors,
                 👤 Client
               </Badge>
             )}
+            {task.assigned_to && (
+              <div className="ml-1" title="Assigned">
+                <Avatar className="h-5 w-5">
+                  <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
+                    <User className="h-3 w-3" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            )}
           </div>
           {task.task_tags && task.task_tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
@@ -615,30 +659,36 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors,
         </div>
       </td>
 
-      {visibleColumns.status && (
-        <td className="px-6 py-4">
-          <Badge className={`${statusColors[task.status]} transition-transform group-hover:scale-105`}>
-            {task.status?.replace('_', ' ')}
-          </Badge>
-        </td>
-      )}
+      {
+        visibleColumns.status && (
+          <td className="px-6 py-4">
+            <Badge className={`${statusColors[task.status]} transition-transform group-hover:scale-105`}>
+              {task.status?.replace('_', ' ')}
+            </Badge>
+          </td>
+        )
+      }
 
-      {visibleColumns.dueDate && (
-        <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-          {task.due_date ? (
-            <span className="flex items-center gap-1">
-              {isOverdue && '🔴'}
-              {new Date(task.due_date).toLocaleDateString()}
-            </span>
-          ) : '-'}
-        </td>
-      )}
+      {
+        visibleColumns.dueDate && (
+          <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+            {task.due_date ? (
+              <span className="flex items-center gap-1">
+                {isOverdue && '🔴'}
+                {new Date(task.due_date).toLocaleDateString()}
+              </span>
+            ) : '-'}
+          </td>
+        )
+      }
 
-      {visibleColumns.priority && (
-        <td className="px-6 py-4">
-          <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
-        </td>
-      )}
-    </tr>
+      {
+        visibleColumns.priority && (
+          <td className="px-6 py-4">
+            <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
+          </td>
+        )
+      }
+    </tr >
   )
 }

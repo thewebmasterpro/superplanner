@@ -27,6 +27,7 @@ import { TaskNotes } from './TaskNotes'
 import { BlockerManager } from './BlockerManager'
 import { MeetingAgendaManager } from './MeetingAgendaManager'
 import { useContextStore } from '../stores/contextStore'
+import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
 
@@ -37,12 +38,14 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const deleteTask = useDeleteTask()
   const archiveTask = useArchiveTask()
   const { contexts, activeContextId, getActiveContext } = useContextStore()
+  const { currentTeam } = useUserStore()
   const { data: contactsList = [] } = useContactsList()
 
   const [categories, setCategories] = useState([])
   const [projects, setProjects] = useState([])
   const [tags, setTags] = useState([])
   const [selectedTags, setSelectedTags] = useState([])
+  const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(false)
 
   // Agenda Items (sub-tasks) for meetings
@@ -66,8 +69,11 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     type: 'task',    // 'task' or 'meeting'
     agenda: '',       // for meetings (deprecated, replaced by agendaItems)
     campaign_id: '',   // Link to campaign
+    campaign_id: '',   // Link to campaign
     context_id: '',    // Link to context (auto-filled from activeContextId)
-    contact_id: ''     // Link to client/contact
+    contact_id: '',    // Link to client/contact
+    team_id: '',       // Link to team
+    assigned_to: ''    // Link to team member
   })
 
   // Load categories, projects, and agenda items
@@ -79,8 +85,16 @@ export function TaskModal({ open, onOpenChange, task = null }) {
           loadAgendaItems(task.id)
         }
         loadTaskTags(task.id)
+        if (task.team_id) {
+          loadTeamMembers(task.team_id)
+        } else if (currentTeam) {
+          loadTeamMembers(currentTeam.id)
+        }
       } else {
         setSelectedTags([])
+        if (currentTeam) {
+          loadTeamMembers(currentTeam.id)
+        }
       }
     } else {
       // Reset when modal closes
@@ -111,7 +125,9 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         agenda: task.agenda || '',
         campaign_id: task.campaign_id || '',
         context_id: task.context_id || '',
-        contact_id: task.contact_id || ''
+        contact_id: task.contact_id || '',
+        team_id: task.team_id || '',
+        assigned_to: task.assigned_to || ''
       })
     } else {
       // Reset form for creation
@@ -132,13 +148,32 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         agenda: '',
         campaign_id: '',
         context_id: (activeContextId === 'trash' || activeContextId === 'archive') ? '' : (activeContextId || ''),
-        contact_id: ''
+        contact_id: '',
+        team_id: currentTeam ? currentTeam.id : '',
+        assigned_to: ''
       })
     }
   }, [task, activeContextId])
 
-  /* New state for campaigns */
   const [campaigns, setCampaigns] = useState([])
+
+  const loadTeamMembers = async (teamId) => {
+    try {
+      // Attempt to fetch with user details (requires profiles table or visible auth.users)
+      // Since we likely don't have a public profiles table yet, this might fail to get emails.
+      // We really should have a public profiles table or a view.
+      // For now, we'll try to get what we can.
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+
+      if (error) throw error
+      setTeamMembers(data || [])
+    } catch (error) {
+      console.error('Error loading team members:', error)
+    }
+  }
 
   const loadCategoriesAndProjects = async () => {
     try {
@@ -587,6 +622,27 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Row 5.5: Assignee (Only if team members available) */}
+              {teamMembers.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="assigned_to">👷 Assigned To</Label>
+                  <Select value={formData.assigned_to || 'none'} onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? null : value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {teamMembers.map((member) => (
+                        <SelectItem key={member.user_id} value={member.user_id}>
+                          {/* Try to show email/name if available, else ID */}
+                          {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`} ({member.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {formData.recurrence && (
                 <div className="space-y-2">
