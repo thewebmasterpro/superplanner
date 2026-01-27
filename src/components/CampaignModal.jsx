@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
 import {
     Select,
     SelectContent,
@@ -19,13 +20,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useContextStore } from '../stores/contextStore'
 
 export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }) {
     const isEditing = !!campaign
     const [loading, setLoading] = useState(false)
-    const [contexts, setContexts] = useState([])
+    const { contexts, activeContextId, getActiveContext, loadContexts } = useContextStore()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -51,28 +53,19 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                     status: campaign.status || 'draft'
                 })
             } else {
+                // For new campaigns: inherit activeContextId
                 setFormData({
                     name: '',
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: '',
-                    context_id: '',
+                    context_id: activeContextId || '',  // Auto-inherit
                     priority: 3,
                     status: 'draft'
                 })
             }
         }
-    }, [open, campaign])
-
-    const loadContexts = async () => {
-        try {
-            const { data, error } = await supabase.from('contexts').select('*').order('name')
-            if (error) throw error
-            setContexts(data || [])
-        } catch (error) {
-            console.error('Error loading contexts:', error)
-        }
-    }
+    }, [open, campaign, activeContextId])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -83,6 +76,12 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
         if (formData.end_date < formData.start_date) {
             toast.error('End date must be after start date')
+            return
+        }
+
+        // Validate context_id is required in Global view (when creating)
+        if (!isEditing && !activeContextId && !formData.context_id) {
+            toast.error('Please select a context before creating')
             return
         }
 
@@ -179,21 +178,44 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="context">Context</Label>
-                            <Select
-                                value={formData.context_id || "none"}
-                                onValueChange={(val) => setFormData({ ...formData, context_id: val === "none" ? "" : val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select context" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">None</SelectItem>
-                                    {contexts.map(ctx => (
-                                        <SelectItem key={ctx.id} value={ctx.id}>{ctx.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Label htmlFor="context" className="flex items-center gap-2">
+                                Context
+                                {!activeContextId && !isEditing && (
+                                    <span className="text-xs text-amber-500 flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" /> Required
+                                    </span>
+                                )}
+                            </Label>
+                            {activeContextId && !isEditing ? (
+                                <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
+                                    <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: getActiveContext()?.color || '#6366f1' }}
+                                    />
+                                    <span className="text-sm">{getActiveContext()?.name || 'Unknown'}</span>
+                                    <Badge variant="outline" className="ml-auto text-xs">Auto</Badge>
+                                </div>
+                            ) : (
+                                <Select
+                                    value={formData.context_id || "none"}
+                                    onValueChange={(val) => setFormData({ ...formData, context_id: val === "none" ? "" : val })}
+                                >
+                                    <SelectTrigger className={!activeContextId && !formData.context_id && !isEditing ? 'border-amber-500' : ''}>
+                                        <SelectValue placeholder="Select context" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {isEditing && <SelectItem value="none">None</SelectItem>}
+                                        {contexts.map(ctx => (
+                                            <SelectItem key={ctx.id} value={ctx.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color || '#6366f1' }} />
+                                                    {ctx.name}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
 
                         <div className="space-y-2">
