@@ -21,15 +21,18 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
+import { useContextStore } from '../stores/contextStore'
+import toast from 'react-hot-toast'
 
 export function TaskModal({ open, onOpenChange, task = null }) {
   const isEditing = !!task
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
+  const { contexts, activeContextId, getActiveContext } = useContextStore()
 
   const [categories, setCategories] = useState([])
   const [projects, setProjects] = useState([])
@@ -57,7 +60,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     recurrence_end: '',
     type: 'task',    // 'task' or 'meeting'
     agenda: '',       // for meetings (deprecated, replaced by agendaItems)
-    campaign_id: ''   // Link to campaign
+    campaign_id: '',   // Link to campaign
+    context_id: ''     // Link to context (auto-filled from activeContextId)
   })
 
   // Load categories, projects, and agenda items
@@ -99,7 +103,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         recurrence_end: task.recurrence_end || '',
         type: task.type || 'task',
         agenda: task.agenda || '',
-        campaign_id: task.campaign_id || ''
+        campaign_id: task.campaign_id || '',
+        context_id: task.context_id || ''
       })
     } else {
       // Reset form for creation
@@ -118,10 +123,11 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         recurrence_end: '',
         type: 'task',
         agenda: '',
-        campaign_id: ''
+        campaign_id: '',
+        context_id: activeContextId || ''  // Auto-inherit from active context
       })
     }
-  }, [task])
+  }, [task, activeContextId])
 
   /* New state for campaigns */
   const [campaigns, setCampaigns] = useState([])
@@ -235,6 +241,12 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     e.preventDefault()
 
     if (!formData.title.trim()) {
+      return
+    }
+
+    // Validate context_id is required in Global view (when creating)
+    if (!isEditing && !activeContextId && !formData.context_id) {
+      toast.error('Please select a context before creating')
       return
     }
 
@@ -646,6 +658,42 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                     value={formData.recurrence_end}
                     onChange={(e) => setFormData({ ...formData, recurrence_end: e.target.value })}
                   />
+                </div>
+              )}
+
+              {/* Context Selector - shown prominently in Global view, hidden when context is active */}
+              {!activeContextId ? (
+                <div className="space-y-2 p-3 border border-dashed rounded-lg bg-muted/30">
+                  <Label htmlFor="context" className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    Context * <span className="text-xs text-muted-foreground font-normal">(required in Global view)</span>
+                  </Label>
+                  <Select
+                    value={formData.context_id || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, context_id: value === 'none' ? '' : value })}
+                  >
+                    <SelectTrigger className={!formData.context_id ? 'border-amber-500' : ''}>
+                      <SelectValue placeholder="Select a context" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" disabled>Select a context...</SelectItem>
+                      {contexts.map((ctx) => (
+                        <SelectItem key={ctx.id} value={ctx.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color || '#6366f1' }} />
+                            {ctx.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Creating in:</span>
+                  <Badge variant="outline" style={{ borderColor: getActiveContext()?.color, color: getActiveContext()?.color }}>
+                    {getActiveContext()?.name || 'Unknown Context'}
+                  </Badge>
                 </div>
               )}
 

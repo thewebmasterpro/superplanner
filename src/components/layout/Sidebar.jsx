@@ -4,6 +4,7 @@ import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import SpotifyPlayer from '../SpotifyPlayer'
+import { ContextSelector } from '../ContextSelector'
 
 export function Sidebar() {
   const { isSidebarOpen, setSidebarOpen } = useUIStore()
@@ -54,6 +55,11 @@ export function Sidebar() {
         {/* Logo */}
         <div className="p-4 border-b border-border">
           <h2 className="text-lg font-bold text-primary">🚀 Superplanner</h2>
+        </div>
+
+        {/* Context Selector */}
+        <div className="p-3 border-b border-border bg-muted/30">
+          <ContextSelector />
         </div>
 
         {/* Menu items */}

@@ -18,6 +18,7 @@ import { CampaignModal } from '../components/CampaignModal'
 import { CampaignGantt } from '../components/CampaignGantt'
 import { CampaignDetails } from '../components/CampaignDetails'
 import { toast } from 'react-hot-toast'
+import { useContextStore } from '../stores/contextStore'
 
 export function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
@@ -26,6 +27,7 @@ export function Campaigns() {
   const [statusFilter, setStatusFilter] = useState('active') // active, draft, completed, archived, all
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState(null)
+  const activeContextId = useContextStore(state => state.activeContextId)
 
   /* New state for View Mode & Selected Campaign */
   const [view, setView] = useState('list') // 'list' | 'gantt' | 'details'
@@ -33,7 +35,7 @@ export function Campaigns() {
 
   useEffect(() => {
     loadCampaigns()
-  }, [])
+  }, [activeContextId]) // Reload when context changes
 
   const loadCampaigns = async () => {
     setLoading(true)
@@ -45,12 +47,17 @@ export function Campaigns() {
         .from('campaigns')
         .select(`
           *,
-          context:contexts(name),
+          context:contexts(name, color),
           tasks:tasks(count),
           meetings:meetings(count)
         `)
         .eq('user_id', user.id)
         .order('start_date', { ascending: false })
+
+      // Filter by context if not Global view
+      if (activeContextId) {
+        query = query.eq('context_id', activeContextId)
+      }
 
       const { data, error } = await query
 

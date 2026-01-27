@@ -1,15 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import { useContextStore } from '../stores/contextStore'
 
 export function useTasks() {
+  const activeContextId = useContextStore(state => state.activeContextId)
+
   return useQuery({
-    queryKey: ['tasks'],
+    queryKey: ['tasks', activeContextId],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return []
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('tasks')
         .select(`
           *,
@@ -17,10 +20,18 @@ export function useTasks() {
           project:projects(name),
           parent_meeting:parent_meeting_id(id, title, type),
           task_tags(tag:tags(id, name, color)),
-          campaign:campaigns(name)
+          campaign:campaigns(name),
+          context:contexts(name, color)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+
+      // Filter by context if not Global view
+      if (activeContextId) {
+        query = query.eq('context_id', activeContextId)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       return data || []
