@@ -1,3 +1,8 @@
+import { Home, CheckSquare, Calendar, BarChart3, Settings, X } from 'lucide-react'
+import { useUIStore } from '../../stores/uiStore'
+import { useUserStore } from '../../stores/userStore'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import SpotifyPlayer from '../SpotifyPlayer'
 
 export function Sidebar() {
