@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { supabase } from './lib/supabase'
 import { MainLayout } from './components/layout/MainLayout'
