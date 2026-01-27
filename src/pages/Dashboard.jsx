@@ -11,7 +11,7 @@ import PrayerCountdown from '../components/PrayerCountdown'
 import QuranVerse from '../components/QuranVerse'
 import Pomodoro from '../components/Pomodoro'
 import TaskTimer from '../components/TaskTimer'
-import TaskTimer from '../components/TaskTimer'
+
 
 export function Dashboard() {
   const { data: tasks = [], isLoading } = useTasks()
