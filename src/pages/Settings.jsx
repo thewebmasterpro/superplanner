@@ -667,7 +667,21 @@ export function Settings() {
       {/* Sticky Save Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 flex justify-end md:left-64">
         <Button
-          onClick={() => toast.success('Preferences saved successfully!')}
+          onClick={async () => {
+            try {
+              const { error } = await supabase
+                .from('user_preferences')
+                .upsert({
+                  user_id: (await supabase.auth.getUser()).data.user.id,
+                  ...preferences
+                })
+
+              if (error) throw error
+              toast.success('Preferences saved successfully!')
+            } catch (e) {
+              toast.error('Failed to save: ' + e.message)
+            }
+          }}
           className="px-8"
         >
           💾 Save Preferences
