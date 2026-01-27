@@ -107,7 +107,11 @@ export const useContextStore = create(
         }),
         {
             name: 'superplanner-context',
-            partialize: (state) => ({ activeContextId: state.activeContextId })
+            name: 'superplanner-context',
+            partialize: (state) => ({
+                // Don't persist activeContextId so it defaults to Global View on reload
+                contexts: state.contexts
+            })
         }
     )
 )
