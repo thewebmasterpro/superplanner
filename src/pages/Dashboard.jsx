@@ -11,7 +11,7 @@ import PrayerCountdown from '../components/PrayerCountdown'
 import QuranVerse from '../components/QuranVerse'
 import Pomodoro from '../components/Pomodoro'
 import TaskTimer from '../components/TaskTimer'
-import SpotifyPlayer from '../components/SpotifyPlayer'
+import TaskTimer from '../components/TaskTimer'
 
 export function Dashboard() {
   const { data: tasks = [], isLoading } = useTasks()
@@ -210,21 +210,6 @@ export function Dashboard() {
           </Card>
         )}
       </div>
-
-      {/* Spotify Player - Full width */}
-      {preferences?.dashboardWidgets?.spotify !== false && userPreferences?.spotify_playlist_url && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Music</CardTitle>
-            <CardDescription>Focus with your playlist</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
-              <SpotifyPlayer playlistUrl={userPreferences.spotify_playlist_url} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Upcoming Tasks */}
       {preferences?.dashboardWidgets?.upcomingTasks !== false && (

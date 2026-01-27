@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { Timer, Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
@@ -10,25 +9,11 @@ import {
     SelectValue,
 } from "./ui/select"
 import { cn } from '../lib/utils'
+import { useTimerStore } from '../stores/timerStore'
 
 function TaskTimer({ tasks }) {
-    const [selectedTaskId, setSelectedTaskId] = useState('')
-    const [isRunning, setIsRunning] = useState(false)
-    const [seconds, setSeconds] = useState(0)
-
-    useEffect(() => {
-        let interval = null
-
-        if (isRunning) {
-            interval = setInterval(() => {
-                setSeconds(prev => prev + 1)
-            }, 1000)
-        } else {
-            clearInterval(interval)
-        }
-
-        return () => clearInterval(interval)
-    }, [isRunning])
+    const { taskTimer, setTaskTimerState, resetTaskTimer } = useTimerStore()
+    const { selectedTaskId, isRunning, seconds } = taskTimer
 
     const formatTime = (totalSeconds) => {
         const hours = Math.floor(totalSeconds / 3600)
@@ -40,19 +25,17 @@ function TaskTimer({ tasks }) {
 
     const handleStart = () => {
         if (!selectedTaskId) {
-            // Optional: User toast warning
             return
         }
-        setIsRunning(true)
+        setTaskTimerState({ isRunning: true })
     }
 
     const handleStop = () => {
-        setIsRunning(false)
+        setTaskTimerState({ isRunning: false })
     }
 
     const handleReset = () => {
-        setIsRunning(false)
-        setSeconds(0)
+        resetTaskTimer()
     }
 
     const selectedTask = tasks.find(t => t.id === selectedTaskId)
@@ -69,7 +52,7 @@ function TaskTimer({ tasks }) {
                 <div className="space-y-2">
                     <Select
                         value={selectedTaskId}
-                        onValueChange={setSelectedTaskId}
+                        onValueChange={(id) => setTaskTimerState({ selectedTaskId: id })}
                         disabled={isRunning}
                     >
                         <SelectTrigger>

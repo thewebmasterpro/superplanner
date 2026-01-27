@@ -1,8 +1,4 @@
-import { Home, CheckSquare, Calendar, BarChart3, Settings, X } from 'lucide-react'
-import { useUIStore } from '../../stores/uiStore'
-import { useUserStore } from '../../stores/userStore'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import SpotifyPlayer from '../SpotifyPlayer'
 
 export function Sidebar() {
   const { isSidebarOpen, setSidebarOpen } = useUIStore()
@@ -36,7 +32,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside className={`
         fixed lg:relative top-0 left-0 h-screen z-50 w-64 border-r border-border bg-card
-        transition-all duration-200 lg:translate-x-0
+        transition-all duration-200 lg:translate-x-0 flex flex-col
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Close button mobile */}
@@ -55,7 +51,7 @@ export function Sidebar() {
         </div>
 
         {/* Menu items */}
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon
             const isDisabled = item.disabled
@@ -90,6 +86,13 @@ export function Sidebar() {
             )
           })}
         </nav>
+
+        {/* Spotify Player in Sidebar */}
+        {preferences.spotify_playlist_url && preferences?.dashboardWidgets?.spotify !== false && (
+          <div className="p-4 border-t border-border">
+            <SpotifyPlayer playlistUrl={preferences.spotify_playlist_url} />
+          </div>
+        )}
       </aside>
     </>
   )
