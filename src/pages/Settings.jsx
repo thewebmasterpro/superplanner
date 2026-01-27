@@ -12,6 +12,7 @@ import { Plus, Trash2, Settings as SettingsIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { TagManager } from '@/components/TagManager'
 import { ContextManager } from '@/components/ContextManager'
+import { DataBackupSettings } from '@/components/settings/DataBackupSettings'
 
 export function Settings() {
   const { preferences, setPreferences } = useUserStore()
@@ -151,6 +152,7 @@ export function Settings() {
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
+          <TabsTrigger value="data">💾 Data & Backup</TabsTrigger>
         </TabsList>
 
         {/* Contexts Tab */}
@@ -552,6 +554,11 @@ export function Settings() {
               <TagManager />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Data & Backup Tab */}
+        <TabsContent value="data" className="space-y-4">
+          <DataBackupSettings />
         </TabsContent>
       </Tabs>
 
