@@ -13,12 +13,6 @@ import { supabase } from '../lib/supabase'
  */
 async function sendTelegramMessage(chatId, message) {
     try {
-        const { data: { session } } = await supabase.auth.getSession()
-
-        if (!session) {
-            throw new Error('Not authenticated')
-        }
-
         // Get Supabase project URL from the client
         const supabaseUrl = supabase.supabaseUrl || import.meta.env.VITE_SUPABASE_URL
         const functionUrl = `${supabaseUrl}/functions/v1/send-telegram-notification`
@@ -27,7 +21,6 @@ async function sendTelegramMessage(chatId, message) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
                 chat_id: chatId,

@@ -294,10 +294,10 @@ export function Settings() {
                   <Label>City</Label>
                   <Input
                     type="text"
-                    value={preferences.prayerLocation?.city || ''}
+                    value={preferences?.prayerLocation?.city || ''}
                     onChange={(e) => setPreferences({
                       prayerLocation: {
-                        ...preferences.prayerLocation,
+                        ...(preferences?.prayerLocation || { country: '' }),
                         city: e.target.value
                       }
                     })}
@@ -308,10 +308,10 @@ export function Settings() {
                   <Label>Country</Label>
                   <Input
                     type="text"
-                    value={preferences.prayerLocation?.country || ''}
+                    value={preferences?.prayerLocation?.country || ''}
                     onChange={(e) => setPreferences({
                       prayerLocation: {
-                        ...preferences.prayerLocation,
+                        ...(preferences?.prayerLocation || { city: '' }),
                         country: e.target.value
                       }
                     })}
@@ -335,10 +335,10 @@ export function Settings() {
                 <Label>Telegram Chat ID</Label>
                 <Input
                   type="text"
-                  value={preferences.telegram?.chatId || ''}
+                  value={preferences?.telegram?.chatId || ''}
                   onChange={(e) => setPreferences({
                     telegram: {
-                      ...preferences.telegram,
+                      ...(preferences?.telegram || { enabled: false, advanceMinutes: 30 }),
                       chatId: e.target.value
                     }
                   })}
@@ -353,10 +353,10 @@ export function Settings() {
                 <input
                   type="checkbox"
                   id="enableTelegram"
-                  checked={preferences.telegram?.enabled || false}
+                  checked={preferences?.telegram?.enabled || false}
                   onChange={(e) => setPreferences({
                     telegram: {
-                      ...preferences.telegram,
+                      ...(preferences?.telegram || { chatId: '', advanceMinutes: 30 }),
                       enabled: e.target.checked
                     }
                   })}
@@ -371,10 +371,10 @@ export function Settings() {
                 <Label>Reminder Time (minutes before)</Label>
                 <Input
                   type="number"
-                  value={preferences.telegram?.advanceMinutes || 30}
+                  value={preferences?.telegram?.advanceMinutes || 30}
                   onChange={(e) => setPreferences({
                     telegram: {
-                      ...preferences.telegram,
+                      ...(preferences?.telegram || { chatId: '', enabled: false }),
                       advanceMinutes: parseInt(e.target.value)
                     }
                   })}
@@ -390,7 +390,7 @@ export function Settings() {
                 variant="outline"
                 size="sm"
                 onClick={handleTestTelegram}
-                disabled={!preferences.telegram?.chatId || !preferences.telegram?.enabled}
+                disabled={!preferences?.telegram?.chatId || !preferences?.telegram?.enabled}
               >
                 🧪 Send Test Notification
               </Button>

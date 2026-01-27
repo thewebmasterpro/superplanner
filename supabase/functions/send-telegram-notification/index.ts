@@ -17,7 +17,16 @@ serve(async (req) => {
         const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
 
         if (!TELEGRAM_BOT_TOKEN) {
-            throw new Error('TELEGRAM_BOT_TOKEN not configured in Supabase Secrets')
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    error: 'TELEGRAM_BOT_TOKEN not configured in Supabase Secrets. Please add it in Settings → Edge Functions → Secrets'
+                }),
+                {
+                    status: 500,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                }
+            )
         }
 
         // Parse request body
@@ -25,7 +34,10 @@ serve(async (req) => {
 
         if (!chat_id || !message) {
             return new Response(
-                JSON.stringify({ error: 'chat_id and message are required' }),
+                JSON.stringify({
+                    success: false,
+                    error: 'chat_id and message are required'
+                }),
                 {
                     status: 400,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -51,7 +63,16 @@ serve(async (req) => {
         const data = await response.json()
 
         if (!response.ok || !data.ok) {
-            throw new Error(`Telegram API error: ${data.description || 'Unknown error'}`)
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    error: `Telegram API error: ${data.description || 'Unknown error'}`
+                }),
+                {
+                    status: 500,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                }
+            )
         }
 
         return new Response(
@@ -65,7 +86,6 @@ serve(async (req) => {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             }
         )
-
     } catch (error) {
         console.error('Error sending Telegram notification:', error)
 
