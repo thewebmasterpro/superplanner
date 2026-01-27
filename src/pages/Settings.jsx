@@ -153,47 +153,7 @@ export function Settings() {
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Campaign Settings</CardTitle>
-              <CardDescription>Configure your campaign workflow</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="setupDays">Campaign Setup Days Before</Label>
-                <Input
-                  id="setupDays"
-                  type="number"
-                  value={preferences.campaignSetupDaysBefore}
-                  onChange={(e) => setPreferences({
-                    campaignSetupDaysBefore: parseInt(e.target.value)
-                  })}
-                  min="1"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Number of days before campaign start to begin setup
-                </p>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="reportingDays">Campaign Reporting Days After</Label>
-                <Input
-                  id="reportingDays"
-                  type="number"
-                  value={preferences.campaignReportingDaysAfter}
-                  onChange={(e) => setPreferences({
-                    campaignReportingDaysAfter: parseInt(e.target.value)
-                  })}
-                  min="1"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Number of days after campaign end to complete reporting
-                </p>
-              </div>
-
-              {/* Removed Campaign Actions toggle per user request - module is now core */}
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>
