@@ -20,6 +20,14 @@ export const useUserStore = create(
           enabled: false,
           advanceMinutes: 30, // Notification X minutes before deadline/meeting
         },
+        dashboardWidgets: {
+          prayerTimes: true,
+          quranVerse: true,
+          focusTools: true,
+          spotify: true,
+          stats: true,
+          upcomingTasks: true,
+        },
       },
       setPreferences: (prefs) => set((state) => ({
         preferences: { ...state.preferences, ...prefs }

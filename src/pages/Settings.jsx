@@ -144,6 +144,7 @@ export function Settings() {
       <Tabs defaultValue="preferences" className="space-y-4">
         <TabsList>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
         </TabsList>
@@ -394,6 +395,131 @@ export function Settings() {
               >
                 🧪 Send Test Notification
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>📊 Dashboard Widgets</CardTitle>
+              <CardDescription>Customize what appears on your dashboard</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="prayerTimes" className="text-base">Prayer Times</Label>
+                  <p className="text-xs text-muted-foreground">Show 5 daily prayers and countdown</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="prayerTimes"
+                  checked={preferences?.dashboardWidgets?.prayerTimes ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      prayerTimes: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="quranVerse" className="text-base">Quran Verse</Label>
+                  <p className="text-xs text-muted-foreground">Show daily inspirational verse</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="quranVerse"
+                  checked={preferences?.dashboardWidgets?.quranVerse ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      quranVerse: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="focusTools" className="text-base">Focus Tools</Label>
+                  <p className="text-xs text-muted-foreground">Show Pomodoro timer and task timer</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="focusTools"
+                  checked={preferences?.dashboardWidgets?.focusTools ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      focusTools: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="spotify" className="text-base">Spotify Player</Label>
+                  <p className="text-xs text-muted-foreground">Show music player (if playlist URL is set)</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="spotify"
+                  checked={preferences?.dashboardWidgets?.spotify ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      spotify: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="stats" className="text-base">Statistics</Label>
+                  <p className="text-xs text-muted-foreground">Show task counts and progress</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="stats"
+                  checked={preferences?.dashboardWidgets?.stats ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      stats: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="upcomingTasks" className="text-base">Upcoming Tasks</Label>
+                  <p className="text-xs text-muted-foreground">Show list of tasks for today and tomorrow</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="upcomingTasks"
+                  checked={preferences?.dashboardWidgets?.upcomingTasks ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      upcomingTasks: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

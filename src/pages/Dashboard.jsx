@@ -15,7 +15,7 @@ import SpotifyPlayer from '../components/SpotifyPlayer'
 
 export function Dashboard() {
   const { data: tasks = [], isLoading } = useTasks()
-  const { user } = useUserStore()
+  const { user, preferences } = useUserStore()
   const [prayerSchedule, setPrayerSchedule] = useState([])
   const [userPreferences, setUserPreferences] = useState(null)
 
@@ -134,77 +134,85 @@ export function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.label}
-                </CardTitle>
-                <Icon className={`w-4 h-4 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      {preferences?.dashboardWidgets?.stats !== false && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <Card key={stat.label}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.label}
+                  </CardTitle>
+                  <Icon className={`w-4 h-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       {/* Productivity & Spiritual Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Column 1: Prayer Times */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Prayer Times</CardTitle>
-            <CardDescription>Today's prayer schedule</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
-              <PrayerTimes />
-            </div>
-            {todayPrayerTimes && (
+        {preferences?.dashboardWidgets?.prayerTimes !== false && (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Prayer Times</CardTitle>
+              <CardDescription>Today's prayer schedule</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
-                <PrayerCountdown prayerTimes={todayPrayerTimes} />
+                <PrayerTimes />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {todayPrayerTimes && (
+                <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
+                  <PrayerCountdown prayerTimes={todayPrayerTimes} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Column 2: Quran Verse */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quran Verse</CardTitle>
-            <CardDescription>Daily inspiration</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
-              <QuranVerse />
-            </div>
-          </CardContent>
-        </Card>
+        {preferences?.dashboardWidgets?.quranVerse !== false && (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Quran Verse</CardTitle>
+              <CardDescription>Daily inspiration</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
+                <QuranVerse />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Column 3: Productivity Tools */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Focus Tools</CardTitle>
-            <CardDescription>Pomodoro & time tracking</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
-              <Pomodoro preferences={userPreferences} />
-            </div>
-            <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
-              <TaskTimer tasks={tasks} />
-            </div>
-          </CardContent>
-        </Card>
+        {preferences?.dashboardWidgets?.focusTools !== false && (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Focus Tools</CardTitle>
+              <CardDescription>Pomodoro & time tracking</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
+                <Pomodoro preferences={userPreferences} />
+              </div>
+              <div className="[&>div]:!shadow-none [&>div]:!border-0 [&>div]:!p-0">
+                <TaskTimer tasks={tasks} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Spotify Player - Full width */}
-      {userPreferences?.spotify_playlist_url && (
+      {preferences?.dashboardWidgets?.spotify !== false && userPreferences?.spotify_playlist_url && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Music</CardTitle>
@@ -219,51 +227,52 @@ export function Dashboard() {
       )}
 
       {/* Upcoming Tasks */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Tasks</CardTitle>
-          <CardDescription>Your tasks for today and tomorrow</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {upcomingTasks.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">No upcoming tasks</p>
-              <Button onClick={() => window.location.href = '/tasks'}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create your first task
-              </Button>
-            </div>
-          ) : (
-            <>
-              {upcomingTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => window.location.href = '/tasks'}
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className={`w-1 h-12 rounded-full ${
-                      task.status === 'in_progress' ? 'bg-orange-500' : 'bg-blue-500'
-                    }`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{task.title}</p>
-                      <p className="text-sm text-muted-foreground">Due: {task.dueDate}</p>
-                    </div>
-                  </div>
-                  <Badge variant={task.priority >= 4 ? 'destructive' : 'secondary'}>
-                    P{task.priority}
-                  </Badge>
-                </div>
-              ))}
-              <div className="pt-2 text-center">
-                <Button variant="outline" onClick={() => window.location.href = '/tasks'}>
-                  View all tasks
+      {preferences?.dashboardWidgets?.upcomingTasks !== false && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Tasks</CardTitle>
+            <CardDescription>Your tasks for today and tomorrow</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {upcomingTasks.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">No upcoming tasks</p>
+                <Button onClick={() => window.location.href = '/tasks'}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create your first task
                 </Button>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <>
+                {upcomingTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = '/tasks'}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`w-1 h-12 rounded-full ${task.status === 'in_progress' ? 'bg-orange-500' : 'bg-blue-500'
+                        }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{task.title}</p>
+                        <p className="text-sm text-muted-foreground">Due: {task.dueDate}</p>
+                      </div>
+                    </div>
+                    <Badge variant={task.priority >= 4 ? 'destructive' : 'secondary'}>
+                      P{task.priority}
+                    </Badge>
+                  </div>
+                ))}
+                <div className="pt-2 text-center">
+                  <Button variant="outline" onClick={() => window.location.href = '/tasks'}>
+                    View all tasks
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
