@@ -1,20 +1,19 @@
-import './SpotifyPlayer.css'
+import { Music } from 'lucide-react'
+import { Card, CardContent } from './ui/card'
 
 function SpotifyPlayer({ playlistUrl }) {
     if (!playlistUrl) {
         return (
-            <div className="spotify-player-widget empty">
-                <div className="spotify-placeholder">
-                    <span className="spotify-icon">🎵</span>
-                    <p>Configurez votre playlist Spotify dans les paramètres</p>
+            <Card className="h-full flex items-center justify-center p-6 text-center text-muted-foreground bg-muted/20">
+                <div className="flex flex-col items-center gap-2">
+                    <Music className="h-8 w-8 opacity-50" />
+                    <p className="text-sm">Configurez votre playlist Spotify dans les paramètres</p>
                 </div>
-            </div>
+            </Card>
         )
     }
 
     // Transform regular Spotify URL to embed URL
-    // Example: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM3M
-    // To: https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM3M
     const getEmbedUrl = (url) => {
         if (!url) return ''
 
@@ -28,8 +27,6 @@ function SpotifyPlayer({ playlistUrl }) {
 
         // Handle web URLs
         try {
-            // Regex to find the type (playlist|album|track) and the ID
-            // Handles formats like /playlist/ID, /intl-xx/playlist/ID, etc.
             const match = url.match(/\/(playlist|album|track)\/([a-zA-Z0-9]+)/)
             if (match) {
                 const type = match[1]
@@ -37,10 +34,7 @@ function SpotifyPlayer({ playlistUrl }) {
                 return `https://open.spotify.com/embed/${type}/${id}`
             }
 
-            // Fallback: if it's already an embed URL
             if (url.includes('/embed/')) return url
-
-            // Last resort fallback
             return url.replace('spotify.com/', 'spotify.com/embed/')
         } catch (e) {
             console.error('Spotify URL parsing error:', e)
@@ -49,18 +43,19 @@ function SpotifyPlayer({ playlistUrl }) {
     }
 
     return (
-        <div className="spotify-player-widget">
+        <Card className="h-full overflow-hidden p-0 border-0 shadow-lg">
             <iframe
                 src={getEmbedUrl(playlistUrl)}
                 width="100%"
-                height="152"
+                height="100%"
                 frameBorder="0"
-                allowfullscreen=""
+                allowFullScreen=""
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
                 title="Spotify Player"
+                className="min-h-[152px]"
             ></iframe>
-        </div>
+        </Card>
     )
 }
 

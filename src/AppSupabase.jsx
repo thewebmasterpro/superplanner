@@ -29,7 +29,13 @@ function AppSupabase() {
     duration: 60,
     scheduled_time: '',
     category_id: '',
-    project_id: ''
+    project_id: '',
+    blocked_reason: '',
+    recurrence: '',
+    recurrence_day: '',
+    recurrence_end: '',
+    type: 'task',      // NEW: 'task' or 'meeting'
+    agenda: ''         // NEW: for meetings
   })
 
   const [categories, setCategories] = useState([])
@@ -66,6 +72,28 @@ function AppSupabase() {
     return matchStatus && matchPriority && matchSearch && matchDate && matchCategory && matchProject
   })
 
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    // 1. Done tasks at the bottom
+    if (a.status === 'done' && b.status !== 'done') return 1
+    if (a.status !== 'done' && b.status === 'done') return -1
+
+    // 2. Overdue tasks at the very top
+    const aOverdue = isOverdue(a)
+    const bOverdue = isOverdue(b)
+    if (aOverdue && !bOverdue) return -1
+    if (!aOverdue && bOverdue) return 1
+
+    // 3. Sort by due_date ascending
+    if (!a.due_date && b.due_date) return 1
+    if (a.due_date && !b.due_date) return -1
+    if (a.due_date && b.due_date) {
+      return a.due_date.localeCompare(b.due_date)
+    }
+
+    // 4. Then by priority descending
+    return (b.priority || 0) - (a.priority || 0)
+  })
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -95,6 +123,9 @@ function AppSupabase() {
     }
   }, [user])
 
+  /* -------------------------------------------------------------------------- */
+  /*                                Data Loading                                */
+  /* -------------------------------------------------------------------------- */
   const loadCategories = async () => {
     try {
       const { data, error } = await supabase
@@ -130,7 +161,7 @@ function AppSupabase() {
           category:task_categories(name, color),
           project:projects(name)
         `)
-        .order('created_at', { ascending: false })
+      // Sort handled in frontend for now to support overdue priority
 
       if (error) throw error
       setTasks(data || [])
@@ -170,10 +201,13 @@ function AppSupabase() {
     }
   }
 
+  /* -------------------------------------------------------------------------- */
+  /*                                CRUD Operations                             */
+  /* -------------------------------------------------------------------------- */
   const createTask = async (e) => {
     e.preventDefault()
     if (!newTask.title.trim()) {
-      showError('Title is required')
+      showError('Le titre est obligatoire')
       return
     }
 
@@ -186,6 +220,7 @@ function AppSupabase() {
         scheduled_time: newTask.scheduled_time || null,
         category_id: newTask.category_id || null,
         project_id: newTask.project_id || null,
+        agenda: newTask.type === 'meeting' ? (newTask.agenda?.trim() || null) : null, // Only save agenda for meetings
         user_id: user.id
       }
 
@@ -204,10 +239,14 @@ function AppSupabase() {
         duration: 60,
         scheduled_time: '',
         category_id: '',
-        project_id: ''
+        project_id: '',
+        recurrence: '',
+        recurrence_end: '',
+        type: 'task',
+        agenda: ''
       })
       loadTasks()
-      showSuccess('Tâche créée !')
+      showSuccess(newTask.type === 'meeting' ? 'Réunion planifiée ! 📅' : 'Tâche créée ! ✅')
     } catch (err) {
       console.error('Error creating task:', err)
       showError(`Erreur : ${err.message || 'Échec de la création'}`)
@@ -223,6 +262,15 @@ function AppSupabase() {
       if (sanitizedUpdates.scheduled_time === '') sanitizedUpdates.scheduled_time = null
       if (sanitizedUpdates.category_id === '') sanitizedUpdates.category_id = null
       if (sanitizedUpdates.project_id === '') sanitizedUpdates.project_id = null
+      if (sanitizedUpdates.agenda === '') sanitizedUpdates.agenda = null // Added for agenda
+
+      // Set completed_at if status changed to done
+      if (sanitizedUpdates.status === 'done') {
+        sanitizedUpdates.completed_at = new Date().toISOString()
+      } else if (sanitizedUpdates.status && sanitizedUpdates.status !== 'done') {
+        // If status changed back from done, clear completed_at
+        sanitizedUpdates.completed_at = null
+      }
 
       const { error } = await supabase
         .from('tasks')
@@ -260,10 +308,70 @@ function AppSupabase() {
   }
 
   const toggleStatus = (task) => {
-    const statusFlow = { todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'todo' }
-    updateTask(task.id, { status: statusFlow[task.status] })
+    const statusFlow = { todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'todo', cancelled: 'todo' }
+    const nextStatus = statusFlow[task.status]
+    updateTask(task.id, { status: nextStatus })
+
+    // Handle recurrence if marking as done
+    if (nextStatus === 'done' && task.recurrence) {
+      handleRecurrence(task)
+    }
   }
 
+  const handleRecurrence = async (task) => {
+    if (!task.recurrence || !task.due_date) return
+
+    const dueDate = new Date(task.due_date)
+    let nextDate = new Date(dueDate)
+
+    switch (task.recurrence) {
+      case 'daily':
+        nextDate.setDate(dueDate.getDate() + 1)
+        break
+      case 'weekly':
+        nextDate.setDate(dueDate.getDate() + 7)
+        break
+      case 'biweekly':
+        nextDate.setDate(dueDate.getDate() + 14)
+        break
+      case 'monthly':
+        nextDate.setMonth(dueDate.getMonth() + 1)
+        break
+      default:
+        return
+    }
+
+    // Check if next date exceeds recurrence_end
+    if (task.recurrence_end && nextDate > new Date(task.recurrence_end)) {
+      return
+    }
+
+    try {
+      const { error } = await supabase.from('tasks').insert({
+        user_id: user.id,
+        title: task.title,
+        description: task.description,
+        status: 'todo',
+        priority: task.priority,
+        due_date: nextDate.toISOString().split('T')[0],
+        duration: task.duration,
+        category_id: task.category_id,
+        project_id: task.project_id,
+        recurrence: task.recurrence,
+        recurrence_end: task.recurrence_end,
+        type: task.type, // Carry over type
+        agenda: task.agenda // Carry over agenda
+      })
+
+      if (error) throw error
+    } catch (err) {
+      console.error('Recurrence creation error:', err)
+    }
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /*                                     UI                                     */
+  /* -------------------------------------------------------------------------- */
   const showError = (message) => {
     setError(message)
     setTimeout(() => setError(null), 3000)
@@ -343,129 +451,178 @@ function AppSupabase() {
         <div className="dashboard-grid">
           {/* Tasks Section */}
           <section className="tasks">
-            <h2>Tasks</h2>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2>My Workspace</h2>
+            </div>
 
             {/* Notifications */}
             {error && <div className="error-message">{error}</div>}
             {success && <div className="success-message">{success}</div>}
 
-            {/* Create Task Form */}
-            <form onSubmit={createTask} className="task-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Titre *</label>
-                  <input
-                    type="text"
-                    placeholder="Titre de la tâche"
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Statut</label>
-                  <select
-                    value={newTask.status}
-                    onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="todo">À faire</option>
-                    <option value="in_progress">En cours</option>
-                    <option value="done">Terminé</option>
-                    <option value="blocked">Bloqué</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Priorité</label>
-                  <select
-                    value={newTask.priority}
-                    onChange={(e) => setNewTask({ ...newTask, priority: parseInt(e.target.value) })}
-                    className="form-select"
-                  >
-                    <option value="1">Priorité 1 (Basse)</option>
-                    <option value="2">Priorité 2</option>
-                    <option value="3">Priorité 3 (Moyenne)</option>
-                    <option value="4">Priorité 4</option>
-                    <option value="5">Priorité 5 (Haute)</option>
-                  </select>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    placeholder="Description (optionnel)"
-                    value={newTask.description}
-                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Échéance</label>
-                  <input
-                    type="date"
-                    value={newTask.due_date}
-                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Durée (min)</label>
-                  <input
-                    type="number"
-                    placeholder="Durée"
-                    value={newTask.duration}
-                    onChange={(e) => setNewTask({ ...newTask, duration: parseInt(e.target.value) || 60 })}
-                    className="form-input"
-                    min="5"
-                    step="5"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Programmation</label>
-                  <input
-                    type="datetime-local"
-                    value={newTask.scheduled_time}
-                    onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Catégorie</label>
-                  <select
-                    value={newTask.category_id}
-                    onChange={(e) => setNewTask({ ...newTask, category_id: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="">Aucune catégorie</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Projet</label>
-                  <select
-                    value={newTask.project_id}
-                    onChange={(e) => setNewTask({ ...newTask, project_id: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="">Aucun projet</option>
-                    {projects.map(proj => (
-                      <option key={proj.id} value={proj.id}>{proj.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-end', height: '44px', flex: 0.5 }}>
-                  ➕ Ajouter
+            {/* Create Task/Meeting Form */}
+            <div className="card task-creation-card mb-6 p-6">
+              <div className="flex gap-4 mb-4 border-b pb-2">
+                <button
+                  type="button"
+                  onClick={() => setNewTask({ ...newTask, type: 'task' })}
+                  className={`pb-2 px-4 font-medium transition-colors ${newTask.type === 'task' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  ✅ Nouvelle Tâche
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewTask({ ...newTask, type: 'meeting' })}
+                  className={`pb-2 px-4 font-medium transition-colors ${newTask.type === 'meeting' ? 'text-primary border-b-2 border-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  📅 Nouvelle Réunion
                 </button>
               </div>
-            </form>
 
+              <form onSubmit={createTask} className="task-form space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  {/* Title - Full Width */}
+                  <div className="md:col-span-12">
+                    <input
+                      type="text"
+                      placeholder={newTask.type === 'meeting' ? "Sujet de la réunion..." : "Titre de la tâche..."}
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                      className="form-input w-full text-lg font-medium"
+                      required
+                    />
+                  </div>
+
+                  {/* Row 2: Category, Project, Priority */}
+                  <div className="md:col-span-4">
+                    <select
+                      value={newTask.category_id}
+                      onChange={(e) => setNewTask({ ...newTask, category_id: e.target.value })}
+                      className="form-select w-full"
+                    >
+                      <option value="">📂 Catégorie (Aucune)</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-4">
+                    <select
+                      value={newTask.project_id}
+                      onChange={(e) => setNewTask({ ...newTask, project_id: e.target.value })}
+                      className="form-select w-full"
+                    >
+                      <option value="">🚀 Projet (Aucun)</option>
+                      {projects.map((proj) => (
+                        <option key={proj.id} value={proj.id}>{proj.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="md:col-span-4">
+                    <select
+                      value={newTask.priority}
+                      onChange={(e) => setNewTask({ ...newTask, priority: parseInt(e.target.value) })}
+                      className="form-select w-full"
+                    >
+                      <option value="1">🟢 Priorité Basse</option>
+                      <option value="2">🔵 Priorité Moyenne</option>
+                      <option value="3">🟡 Priorité Haute</option>
+                      <option value="4">🟠 Urgent</option>
+                      <option value="5">🔴 Critique</option>
+                    </select>
+                  </div>
+
+                  {/* Row 3: Date, Time, Duration */}
+                  <div className="md:col-span-4">
+                    <input
+                      type="date"
+                      value={newTask.due_date}
+                      onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                      className="form-input w-full"
+                    />
+                  </div>
+                  <div className="md:col-span-4">
+                    <input
+                      type="time"
+                      value={newTask.scheduled_time}
+                      onChange={(e) => setNewTask({ ...newTask, scheduled_time: e.target.value })}
+                      className="form-input w-full"
+                    />
+                  </div>
+                  <div className="md:col-span-4">
+                    <select
+                      value={newTask.duration}
+                      onChange={(e) => setNewTask({ ...newTask, duration: parseInt(e.target.value) })}
+                      className="form-select w-full"
+                    >
+                      <option value="15">15 min</option>
+                      <option value="30">30 min</option>
+                      <option value="45">45 min</option>
+                      <option value="60">1h</option>
+                      <option value="90">1h 30</option>
+                      <option value="120">2h</option>
+                    </select>
+                  </div>
+
+                  {/* Recurrence Row */}
+                  <div className="md:col-span-12 flex gap-4 items-center bg-gray-50 p-3 rounded-lg">
+                    <span className="text-sm text-gray-500 font-medium">🔁 Répétition :</span>
+                    <select
+                      value={newTask.recurrence}
+                      onChange={(e) => setNewTask({ ...newTask, recurrence: e.target.value })}
+                      className="form-select text-sm"
+                      style={{ width: 'auto', flex: 1 }}
+                    >
+                      <option value="">Jamais</option>
+                      <option value="daily">Tous les jours</option>
+                      <option value="weekly">Chaque semaine</option>
+                      <option value="biweekly">Toutes les 2 semaines</option>
+                      <option value="monthly">Chaque mois</option>
+                    </select>
+
+                    {newTask.recurrence && (
+                      <input
+                        type="date"
+                        placeholder="Fin"
+                        value={newTask.recurrence_end}
+                        onChange={(e) => setNewTask({ ...newTask, recurrence_end: e.target.value })}
+                        className="form-input text-sm"
+                        style={{ width: 'auto' }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Description OR Agenda */}
+                  {newTask.type === 'meeting' ? (
+                    <div className="md:col-span-12">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">📝 Agenda / Points à aborder</label>
+                      <textarea
+                        placeholder="- Point 1&#10;- Point 2&#10;- Décisions..."
+                        value={newTask.agenda}
+                        onChange={(e) => setNewTask({ ...newTask, agenda: e.target.value })}
+                        className="form-textarea w-full h-32 font-mono text-sm"
+                      />
+                    </div>
+                  ) : (
+                    <div className="md:col-span-12">
+                      <textarea
+                        placeholder="Description (optionnel)..."
+                        value={newTask.description}
+                        onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                        className="form-textarea w-full h-24"
+                      />
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <div className="md:col-span-12 flex justify-end">
+                    <button type="submit" className="btn-primary px-8 py-3 flex items-center gap-2">
+                      {newTask.type === 'meeting' ? '📅 Planifier Réunion' : '➕ Créer Tâche'}
+                    </button>
+                  </div>
+
+                </div>
+              </form>
+            </div>
             {/* Task Filters */}
             <div className="task-filters">
               <div className="form-group">
@@ -490,6 +647,7 @@ function AppSupabase() {
                   <option value="in_progress">En cours</option>
                   <option value="done">Terminé</option>
                   <option value="blocked">Bloqué</option>
+                  <option value="cancelled">Annulé</option>
                 </select>
               </div>
               <div className="form-group">
@@ -552,10 +710,10 @@ function AppSupabase() {
             </div>
 
             {/* Task List */}
-            {filteredTasks.length === 0 ? (
+            {sortedTasks.length === 0 ? (
               <p className="empty">Aucune tâche trouvée.</p>
             ) : (
-              <div className="task-list">{filteredTasks.map(task => (
+              <div className="task-list">{sortedTasks.map(task => (
 
                 <div key={task.id} className="task-card">
                   {editingTask?.id === task.id ? (
@@ -593,8 +751,21 @@ function AppSupabase() {
                             <option value="in_progress">En cours</option>
                             <option value="done">Terminé</option>
                             <option value="blocked">Bloqué</option>
+                            <option value="cancelled">Annulé</option>
                           </select>
                         </div>
+                        {editingTask.status === 'blocked' && (
+                          <div className="form-group">
+                            <label>Raison du blocage</label>
+                            <input
+                              type="text"
+                              value={editingTask.blocked_reason || ''}
+                              onChange={(e) => setEditingTask({ ...editingTask, blocked_reason: e.target.value })}
+                              className="form-input"
+                              placeholder="Pourquoi est-ce bloqué ?"
+                            />
+                          </div>
+                        )}
                         <div className="form-group">
                           <label>Priorité</label>
                           <select
@@ -687,6 +858,9 @@ function AppSupabase() {
                           <div className="task-title-group">
                             <h3 className="task-title">{task.title}</h3>
                             <div className="task-badges">
+                              {isOverdue(task) && (
+                                <span className="overdue-badge">⚠️ EN RETARD</span>
+                              )}
                               {task.category && (
                                 <span className="category-badge" style={{ backgroundColor: task.category.color || '#e2e8f0' }}>
                                   {task.category.name}
@@ -707,22 +881,37 @@ function AppSupabase() {
                             {task.status.replace('_', ' ')}
                           </span>
                         </div>
+                        {task.status === 'blocked' && task.blocked_reason && (
+                          <div className="blocked-reason-display">
+                            🚫 <strong>Bloqué :</strong> {task.blocked_reason}
+                          </div>
+                        )}
                         {task.description && (
                           <p className="task-description">{task.description}</p>
                         )}
-                        <div className="task-meta">
-                          <span className="task-priority">Priority: {task.priority}</span>
-                          {task.due_date && (
-                            <span className="task-due-date">Due: {new Date(task.due_date).toLocaleDateString()}</span>
-                          )}
-                        </div>
+                        <span className="task-priority">Priority: {task.priority}</span>
+                        {task.due_date && (
+                          <span className={`task-due-date ${isOverdue(task) ? 'overdue' : ''}`}>
+                            Due: {new Date(task.due_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        {task.recurrence && (
+                          <span className="task-recurrence-meta">
+                            🔄 {task.recurrence}
+                          </span>
+                        )}
+                        {task.status === 'done' && task.completed_at && (
+                          <span className="task-completed-at">
+                            ✅ Terminé le {new Date(task.completed_at).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
                       <div className="task-actions">
                         <button onClick={() => setEditingTask(task)} className="btn-edit">
-                          ✏️ Edit
+                          ✏️ Modifier
                         </button>
                         <button onClick={() => deleteTask(task.id)} className="btn-delete">
-                          🗑️ Delete
+                          🗑️ Supprimer
                         </button>
                       </div>
                     </>
@@ -743,20 +932,22 @@ function AppSupabase() {
             />
           </section>
         </div>
-      </main>
+      </main >
 
       {/* Settings Modal */}
-      {showSettings && (
-        <Settings
-          user={user}
-          onClose={() => {
-            setShowSettings(false)
-            loadPrayerTimes()
-            loadPreferences() // Reload preferences after settings change
-          }}
-        />
-      )}
-    </div>
+      {
+        showSettings && (
+          <Settings
+            user={user}
+            onClose={() => {
+              setShowSettings(false)
+              loadPrayerTimes()
+              loadPreferences() // Reload preferences after settings change
+            }}
+          />
+        )
+      }
+    </div >
   )
 }
 

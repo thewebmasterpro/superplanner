@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import './PrayerTimes.css'
+import { cn } from '../lib/utils'
+import { Sunrise, Sun, Sunset, Moon, CloudSun } from 'lucide-react'
 
 function PrayerTimes() {
     const [prayerTimes, setPrayerTimes] = useState(null)
@@ -14,7 +15,6 @@ function PrayerTimes() {
     const loadPrayerTimes = async () => {
         try {
             const today = new Date().toISOString().split('T')[0]
-
             const { data, error } = await supabase
                 .from('prayer_schedule')
                 .select('*')
@@ -33,7 +33,6 @@ function PrayerTimes() {
 
     const getCurrentPrayer = () => {
         if (!prayerTimes) return null
-
         const now = new Date()
         const currentTime = now.getHours() * 60 + now.getMinutes()
 
@@ -49,12 +48,9 @@ function PrayerTimes() {
             const [hours, minutes] = prayers[i].time.split(':').map(Number)
             const prayerMinutes = hours * 60 + minutes
 
-            if (currentTime < prayerMinutes) {
-                return prayers[i].name
-            }
+            if (currentTime < prayerMinutes) return prayers[i].name
         }
-
-        return 'Fajr' // After Isha, next is Fajr
+        return 'Fajr'
     }
 
     const formatTime = (time) => {
@@ -63,61 +59,68 @@ function PrayerTimes() {
         return `${hours}:${minutes}`
     }
 
-    if (loading) {
-        return (
-            <div className="prayer-times">
-                <h3>🕌 Prayer Times</h3>
-                <p className="loading-text">Loading...</p>
-            </div>
-        )
-    }
+    if (loading) return (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h3 className="flex items-center gap-2 font-semibold text-lg text-card-foreground">
+                <Sunrise className="h-5 w-5 text-primary" /> Horaires de Prières
+            </h3>
+            <p className="mt-4 text-sm text-muted-foreground animate-pulse">Chargement...</p>
+        </div>
+    )
 
-    if (error || !prayerTimes) {
-        return (
-            <div className="prayer-times">
-                <h3>🕌 Prayer Times</h3>
-                <p className="error-text">{error || 'No data available'}</p>
-            </div>
-        )
-    }
+    if (error || !prayerTimes) return (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h3 className="flex items-center gap-2 font-semibold text-lg text-card-foreground">
+                <Sunrise className="h-5 w-5 text-primary" /> Horaires de Prières
+            </h3>
+            <p className="mt-4 text-sm text-destructive">{error || 'Aucune donnée disponible'}</p>
+        </div>
+    )
 
     const nextPrayer = getCurrentPrayer()
+    const prayers = [
+        { key: 'Fajr', label: 'Fajr', time: prayerTimes.fajr, icon: Sunrise },
+        { key: 'Dhuhr', label: 'Dhuhr', time: prayerTimes.dhuhr, icon: Sun },
+        { key: 'Asr', label: 'Asr', time: prayerTimes.asr, icon: CloudSun },
+        { key: 'Maghrib', label: 'Maghrib', time: prayerTimes.maghrib, icon: Sunset },
+        { key: 'Isha', label: 'Isha', time: prayerTimes.isha, icon: Moon }
+    ]
 
     return (
-        <div className="prayer-times">
-            <h3>🕌 Prayer Times</h3>
-            <p className="prayer-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <div className="rounded-xl border bg-card shadow-sm h-full flex flex-col">
+            <div className="p-6 pb-2">
+                <h3 className="flex items-center gap-2 font-semibold text-lg text-card-foreground">
+                    <Sunrise className="h-5 w-5 text-primary" />
+                    Horaires de Prières
+                </h3>
+                <p className="text-xs text-muted-foreground capitalize mt-1">
+                    {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+            </div>
 
-            <div className="prayer-list">
-                <div className={`prayer-item ${nextPrayer === 'Fajr' ? 'next-prayer' : ''}`}>
-                    <span className="prayer-icon">🌅</span>
-                    <span className="prayer-name">Fajr</span>
-                    <span className="prayer-time">{formatTime(prayerTimes.fajr)}</span>
-                </div>
+            <div className="p-6 pt-2 space-y-2 flex-1">
+                {prayers.map((prayer) => {
+                    const isNext = nextPrayer === prayer.key
+                    const Icon = prayer.icon
 
-                <div className={`prayer-item ${nextPrayer === 'Dhuhr' ? 'next-prayer' : ''}`}>
-                    <span className="prayer-icon">☀️</span>
-                    <span className="prayer-name">Dhuhr</span>
-                    <span className="prayer-time">{formatTime(prayerTimes.dhuhr)}</span>
-                </div>
-
-                <div className={`prayer-item ${nextPrayer === 'Asr' ? 'next-prayer' : ''}`}>
-                    <span className="prayer-icon">🌤️</span>
-                    <span className="prayer-name">Asr</span>
-                    <span className="prayer-time">{formatTime(prayerTimes.asr)}</span>
-                </div>
-
-                <div className={`prayer-item ${nextPrayer === 'Maghrib' ? 'next-prayer' : ''}`}>
-                    <span className="prayer-icon">🌇</span>
-                    <span className="prayer-name">Maghrib</span>
-                    <span className="prayer-time">{formatTime(prayerTimes.maghrib)}</span>
-                </div>
-
-                <div className={`prayer-item ${nextPrayer === 'Isha' ? 'next-prayer' : ''}`}>
-                    <span className="prayer-icon">🌙</span>
-                    <span className="prayer-name">Isha</span>
-                    <span className="prayer-time">{formatTime(prayerTimes.isha)}</span>
-                </div>
+                    return (
+                        <div
+                            key={prayer.key}
+                            className={cn(
+                                "flex items-center justify-between p-3 rounded-lg transition-all",
+                                isNext
+                                    ? "bg-primary/10 border-l-4 border-primary text-primary font-medium"
+                                    : "hover:bg-muted/50 text-muted-foreground"
+                            )}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Icon className={cn("h-4 w-4", isNext ? "text-primary" : "text-muted-foreground")} />
+                                <span>{prayer.label}</span>
+                            </div>
+                            <span className="font-mono text-sm">{formatTime(prayer.time)}</span>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )

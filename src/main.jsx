@@ -1,10 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import AppSupabase from './AppSupabase.jsx'
-import './index.css'
+import App from './App.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppSupabase />
+    <App />
   </React.StrictMode>,
 )

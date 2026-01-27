@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react'
-import './TaskTimer.css'
+import { Timer, Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Button } from './ui/button'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "./ui/select"
+import { cn } from '../lib/utils'
 
 function TaskTimer({ tasks }) {
     const [selectedTaskId, setSelectedTaskId] = useState('')
@@ -30,7 +40,7 @@ function TaskTimer({ tasks }) {
 
     const handleStart = () => {
         if (!selectedTaskId) {
-            alert('Please select a task first')
+            // Optional: User toast warning
             return
         }
         setIsRunning(true)
@@ -48,58 +58,73 @@ function TaskTimer({ tasks }) {
     const selectedTask = tasks.find(t => t.id === selectedTaskId)
 
     return (
-        <div className={`task-timer-widget ${isRunning ? 'running' : ''}`}>
-            <h3>⏲️ Task Timer</h3>
+        <Card className="h-full">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Timer className="h-5 w-5 text-primary" />
+                    Chronomètre Tâche
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Select
+                        value={selectedTaskId}
+                        onValueChange={setSelectedTaskId}
+                        disabled={isRunning}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une tâche..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {tasks.filter(t => t.status !== 'done').map(task => (
+                                <SelectItem key={task.id} value={task.id}>
+                                    {task.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-            <div className="task-selector">
-                <select
-                    value={selectedTaskId}
-                    onChange={(e) => setSelectedTaskId(e.target.value)}
-                    className="task-select"
-                    disabled={isRunning}
-                >
-                    <option value="">Select a task...</option>
-                    {tasks.filter(t => t.status !== 'done').map(task => (
-                        <option key={task.id} value={task.id}>
-                            {task.title}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            <div className="timer-display">
-                <div className="timer-time">{formatTime(seconds)}</div>
-                {selectedTask && (
-                    <div className="timer-task-info">
-                        <span className={`task-badge status-${selectedTask.status}`}>
-                            {selectedTask.status.replace('_', ' ')}
-                        </span>
-                    </div>
-                )}
-            </div>
-
-            <div className="timer-controls">
-                {!isRunning ? (
-                    <button onClick={handleStart} className="btn-timer btn-start">
-                        ▶️ Start
-                    </button>
-                ) : (
-                    <button onClick={handleStop} className="btn-timer btn-stop">
-                        ⏸️ Stop
-                    </button>
-                )}
-                <button onClick={handleReset} className="btn-timer btn-reset">
-                    🔄 Reset
-                </button>
-            </div>
-
-            {isRunning && (
-                <div className="running-indicator">
-                    <span className="pulse-dot"></span>
-                    <span>Timer running...</span>
+                    {selectedTask && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
+                            <CheckCircle2 className={`h-4 w-4 status-icon-${selectedTask.status}`} />
+                            <span className="truncate">{selectedTask.title}</span>
+                        </div>
+                    )}
                 </div>
-            )}
-        </div>
+
+                <div className="text-center py-2">
+                    <div className={cn(
+                        "text-4xl font-mono font-bold tracking-tighter tabular-nums transition-colors",
+                        isRunning ? "text-primary" : "text-muted-foreground"
+                    )}>
+                        {formatTime(seconds)}
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2">
+                    {!isRunning ? (
+                        <Button
+                            onClick={handleStart}
+                            disabled={!selectedTaskId}
+                            className={cn("w-28 gap-2", !selectedTaskId && "opacity-50")}
+                        >
+                            <Play className="h-4 w-4" /> Démarrer
+                        </Button>
+                    ) : (
+                        <Button
+                            onClick={handleStop}
+                            variant="destructive"
+                            className="w-28 gap-2"
+                        >
+                            <Pause className="h-4 w-4" /> Pause
+                        </Button>
+                    )}
+                    <Button onClick={handleReset} variant="outline" size="icon">
+                        <RotateCcw className="h-4 w-4" />
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     )
 }
 
