@@ -1,45 +1,94 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+    
+    /* Context Colors */
+    --context-amp: 99 102 241;   /* Indigo */
+    --context-web: 245 158 11;   /* Amber */
+    --context-agency: 34 197 94; /* Green */
+    --context-wazo: 20 184 166;  /* Teal */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
+/* Custom Gradients */
+.bg-gradient-amp {
+  background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, transparent 100%);
+}
+.bg-gradient-web {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1) 0%, transparent 100%);
+}
+.bg-gradient-agency {
+  background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, transparent 100%);
+}
+.bg-gradient-wazo {
+  background: linear-gradient(135deg, rgba(20,184,166,0.1) 0%, transparent 100%);
 }
 
-button {
-  cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-size: 1em;
-  font-weight: 500;
-  transition: all 0.2s;
+/* Animations */
+@keyframes check {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-button:hover {
-  opacity: 0.8;
+.animate-check {
+  animation: check 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-input, textarea {
-  font-family: inherit;
-  font-size: 1em;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/50;
 }

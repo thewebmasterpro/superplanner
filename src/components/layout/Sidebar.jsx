@@ -5,11 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import SpotifyPlayer from '../SpotifyPlayer'
 import { ContextSelector } from '../ContextSelector'
+import { useContextStore } from '../../stores/contextStore'
 
 export function Sidebar() {
   const { isSidebarOpen, setSidebarOpen } = useUIStore()
   const { preferences } = useUserStore()
+  const { getActiveContext } = useContextStore()
   const currentPath = window.location.pathname
+
+  const activeContext = getActiveContext()
 
   const menuItems = [
     { label: 'Dashboard', icon: Home, href: '/' },
@@ -78,14 +82,22 @@ export function Sidebar() {
                   setSidebarOpen(false) // Close on mobile
                 }}
                 className={`
-                  flex items-center gap-3 px-4 py-2 rounded-md transition-colors
+                  flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
                   ${isActive
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'font-medium bg-primary/10'
                     : isDisabled
                       ? 'opacity-50 cursor-not-allowed text-muted-foreground'
                       : 'hover:bg-muted text-foreground'
                   }
                 `}
+                style={isActive && activeContext ? {
+                  color: activeContext.color,
+                  backgroundColor: `${activeContext.color}15`,
+                  borderRight: `3px solid ${activeContext.color}`
+                } : isActive ? {
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--secondary)'
+                } : {}}
               >
                 <Icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>

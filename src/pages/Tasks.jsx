@@ -369,86 +369,24 @@ export function Tasks() {
                   const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
 
                   return (
-                    <tr
+                    <TaskRow
                       key={task.id}
-                      className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${selectedIds.includes(task.id) ? 'bg-primary/5' : ''
-                        }`}
+                      task={task}
+                      isSelected={selectedIds.includes(task.id)}
+                      onSelect={(e) => {
+                        e?.stopPropagation()
+                        toggleSelect(task.id)
+                      }}
                       onClick={() => {
                         setSelectedTask(task)
                         setTaskModalOpen(true)
                       }}
-                    >
-                      <td className="px-4 py-4">
-                        <Checkbox
-                          checked={selectedIds.includes(task.id)}
-                          onCheckedChange={() => toggleSelect(task.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={`Select ${task.title}`}
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            {task.type === 'meeting' && <span>📅</span>}
-                            <p className="font-medium">{task.title}</p>
-                            {task.context && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs"
-                                style={{
-                                  backgroundColor: `${task.context.color}15`,
-                                  borderColor: task.context.color,
-                                  color: task.context.color
-                                }}
-                              >
-                                {task.context.name}
-                              </Badge>
-                            )}
-                            {task.campaign && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700"
-                              >
-                                🚀 {task.campaign.name}
-                              </Badge>
-                            )}
-                          </div>
-                          {task.task_tags && task.task_tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {task.task_tags.map(({ tag }) => tag && (
-                                <Badge
-                                  key={tag.id}
-                                  variant="outline"
-                                  className="text-[10px] px-1 py-0 h-5 border-none"
-                                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                                >
-                                  {tag.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                              {task.description}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge className={statusColors[task.status]}>
-                          {task.status?.replace('_', ' ')}
-                        </Badge>
-                      </td>
-                      <td className={`px-6 py-4 text-sm ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-                        {task.due_date ? (
-                          <>
-                            {isOverdue && '🔴 '}
-                            {new Date(task.due_date).toLocaleDateString()}
-                          </>
-                        ) : '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      isOverdue={isOverdue}
+                      statusColors={statusColors}
+                      priorityColors={priorityColors}
+                    />
+                  )
+                    < div className = "flex items-center gap-2" >
                           <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                             <div
                               className={`h-full ${priorityColors[task.priority || 1]}`}
@@ -457,38 +395,152 @@ export function Tasks() {
                           </div>
                           <span className="text-xs text-muted-foreground">{task.priority || 1}</span>
                         </div>
-                      </td>
-                    </tr>
-                  )
+          </td>
+        </tr>
+        )
                 })
               )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      </tbody>
+    </table>
+        </div >
+      </Card >
 
-      {/* Results count */}
-      {filteredTasks.length > 0 && (
-        <p className="text-sm text-muted-foreground text-center">
-          Showing {filteredTasks.length} of {tasks.length} tasks
-        </p>
-      )}
+    {/* Results count */ }
+  {
+    filteredTasks.length > 0 && (
+      <p className="text-sm text-muted-foreground text-center">
+        Showing {filteredTasks.length} of {tasks.length} tasks
+      </p>
+    )
+  }
 
-      {/* Bulk Actions Bar */}
-      {selectedIds.length > 0 && (
-        <BulkActionsBar
-          selectedIds={selectedIds}
-          onClear={clearSelection}
-          onSuccess={clearSelection}
-        />
-      )}
-
-      {/* Task Modal */}
-      <TaskModal
-        open={isTaskModalOpen}
-        onOpenChange={setTaskModalOpen}
-        task={selectedTask}
+  {/* Bulk Actions Bar */ }
+  {
+    selectedIds.length > 0 && (
+      <BulkActionsBar
+        selectedIds={selectedIds}
+        onClear={clearSelection}
+        onSuccess={clearSelection}
       />
-    </div>
+    )
+  }
+
+  {/* Task Modal */ }
+  <TaskModal
+    open={isTaskModalOpen}
+    onOpenChange={setTaskModalOpen}
+    task={selectedTask}
+  />
+    </div >
+  )
+}
+
+// Task Row Component with polish
+function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors, priorityColors }) {
+  const [completeAnim, setCompleteAnim] = useState(false)
+
+  const handleCheck = () => {
+    if (task.status !== 'done') {
+      setCompleteAnim(true)
+      setTimeout(() => {
+        onSelect() // Actually this logic should move status to done, but for now we just toggle selection or status
+      }, 300)
+    }
+    onSelect()
+  }
+
+  return (
+    <tr
+      className={`border-b transition-all duration-200 cursor-pointer group
+        ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'}
+        ${completeAnim ? 'opacity-50 scale-[0.98]' : ''}
+      `}
+      onClick={onClick}
+    >
+      <td className="px-4 py-4 w-[50px]">
+        <div className="relative flex items-center justify-center">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={handleCheck}
+            onClick={(e) => e.stopPropagation()}
+            className={completeAnim ? 'animate-check' : ''}
+          />
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <div>
+          <div className="flex items-center gap-2">
+            {task.type === 'meeting' && <span className="text-xl">📅</span>}
+            <p className={`font-medium transition-all ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+              {task.title}
+            </p>
+            {task.context && (
+              <Badge
+                variant="outline"
+                className="text-xs transition-colors"
+                style={{
+                  backgroundColor: `${task.context.color}15`,
+                  borderColor: task.context.color,
+                  color: task.context.color
+                }}
+              >
+                {task.context.name}
+              </Badge>
+            )}
+            {task.campaign && (
+              <Badge
+                variant="outline"
+                className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700 bg-gradient-to-r from-indigo-50 to-white"
+              >
+                🚀 {task.campaign.name}
+              </Badge>
+            )}
+            {task.contact_id && (
+              <Badge
+                variant="outline"
+                className="text-xs border-blue-200 bg-blue-50 text-blue-700"
+              >
+                👤 Client
+              </Badge>
+            )}
+          </div>
+          {task.task_tags && task.task_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {task.task_tags.map(({ tag }) => tag && (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-[10px] px-1 py-0 h-5 border-none"
+                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                >
+                  {tag.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+          {task.description && (
+            <p className="text-sm text-muted-foreground line-clamp-1 mt-1 group-hover:text-foreground/80 transition-colors">
+              {task.description}
+            </p>
+          )}
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <Badge className={`${statusColors[task.status]} transition-transform group-hover:scale-105`}>
+          {task.status?.replace('_', ' ')}
+        </Badge>
+      </td>
+      <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+        {task.due_date ? (
+          <span className="flex items-center gap-1">
+            {isOverdue && '🔴'}
+            {new Date(task.due_date).toLocaleDateString()}
+          </span>
+        ) : '-'}
+      </td>
+      <td className="px-6 py-4">
+        <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
+      </td>
+    </tr>
   )
 }
