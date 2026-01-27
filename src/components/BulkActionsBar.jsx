@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trash2, FolderOpen, Tag, Layers, X, Check } from 'lucide-react'
+import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -32,6 +32,8 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const { contexts } = useContextStore()
     const [tags, setTags] = useState([])
     const [categories, setCategories] = useState([])
+    const [meetings, setMeetings] = useState([])
+    const [campaigns, setCampaigns] = useState([])
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [loading, setLoading] = useState(false)
 
@@ -42,13 +44,17 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const loadOptions = async () => {
         const { data: { user } } = await supabase.auth.getUser()
 
-        const [tagsRes, catsRes] = await Promise.all([
+        const [tagsRes, catsRes, meetingsRes, campaignsRes] = await Promise.all([
             supabase.from('tags').select('id, name, color').eq('user_id', user.id).order('name'),
-            supabase.from('task_categories').select('id, name').eq('user_id', user.id).order('name')
+            supabase.from('task_categories').select('id, name').eq('user_id', user.id).order('name'),
+            supabase.from('tasks').select('id, title').eq('user_id', user.id).eq('type', 'meeting').order('title'),
+            supabase.from('campaigns').select('id, name').eq('user_id', user.id).eq('status', 'active').order('name')
         ])
 
         setTags(tagsRes.data || [])
         setCategories(catsRes.data || [])
+        setMeetings(meetingsRes.data || [])
+        setCampaigns(campaignsRes.data || [])
     }
 
     const count = selectedIds.length
@@ -103,7 +109,6 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const handleAddTag = async (tagId) => {
         setLoading(true)
         try {
-            // Create tag associations for all selected tasks
             const inserts = selectedIds.map(taskId => ({
                 task_id: taskId,
                 tag_id: tagId
@@ -172,16 +177,80 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         }
     }
 
+    // Bulk add to meeting agenda
+    const handleAddToMeeting = async (meetingId) => {
+        setLoading(true)
+        try {
+            // Get current max position for this meeting
+            const { data: existing } = await supabase
+                .from('meeting_items')
+                .select('position')
+                .eq('meeting_id', meetingId)
+                .order('position', { ascending: false })
+                .limit(1)
+
+            let nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0
+
+            // Insert all selected tasks as meeting items
+            const inserts = selectedIds.map((taskId, index) => ({
+                meeting_id: meetingId,
+                item_type: 'task',
+                item_id: taskId,
+                position: nextPosition + index
+            }))
+
+            const { error } = await supabase
+                .from('meeting_items')
+                .upsert(inserts, { onConflict: 'meeting_id,item_id', ignoreDuplicates: true })
+
+            if (error) throw error
+
+            const meetingName = meetings.find(m => m.id === meetingId)?.title
+            toast.success(`${count} task(s) added to "${meetingName}" agenda`)
+            queryClient.invalidateQueries({ queryKey: ['meetingAgenda', meetingId] })
+            onClear()
+            onSuccess?.()
+        } catch (error) {
+            toast.error('Failed to add to meeting')
+            console.error(error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Bulk add to campaign
+    const handleAddToCampaign = async (campaignId) => {
+        setLoading(true)
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({ campaign_id: campaignId === 'none' ? null : campaignId })
+                .in('id', selectedIds)
+
+            if (error) throw error
+
+            const campaignName = campaigns.find(c => c.id === campaignId)?.name || 'None'
+            toast.success(`${count} task(s) added to campaign "${campaignName}"`)
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
+            onClear()
+            onSuccess?.()
+        } catch (error) {
+            toast.error('Failed to add to campaign')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <>
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-lg rounded-lg px-4 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
-                <Badge variant="secondary" className="text-sm">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 animate-in slide-in-from-bottom-4 flex-wrap max-w-[95vw]">
+                <Badge variant="secondary" className="text-sm shrink-0">
                     {count} selected
                 </Badge>
 
                 {/* Status */}
                 <Select onValueChange={handleStatusChange} disabled={loading}>
-                    <SelectTrigger className="w-[130px] h-9">
+                    <SelectTrigger className="w-[120px] h-9">
                         <Check className="w-4 h-4 mr-1" />
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
@@ -195,7 +264,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
                 {/* Context */}
                 <Select onValueChange={handleContextChange} disabled={loading}>
-                    <SelectTrigger className="w-[140px] h-9">
+                    <SelectTrigger className="w-[130px] h-9">
                         <FolderOpen className="w-4 h-4 mr-1" />
                         <SelectValue placeholder="Context" />
                     </SelectTrigger>
@@ -212,10 +281,43 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                     </SelectContent>
                 </Select>
 
+                {/* Campaign */}
+                {campaigns.length > 0 && (
+                    <Select onValueChange={handleAddToCampaign} disabled={loading}>
+                        <SelectTrigger className="w-[130px] h-9">
+                            <Rocket className="w-4 h-4 mr-1" />
+                            <SelectValue placeholder="Campaign" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {campaigns.map(camp => (
+                                <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+
+                {/* Meeting */}
+                {meetings.length > 0 && (
+                    <Select onValueChange={handleAddToMeeting} disabled={loading}>
+                        <SelectTrigger className="w-[130px] h-9">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            <SelectValue placeholder="Meeting" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {meetings.map(meeting => (
+                                <SelectItem key={meeting.id} value={meeting.id}>
+                                    📅 {meeting.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+
                 {/* Tag */}
                 {tags.length > 0 && (
                     <Select onValueChange={handleAddTag} disabled={loading}>
-                        <SelectTrigger className="w-[120px] h-9">
+                        <SelectTrigger className="w-[100px] h-9">
                             <Tag className="w-4 h-4 mr-1" />
                             <SelectValue placeholder="Tag" />
                         </SelectTrigger>
@@ -235,7 +337,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                 {/* Category */}
                 {categories.length > 0 && (
                     <Select onValueChange={handleCategoryChange} disabled={loading}>
-                        <SelectTrigger className="w-[130px] h-9">
+                        <SelectTrigger className="w-[120px] h-9">
                             <Layers className="w-4 h-4 mr-1" />
                             <SelectValue placeholder="Category" />
                         </SelectTrigger>
@@ -260,7 +362,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                 </Button>
 
                 {/* Clear selection */}
-                <Button variant="ghost" size="icon" onClick={onClear} className="h-8 w-8">
+                <Button variant="ghost" size="icon" onClick={onClear} className="h-8 w-8 shrink-0">
                     <X className="w-4 h-4" />
                 </Button>
             </div>
