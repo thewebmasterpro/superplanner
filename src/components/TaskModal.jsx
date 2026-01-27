@@ -130,7 +130,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         type: 'task',
         agenda: '',
         campaign_id: '',
-        context_id: activeContextId || '',  // Auto-inherit from active context
+        context_id: (activeContextId === 'trash' || activeContextId === 'archive') ? '' : (activeContextId || ''),
         contact_id: ''
       })
     }
@@ -588,11 +588,11 @@ export function TaskModal({ open, onOpenChange, task = null }) {
               )}
 
               {/* Context Selector - shown prominently in Global view, hidden when context is active */}
-              {!activeContextId ? (
+              {(!activeContextId || activeContextId === 'trash' || activeContextId === 'archive') ? (
                 <div className="space-y-2 p-3 border border-dashed rounded-lg bg-muted/30">
                   <Label htmlFor="context" className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-500" />
-                    Context * <span className="text-xs text-muted-foreground font-normal">(required in Global view)</span>
+                    Context * <span className="text-xs text-muted-foreground font-normal">(required)</span>
                   </Label>
                   <Select
                     value={formData.context_id || 'none'}
