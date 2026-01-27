@@ -88,7 +88,7 @@ export function Sidebar() {
         </nav>
 
         {/* Spotify Player in Sidebar */}
-        {preferences.spotify_playlist_url && preferences?.dashboardWidgets?.spotify !== false && (
+        {preferences?.spotify_playlist_url && preferences?.dashboardWidgets?.spotify !== false && (
           <div className="p-4 border-t border-border">
             <SpotifyPlayer playlistUrl={preferences.spotify_playlist_url} />
           </div>
