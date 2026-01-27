@@ -11,7 +11,7 @@ import { Settings } from './pages/Settings'
 import { Trash } from './pages/Trash'
 import { ArchivePage } from './pages/Archive'
 import { LandingPage } from './pages/LandingPage'
-import LoginSupabase from './components/LoginSupabase'
+import { LoginModal } from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 import './globals.css'
 
@@ -105,24 +105,21 @@ function AppContent() {
 
   // Show login or landing if not authenticated
   if (!session) {
-    if (showLogin) {
-      return (
-        <div className="relative">
-          <button
-            onClick={() => setShowLogin(false)}
-            className="absolute top-4 left-4 z-50 text-sm hover:underline text-muted-foreground"
-          >
-            ← Back to Home
-          </button>
-          <LoginSupabase onLoginSuccess={(data) => {
+    return (
+      <>
+        <LandingPage onLoginClick={() => setShowLogin(true)} />
+        <LoginModal
+          open={showLogin}
+          onOpenChange={setShowLogin}
+          onLoginSuccess={(data) => {
             console.log('Login success:', data.user?.email)
             setSession(data.session)
             setUser(data.user)
-          }} />
-        </div>
-      )
-    }
-    return <LandingPage onLoginClick={() => setShowLogin(true)} />
+            setShowLogin(false)
+          }}
+        />
+      </>
+    )
   }
 
   // Show app with MainLayout

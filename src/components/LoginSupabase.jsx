@@ -4,7 +4,7 @@ import { Auth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import './Login.css'
 
-function LoginSupabase({ onLoginSuccess }) {
+function LoginSupabase({ onLoginSuccess, isModal = false }) {
   const [error, setError] = useState('')
 
   // Handle authentication state changes
@@ -29,8 +29,8 @@ function LoginSupabase({ onLoginSuccess }) {
   })
 
   return (
-    <div className="login-container">
-      <div className="login-box">
+    <div className={isModal ? "" : "login-container"}>
+      <div className={isModal ? "w-full" : "login-box"}>
         <div className="login-header">
           <h1>🚀 Superplanner</h1>
           <p>Task Management & CRM</p>
