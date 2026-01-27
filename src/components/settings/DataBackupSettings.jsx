@@ -131,15 +131,46 @@ export function DataBackupSettings() {
         let successCount = 0
 
         try {
-            // Batch process? For now simply iterate as useCreateTask is single
-            // Or better: use supabase.insert([array]) for performance
             const { data: { user } } = await supabase.auth.getUser()
 
-            const tasksToInsert = importData.map(t => ({
-                ...t,
-                user_id: user.id
-                // Note: We are losing context/campaign mapping for now unless we do lookup
-            }))
+            // Fetch metadata for mapping
+            const [
+                { data: contexts },
+                { data: campaigns },
+                { data: projects }
+            ] = await Promise.all([
+                supabase.from('contexts').select('id, name'),
+                supabase.from('campaigns').select('id, name'),
+                supabase.from('projects').select('id, name')
+            ])
+
+            const contextMap = new Map(contexts?.map(c => [c.name.toLowerCase(), c.id]))
+            const campaignMap = new Map(campaigns?.map(c => [c.name.toLowerCase(), c.id]))
+            const projectMap = new Map(projects?.map(p => [p.name.toLowerCase(), p.id]))
+
+            const tasksToInsert = importData.map(t => {
+                // Resolve Relations
+                const contextId = t.context_name ? contextMap.get(t.context_name.toLowerCase()) : null
+                const campaignId = t.campaign_name ? campaignMap.get(t.campaign_name.toLowerCase()) : null
+                const projectId = t.project_name ? projectMap.get(t.project_name.toLowerCase()) : null
+
+                // Clean object for Insert
+                // We explicitely construct the object to avoid "Column not found" errors
+                return {
+                    user_id: user.id,
+                    title: t.title,
+                    description: t.description,
+                    status: t.status,
+                    priority: t.priority,
+                    due_date: t.due_date,
+                    // Use resolved IDs
+                    context_id: contextId,
+                    campaign_id: campaignId,
+                    project_id: projectId,
+                    contact_id: t.client || null // Assuming client is ID for now
+                    // Ignore unknown fields like campaign_name, context_name
+                }
+            })
 
             const { error } = await supabase.from('tasks').insert(tasksToInsert)
 
