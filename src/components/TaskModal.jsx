@@ -27,6 +27,7 @@ import { TaskNotes } from './TaskNotes'
 import { BlockerManager } from './BlockerManager'
 import { MeetingAgendaManager } from './MeetingAgendaManager'
 import { useContextStore } from '../stores/contextStore'
+import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
 
 export function TaskModal({ open, onOpenChange, task = null }) {
@@ -35,6 +36,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const { contexts, activeContextId, getActiveContext } = useContextStore()
+  const { data: contactsList = [] } = useContactsList()
 
   const [categories, setCategories] = useState([])
   const [projects, setProjects] = useState([])
@@ -63,7 +65,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     type: 'task',    // 'task' or 'meeting'
     agenda: '',       // for meetings (deprecated, replaced by agendaItems)
     campaign_id: '',   // Link to campaign
-    context_id: ''     // Link to context (auto-filled from activeContextId)
+    context_id: '',    // Link to context (auto-filled from activeContextId)
+    contact_id: ''     // Link to client/contact
   })
 
   // Load categories, projects, and agenda items
@@ -106,7 +109,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         type: task.type || 'task',
         agenda: task.agenda || '',
         campaign_id: task.campaign_id || '',
-        context_id: task.context_id || ''
+        context_id: task.context_id || '',
+        contact_id: task.contact_id || ''
       })
     } else {
       // Reset form for creation
@@ -126,7 +130,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         type: 'task',
         agenda: '',
         campaign_id: '',
-        context_id: activeContextId || ''  // Auto-inherit from active context
+        context_id: activeContextId || '',  // Auto-inherit from active context
+        contact_id: ''
       })
     }
   }, [task, activeContextId])
@@ -540,7 +545,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                   <Label htmlFor="campaign">Campaign</Label>
                   <Select value={formData.campaign_id || 'none'} onValueChange={(value) => setFormData({ ...formData, campaign_id: value === 'none' ? null : value })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select campaign (optional)" />
+                      <SelectValue placeholder="Select campaign" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
@@ -550,6 +555,24 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Row 5: Client */}
+              <div className="space-y-2">
+                <Label htmlFor="contact">👤 Client</Label>
+                <Select value={formData.contact_id || 'none'} onValueChange={(value) => setFormData({ ...formData, contact_id: value === 'none' ? null : value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select client (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {contactsList.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name} {contact.company && `(${contact.company})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {formData.recurrence && (

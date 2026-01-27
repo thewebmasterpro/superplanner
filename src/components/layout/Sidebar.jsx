@@ -1,4 +1,4 @@
-import { Home, CheckSquare, Calendar, BarChart3, Settings, X } from 'lucide-react'
+import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users } from 'lucide-react'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
@@ -14,11 +14,11 @@ export function Sidebar() {
   const menuItems = [
     { label: 'Dashboard', icon: Home, href: '/' },
     { label: 'Tasks', icon: CheckSquare, href: '/tasks' },
+    { label: 'Contacts', icon: Users, href: '/contacts' },
     { label: 'Calendar', icon: Calendar, href: '/calendar' },
     {
       label: 'Campaigns',
       icon: BarChart3,
-      href: '/campaigns',
       href: '/campaigns',
       disabled: false,
       badge: null

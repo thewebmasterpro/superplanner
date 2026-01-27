@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Tasks } from './pages/Tasks'
 import { Calendar } from './pages/Calendar'
 import { Campaigns } from './pages/Campaigns'
+import { Contacts } from './pages/Contacts'
 import { Settings } from './pages/Settings'
 import LoginSupabase from './components/LoginSupabase'
 import { useUserStore } from './stores/userStore'
@@ -26,6 +27,7 @@ const routes = {
   '/tasks': Tasks,
   '/calendar': Calendar,
   '/campaigns': Campaigns,
+  '/contacts': Contacts,
   '/settings': Settings,
 }
 
