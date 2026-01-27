@@ -1,4 +1,4 @@
-# SUPERPLANNER_API.md — Henry's Guide to Superplanner
+# SUPERPLANNER_API.md — Lisa's Guide to Superplanner
 
 ## 🔑 Access Credentials
 
@@ -208,12 +208,12 @@ ORDER BY t.priority ASC, t.due_date ASC;
 
 ---
 
-## 🎯 Common Patterns for Henry
+## 🎯 Common Patterns for Lisa
 
 ### Pattern 1: Créer une tâche en conversation
 ```
 User: "ajoute: faire le devis client ABC"
-Henry:
+Lisa:
   1. Détecter le contexte actif (ou demander si global)
   2. INSERT INTO tasks (title: "Faire le devis client ABC", context_id: ctx)
   3. Confirmer: "Tâche créée dans Distriweb ✓"
@@ -221,7 +221,7 @@ Henry:
 
 ### Pattern 2: Résumé du jour (Heartbeat)
 ```
-Henry:
+Lisa:
   1. SELECT tâches urgentes (priority <= 2)
   2. SELECT tâches bloquées > 3 jours
   3. SELECT campagnes finissant < 7 jours
@@ -231,7 +231,7 @@ Henry:
 ### Pattern 3: Marquer comme fait
 ```
 User: "mark 'faire banneurs' as done"
-Henry:
+Lisa:
   1. Fuzzy match sur title = "faire banneurs"
   2. UPDATE tasks SET status = 'done' WHERE ...
   3. Confirmer: "Tâche terminée ✓"
@@ -240,7 +240,7 @@ Henry:
 ### Pattern 4: Débloquer une tâche
 ```
 User: "retire le blocker sur 'déployer'"
-Henry:
+Lisa:
   1. Trouver la tâche par fuzzy match
   2. SELECT blockers pour cette tâche
   3. DELETE FROM task_dependencies WHERE ...
@@ -258,7 +258,7 @@ Henry:
 
 ---
 
-## 🚀 Quick Start for Henry
+## 🚀 Quick Start for Lisa
 
 1. **Init Supabase client** (avec Service Role)
 2. **getCurrentUser()** → récupérer user_id et contextes
