@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 import { CampaignModal } from '../components/CampaignModal'
 import { CampaignGantt } from '../components/CampaignGantt'
+import { CampaignDetails } from '../components/CampaignDetails'
 import { toast } from 'react-hot-toast'
 
 export function Campaigns() {
@@ -25,6 +26,10 @@ export function Campaigns() {
   const [statusFilter, setStatusFilter] = useState('active') // active, draft, completed, archived, all
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState(null)
+
+  /* New state for View Mode & Selected Campaign */
+  const [view, setView] = useState('list') // 'list' | 'gantt' | 'details'
+  const [selectedCampaignId, setSelectedCampaignId] = useState(null)
 
   useEffect(() => {
     loadCampaigns()
@@ -67,6 +72,10 @@ export function Campaigns() {
       if (error) throw error
       toast.success('Campaign deleted')
       loadCampaigns()
+      if (selectedCampaignId === id) {
+        setView('list')
+        setSelectedCampaignId(null)
+      }
     } catch (error) {
       toast.error('Error deleting campaign')
     }
@@ -88,14 +97,35 @@ export function Campaigns() {
     }
   }
 
-  /* New state for View Mode */
-  const [view, setView] = useState('list') // 'list' | 'gantt'
+  const handleOpenDetails = (campaignId) => {
+    setSelectedCampaignId(campaignId)
+    setView('details')
+  }
 
   const filteredCampaigns = campaigns.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase())
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  // Render Details View if active
+  if (view === 'details' && selectedCampaignId) {
+    return (
+      <div className="container-tight py-6">
+        <CampaignDetails
+          campaignId={selectedCampaignId}
+          onBack={() => { setView('list'); setSelectedCampaignId(null); }}
+          onEdit={(c) => { setEditingCampaign(c); setIsModalOpen(true); }}
+        />
+        <CampaignModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          campaign={editingCampaign}
+          onSuccess={() => { loadCampaigns(); }} // Should ideally reload details too if open
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="container-tight py-6 space-y-6">
@@ -191,12 +221,15 @@ export function Campaigns() {
       ) : view === 'gantt' ? (
         <CampaignGantt
           campaigns={filteredCampaigns}
-          onEdit={(c) => { setEditingCampaign(c); setIsModalOpen(true) }}
+          onEdit={(c) => { handleOpenDetails(c.id) }}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCampaigns.map(campaign => (
-            <Card key={campaign.id} className="hover:shadow-md transition-shadow">
+            <Card key={campaign.id} className="hover:shadow-md transition-shadow cursor-pointer border-l-4"
+              style={{ borderLeftColor: campaign.status === 'active' ? '#22c55e' : 'transparent' }}
+              onClick={() => handleOpenDetails(campaign.id)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
@@ -204,30 +237,26 @@ export function Campaigns() {
                       {campaign.name}
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${campaign.status === 'active' ? 'bg-green-500' :
-                        campaign.status === 'completed' ? 'bg-blue-500' :
-                          campaign.status === 'draft' ? 'bg-gray-400' : 'bg-orange-500'
-                        }`} />
                       <span className="capitalize">{campaign.status}</span>
                     </CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                      <Button variant="ghost" size="icon" className="-mr-2 -mt-2" onClick={(e) => e.stopPropagation()}>
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => { setEditingCampaign(campaign); setIsModalOpen(true) }}>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingCampaign(campaign); setIsModalOpen(true) }}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleArchive(campaign.id, campaign.status)}>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchive(campaign.id, campaign.status) }}>
                         <Archive className="w-4 h-4 mr-2" />
                         {campaign.status === 'archived' ? 'Restore' : 'Archive'}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(campaign.id)}>
+                      <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id) }}>
                         <Trash2 className="w-4 h-4 mr-2" /> Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -256,12 +285,6 @@ export function Campaigns() {
                     </div>
                   </div>
                 </div>
-
-                {campaign.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-2 h-10">
-                    {campaign.description}
-                  </p>
-                )}
               </CardContent>
             </Card>
           ))}
