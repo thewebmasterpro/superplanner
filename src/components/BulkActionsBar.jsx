@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket } from 'lucide-react'
+import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -22,6 +22,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { useContextStore } from '../stores/contextStore'
 import { useQueryClient } from '@tanstack/react-query'
+import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
 
 /**
@@ -34,6 +35,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const [categories, setCategories] = useState([])
     const [meetings, setMeetings] = useState([])
     const [campaigns, setCampaigns] = useState([])
+    const { data: contactsList = [] } = useContactsList()
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [loading, setLoading] = useState(false)
 
@@ -259,6 +261,42 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                         <SelectItem value="in_progress">In Progress</SelectItem>
                         <SelectItem value="done">Done</SelectItem>
                         <SelectItem value="blocked">Blocked</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                {/* Client assignment */}
+                <Select onValueChange={async (contactId) => {
+                    setLoading(true)
+                    try {
+                        const { error } = await supabase
+                            .from('tasks')
+                            .update({ contact_id: contactId === 'none' ? null : contactId })
+                            .in('id', selectedIds)
+
+                        if (error) throw error
+
+                        const contactName = contactsList.find(c => c.id === contactId)?.name || 'None'
+                        toast.success(`${count} task(s) assigned to ${contactName}`)
+                        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+                        onClear()
+                        onSuccess?.()
+                    } catch (error) {
+                        toast.error('Failed to assign client')
+                    } finally {
+                        setLoading(false)
+                    }
+                }} disabled={loading}>
+                    <SelectTrigger className="w-[130px] h-9">
+                        <User className="w-4 h-4 mr-1" />
+                        <SelectValue placeholder="Client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {contactsList.map(contact => (
+                            <SelectItem key={contact.id} value={contact.id}>
+                                {contact.name}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
 
