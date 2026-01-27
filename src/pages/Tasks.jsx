@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Loader2, Filter, X } from 'lucide-react'
+import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
+import { useContactsList } from '../hooks/useContacts'
 import { useUIStore } from '../stores/uiStore'
 import { useContextStore } from '../stores/contextStore'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Card } from '@/components/ui/card'
 import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
@@ -21,6 +30,7 @@ import { supabase } from '../lib/supabase'
 
 export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
+  const { data: contactsList = [] } = useContactsList()
   const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
   const { contexts } = useContextStore()
   const [searchQuery, setSearchQuery] = useState('')
@@ -31,6 +41,13 @@ export function Tasks() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [tagFilter, setTagFilter] = useState('all')
   const [dueDateFilter, setDueDateFilter] = useState('all')
+  const [clientFilter, setClientFilter] = useState('all')
+  const [sortOrder, setSortOrder] = useState('created_desc')
+  const [visibleColumns, setVisibleColumns] = useState({
+    status: true,
+    dueDate: true,
+    priority: true
+  })
   const [selectedTask, setSelectedTask] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
   const [showFilters, setShowFilters] = useState(false)
@@ -90,6 +107,8 @@ export function Tasks() {
       const matchesType = typeFilter === 'all' || task.type === typeFilter
       const matchesTag = tagFilter === 'all' ||
         task.task_tags?.some(tt => tt.tag?.id === tagFilter)
+      const matchesClient = clientFilter === 'all' ||
+        task.contact_id === clientFilter
 
       // Due date filter
       let matchesDueDate = true
@@ -111,9 +130,34 @@ export function Tasks() {
       }
 
       return matchesSearch && matchesStatus && matchesPriority && matchesContext &&
-        matchesCampaign && matchesType && matchesTag && matchesDueDate
+        matchesCampaign && matchesType && matchesTag && matchesDueDate && matchesClient
     })
-  }, [tasks, searchQuery, statusFilter, priorityFilter, contextFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter])
+
+    // Sort tasks
+    return result.sort((a, b) => {
+      switch (sortOrder) {
+        case 'priority_desc': // High to Low
+          return (b.priority || 0) - (a.priority || 0)
+        case 'priority_asc': // Low to High
+          return (a.priority || 0) - (b.priority || 0)
+        case 'duedate_asc': // Soonest first
+          if (!a.due_date) return 1
+          if (!b.due_date) return -1
+          return new Date(a.due_date) - new Date(b.due_date)
+        case 'duedate_desc': // Furthest first
+          if (!a.due_date) return 1
+          if (!b.due_date) return -1
+          return new Date(b.due_date) - new Date(a.due_date)
+        case 'title_asc':
+          return (a.title || '').localeCompare(b.title || '')
+        case 'created_asc':
+          return new Date(a.created_at) - new Date(b.created_at)
+        case 'created_desc':
+        default:
+          return new Date(b.created_at) - new Date(a.created_at)
+      }
+    })
+  }, [tasks, searchQuery, statusFilter, priorityFilter, contextFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, sortOrder])
 
   // Count active filters
   const activeFilterCount = [
@@ -123,6 +167,7 @@ export function Tasks() {
     campaignFilter !== 'all',
     typeFilter !== 'all',
     tagFilter !== 'all',
+    clientFilter !== 'all',
     dueDateFilter !== 'all',
   ].filter(Boolean).length
 
@@ -136,6 +181,7 @@ export function Tasks() {
     setTypeFilter('all')
     setTagFilter('all')
     setDueDateFilter('all')
+    setClientFilter('all')
   }
 
   // Selection handlers
@@ -324,6 +370,69 @@ export function Tasks() {
                 <SelectItem value="no_date">No Date</SelectItem>
               </SelectContent>
             </Select>
+            {/* Client (New) */}
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Client" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {contactsList.map(contact => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.name} {contact.company && `(${contact.company})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sorting (New) */}
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="border-dashed">
+                <ArrowUpDown className="w-4 h-4 mr-2 opacity-50" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_desc">Newest Created</SelectItem>
+                <SelectItem value="created_asc">Oldest Created</SelectItem>
+                <SelectItem value="priority_desc">Highest Priority</SelectItem>
+                <SelectItem value="priority_asc">Lowest Priority</SelectItem>
+                <SelectItem value="duedate_asc">Due Soonest</SelectItem>
+                <SelectItem value="duedate_desc">Due Latest</SelectItem>
+                <SelectItem value="title_asc">Title (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Column Visibility (New) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="border-dashed">
+                  <Columns className="w-4 h-4 mr-2 opacity-50" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={visibleColumns.status}
+                  onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, status: checked }))}
+                >
+                  Status
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={visibleColumns.dueDate}
+                  onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, dueDate: checked }))}
+                >
+                  Due Date
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={visibleColumns.priority}
+                  onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, priority: checked }))}
+                >
+                  Priority
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </Card>
@@ -343,9 +452,9 @@ export function Tasks() {
                   />
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">Title</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Due Date</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Priority</th>
+                {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>}
+                {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold">Due Date</th>}
+                {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold">Priority</th>}
               </tr>
             </thead>
             <tbody>
@@ -384,6 +493,7 @@ export function Tasks() {
                       isOverdue={isOverdue}
                       statusColors={statusColors}
                       priorityColors={priorityColors}
+                      visibleColumns={visibleColumns}
                     />
                   )
                 })
@@ -424,7 +534,7 @@ export function Tasks() {
 }
 
 // Task Row Component with polish
-function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors, priorityColors }) {
+function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
   const [completeAnim, setCompleteAnim] = useState(false)
 
   const handleCheck = () => {
@@ -513,22 +623,31 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors,
           )}
         </div>
       </td>
-      <td className="px-6 py-4">
-        <Badge className={`${statusColors[task.status]} transition-transform group-hover:scale-105`}>
-          {task.status?.replace('_', ' ')}
-        </Badge>
-      </td>
-      <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-        {task.due_date ? (
-          <span className="flex items-center gap-1">
-            {isOverdue && '🔴'}
-            {new Date(task.due_date).toLocaleDateString()}
-          </span>
-        ) : '-'}
-      </td>
-      <td className="px-6 py-4">
-        <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
-      </td>
+
+      {visibleColumns.status && (
+        <td className="px-6 py-4">
+          <Badge className={`${statusColors[task.status]} transition-transform group-hover:scale-105`}>
+            {task.status?.replace('_', ' ')}
+          </Badge>
+        </td>
+      )}
+
+      {visibleColumns.dueDate && (
+        <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+          {task.due_date ? (
+            <span className="flex items-center gap-1">
+              {isOverdue && '🔴'}
+              {new Date(task.due_date).toLocaleDateString()}
+            </span>
+          ) : '-'}
+        </td>
+      )}
+
+      {visibleColumns.priority && (
+        <td className="px-6 py-4">
+          <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
+        </td>
+      )}
     </tr>
   )
 }
