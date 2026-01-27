@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket, User } from 'lucide-react'
+import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket, User, Archive } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -61,18 +61,18 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
     const count = selectedIds.length
 
-    // Bulk delete
+    // Bulk soft delete (Trash)
     const handleDelete = async () => {
         setLoading(true)
         try {
             const { error } = await supabase
                 .from('tasks')
-                .delete()
+                .update({ deleted_at: new Date().toISOString() })
                 .in('id', selectedIds)
 
             if (error) throw error
 
-            toast.success(`${count} task(s) deleted`)
+            toast.success(`${count} task(s) moved to trash`)
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
@@ -81,6 +81,28 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         } finally {
             setLoading(false)
             setShowDeleteConfirm(false)
+        }
+    }
+
+    // Bulk archive
+    const handleArchive = async () => {
+        setLoading(true)
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({ archived_at: new Date().toISOString() })
+                .in('id', selectedIds)
+
+            if (error) throw error
+
+            toast.success(`${count} task(s) archived`)
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
+            onClear()
+            onSuccess?.()
+        } catch (error) {
+            toast.error('Failed to archive tasks')
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -388,6 +410,17 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                     </Select>
                 )}
 
+                {/* Archive */}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleArchive}
+                    disabled={loading}
+                >
+                    <Archive className="w-4 h-4 mr-1" />
+                    Archive
+                </Button>
+
                 {/* Delete */}
                 <Button
                     variant="destructive"
@@ -396,7 +429,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                     disabled={loading}
                 >
                     <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
+                    Trash
                 </Button>
 
                 {/* Clear selection */}
@@ -409,15 +442,15 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {count} task(s)?</AlertDialogTitle>
+                        <AlertDialogTitle>Move {count} task(s) to trash?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. All selected tasks will be permanently deleted.
+                            Items in trash can be restored later.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-                            Delete
+                            Move to Trash
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

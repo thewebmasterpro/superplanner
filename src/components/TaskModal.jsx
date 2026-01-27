@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useCreateTask, useUpdateTask, useDeleteTask } from '../hooks/useTasks'
+import { useCreateTask, useUpdateTask, useDeleteTask, useArchiveTask } from '../hooks/useTasks'
 import { supabase } from '../lib/supabase'
 import {
   Dialog,
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Archive, Trash2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
 import { BlockerManager } from './BlockerManager'
@@ -35,6 +35,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
+  const archiveTask = useArchiveTask()
   const { contexts, activeContextId, getActiveContext } = useContextStore()
   const { data: contactsList = [] } = useContactsList()
 
@@ -297,7 +298,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this task?')) {
+    if (!window.confirm('Move this task to trash?')) {
       return
     }
 
@@ -307,6 +308,18 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       onOpenChange(false)
     } catch (error) {
       console.error('Error deleting task:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleArchive = async () => {
+    setLoading(true)
+    try {
+      await archiveTask.mutateAsync(task.id)
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error archiving task:', error)
     } finally {
       setLoading(false)
     }
@@ -625,14 +638,26 @@ export function TaskModal({ open, onOpenChange, task = null }) {
 
               <DialogFooter className="gap-2">
                 {isEditing && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={loading}
-                  >
-                    Delete
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleArchive}
+                      disabled={loading}
+                      title="Archive"
+                    >
+                      <Archive className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={loading}
+                      title="Move to Trash"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </>
                 )}
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancel
