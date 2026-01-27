@@ -177,6 +177,14 @@ export function Tasks() {
                               📅 {task.parent_meeting.title}
                             </Badge>
                           )}
+                          {task.campaign && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700"
+                            >
+                              🚀 {task.campaign.name}
+                            </Badge>
+                          )}
                         </div>
                         {task.task_tags && task.task_tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">

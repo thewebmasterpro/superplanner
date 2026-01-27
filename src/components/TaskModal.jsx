@@ -56,7 +56,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     recurrence: '',
     recurrence_end: '',
     type: 'task',    // 'task' or 'meeting'
-    agenda: ''       // for meetings (deprecated, replaced by agendaItems)
+    agenda: '',       // for meetings (deprecated, replaced by agendaItems)
+    campaign_id: ''   // Link to campaign
   })
 
   // Load categories, projects, and agenda items
@@ -97,7 +98,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         recurrence: task.recurrence || '',
         recurrence_end: task.recurrence_end || '',
         type: task.type || 'task',
-        agenda: task.agenda || ''
+        agenda: task.agenda || '',
+        campaign_id: task.campaign_id || ''
       })
     } else {
       // Reset form for creation
@@ -115,22 +117,28 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         recurrence: '',
         recurrence_end: '',
         type: 'task',
-        agenda: ''
+        agenda: '',
+        campaign_id: ''
       })
     }
   }, [task])
 
+  /* New state for campaigns */
+  const [campaigns, setCampaigns] = useState([])
+
   const loadCategoriesAndProjects = async () => {
     try {
-      const [categoriesRes, projectsRes, tagsRes] = await Promise.all([
+      const [categoriesRes, projectsRes, tagsRes, campaignsRes] = await Promise.all([
         supabase.from('task_categories').select('*').order('name'),
         supabase.from('projects').select('*').order('name'),
-        supabase.from('tags').select('*').order('name')
+        supabase.from('tags').select('*').order('name'),
+        supabase.from('campaigns').select('id, name').eq('status', 'active').order('name')
       ])
 
       if (categoriesRes.data) setCategories(categoriesRes.data)
       if (projectsRes.data) setProjects(projectsRes.data)
       if (tagsRes.data) setTags(tagsRes.data)
+      if (campaignsRes.data) setCampaigns(campaignsRes.data)
     } catch (error) {
       console.error('Error loading data:', error)
     }
@@ -595,7 +603,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                 />
               </div>
 
-              {/* Row 4: Recurrence */}
+              {/* Row 4: Recurrence & Campaign */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="recurrence">Recurrence</Label>
@@ -613,18 +621,33 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                   </Select>
                 </div>
 
-                {formData.recurrence && (
-                  <div className="space-y-2">
-                    <Label htmlFor="recurrence_end">Recurrence End Date</Label>
-                    <Input
-                      id="recurrence_end"
-                      type="date"
-                      value={formData.recurrence_end}
-                      onChange={(e) => setFormData({ ...formData, recurrence_end: e.target.value })}
-                    />
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="campaign">Campaign</Label>
+                  <Select value={formData.campaign_id || 'none'} onValueChange={(value) => setFormData({ ...formData, campaign_id: value === 'none' ? null : value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select campaign (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {campaigns.map((camp) => (
+                        <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {formData.recurrence && (
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence_end">Recurrence End Date</Label>
+                  <Input
+                    id="recurrence_end"
+                    type="date"
+                    value={formData.recurrence_end}
+                    onChange={(e) => setFormData({ ...formData, recurrence_end: e.target.value })}
+                  />
+                </div>
+              )}
 
               <DialogFooter className="gap-2">
                 {isEditing && (

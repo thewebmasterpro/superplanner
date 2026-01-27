@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Calendar as CalendarIcon, Filter, Layers, MoreVertical, Archive, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Search, Calendar as CalendarIcon, Filter, Layers, MoreVertical, Archive, Trash2, Edit2, LayoutGrid, GanttChartSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 import { CampaignModal } from '../components/CampaignModal'
+import { CampaignGantt } from '../components/CampaignGantt'
 import { toast } from 'react-hot-toast'
 
 export function Campaigns() {
@@ -87,12 +88,12 @@ export function Campaigns() {
     }
   }
 
+  /* New state for View Mode */
+  const [view, setView] = useState('list') // 'list' | 'gantt'
+
   const filteredCampaigns = campaigns.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase())
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter
-
-    // Auto-filter based on dates if 'active' is not explicitly set in DB but logically active?
-    // For now, rely on DB status column.
     return matchesSearch && matchesStatus
   })
 
@@ -106,53 +107,77 @@ export function Campaigns() {
           </h1>
           <p className="text-muted-foreground">Manage your marketing campaigns and major projects</p>
         </div>
-        <Button onClick={() => { setEditingCampaign(null); setIsModalOpen(true) }}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Campaign
-        </Button>
+        <div className="flex gap-2">
+          <div className="bg-muted p-1 rounded-lg flex items-center">
+            <Button
+              variant={view === 'list' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setView('list')}
+              title="List View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={view === 'gantt' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setView('gantt')}
+              title="Gantt View"
+            >
+              <GanttChartSquare className="w-4 h-4" />
+            </Button>
+          </div>
+          <Button onClick={() => { setEditingCampaign(null); setIsModalOpen(true) }}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Campaign
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search campaigns..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      {view === 'list' && (
+        <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search campaigns..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant={statusFilter === 'active' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('active')}
+              size="sm"
+            >
+              Active
+            </Button>
+            <Button
+              variant={statusFilter === 'draft' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('draft')}
+              size="sm"
+            >
+              Drafts
+            </Button>
+            <Button
+              variant={statusFilter === 'completed' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('completed')}
+              size="sm"
+            >
+              Completed
+            </Button>
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
+              size="sm"
+            >
+              All
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button
-            variant={statusFilter === 'active' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('active')}
-            size="sm"
-          >
-            Active
-          </Button>
-          <Button
-            variant={statusFilter === 'draft' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('draft')}
-            size="sm"
-          >
-            Drafts
-          </Button>
-          <Button
-            variant={statusFilter === 'completed' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('completed')}
-            size="sm"
-          >
-            Completed
-          </Button>
-          <Button
-            variant={statusFilter === 'all' ? 'default' : 'outline'}
-            onClick={() => setStatusFilter('all')}
-            size="sm"
-          >
-            All
-          </Button>
-        </div>
-      </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">Loading campaigns...</div>
@@ -163,6 +188,11 @@ export function Campaigns() {
           <p className="text-muted-foreground mb-4">Get started by creating your first campaign.</p>
           <Button onClick={() => setIsModalOpen(true)}>Create Campaign</Button>
         </div>
+      ) : view === 'gantt' ? (
+        <CampaignGantt
+          campaigns={filteredCampaigns}
+          onEdit={(c) => { setEditingCampaign(c); setIsModalOpen(true) }}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCampaigns.map(campaign => (
@@ -175,8 +205,8 @@ export function Campaigns() {
                     </CardTitle>
                     <CardDescription className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${campaign.status === 'active' ? 'bg-green-500' :
-                          campaign.status === 'completed' ? 'bg-blue-500' :
-                            campaign.status === 'draft' ? 'bg-gray-400' : 'bg-orange-500'
+                        campaign.status === 'completed' ? 'bg-blue-500' :
+                          campaign.status === 'draft' ? 'bg-gray-400' : 'bg-orange-500'
                         }`} />
                       <span className="capitalize">{campaign.status}</span>
                     </CardDescription>
