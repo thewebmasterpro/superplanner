@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Settings as SettingsIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { TagManager } from '@/components/TagManager'
+import { ContextManager } from '@/components/ContextManager'
 
 export function Settings() {
   const { preferences, setPreferences } = useUserStore()
@@ -142,14 +143,20 @@ export function Settings() {
         </div>
       </div>
 
-      <Tabs defaultValue="preferences" className="space-y-4">
+      <Tabs defaultValue="contexts" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="contexts">Contexts</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
         </TabsList>
+
+        {/* Contexts Tab */}
+        <TabsContent value="contexts" className="space-y-4">
+          <ContextManager />
+        </TabsContent>
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-4">
