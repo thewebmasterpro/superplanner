@@ -35,8 +35,8 @@ export function Calendar() {
 
   // Fetch prayer times if location is configured
   const { data: prayerData } = usePrayerTimes(
-    preferences?.prayerLocation?.city,
-    preferences?.prayerLocation?.country
+    preferences?.prayerLocation?.city || null,
+    preferences?.prayerLocation?.country || null
   )
 
   // Convert tasks to calendar events (including virtual occurrences and prayer times)
