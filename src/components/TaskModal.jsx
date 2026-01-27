@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
+import { BlockerManager } from './BlockerManager'
 import { useContextStore } from '../stores/contextStore'
 import toast from 'react-hot-toast'
 
@@ -316,9 +317,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="notes" disabled={!isEditing}>Notes & Comments</TabsTrigger>
+            <TabsTrigger value="blockers" disabled={!isEditing}>Blockers</TabsTrigger>
+            <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="space-y-4">
             {/* Task/Meeting Type Toggle (only when creating) */}
@@ -717,6 +719,16 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                 </Button>
               </DialogFooter>
             </form>
+          </TabsContent>
+
+          <TabsContent value="blockers" className="min-h-[300px]">
+            {isEditing ? (
+              <BlockerManager taskId={task.id} />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <p>Please create the task first to manage blockers.</p>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="notes" className="h-[400px]">
