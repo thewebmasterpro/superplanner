@@ -23,10 +23,7 @@ export function TaskNotes({ taskId }) {
         try {
             const { data, error } = await supabase
                 .from('task_notes')
-                .select(`
-          *,
-          user:user_id(email) -- Assuming we can fetch email or user details if profile table exists, otherwise just user_id for now
-        `)
+                .select('*')
                 .eq('task_id', taskId)
                 .order('created_at', { ascending: false })
 
@@ -52,7 +49,6 @@ export function TaskNotes({ taskId }) {
                 .from('task_notes')
                 .insert({
                     task_id: taskId,
-                    user_id: user.id,
                     content: newNote.trim()
                 })
 
