@@ -26,15 +26,117 @@ export function useTasks() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      // Filter by context if not Global view
-      if (activeContextId) {
-        query = query.eq('context_id', activeContextId)
+      // Filter logic for Trash/Archive
+      if (activeContextId === 'trash') {
+        query = query.not('deleted_at', 'is', null)
+      } else if (activeContextId === 'archive') {
+        query = query.is('deleted_at', null).not('archived_at', 'is', null)
+      } else {
+        // Default view: Not deleted, Not archived
+        query = query.is('deleted_at', null).is('archived_at', null)
+
+        // Context filter (normal)
+        if (activeContextId && activeContextId !== 'all') {
+          query = query.eq('context_id', activeContextId)
+        }
       }
 
       const { data, error } = await query
 
       if (error) throw error
       return data || []
+    },
+  })
+}
+
+// Hook to move task to trash (soft delete)
+export function useMoveToTrash() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Moved to trash')
+    },
+    onError: (error) => {
+      toast.error(`Failed to move to trash: ${error.message}`)
+    },
+  })
+}
+
+// Hook to archive task
+export function useArchiveTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task archived')
+    },
+    onError: (error) => {
+      toast.error(`Failed to archive task: ${error.message}`)
+    },
+  })
+}
+
+// Hook to restore task (from trash or archive)
+export function useRestoreTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: null, archived_at: null })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task restored')
+    },
+    onError: (error) => {
+      toast.error(`Failed to restore task: ${error.message}`)
+    },
+  })
+}
+
+// Permanent delete (only for trash)
+export function usePermanentDeleteTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Task permanently deleted')
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete task: ${error.message}`)
     },
   })
 }
@@ -217,24 +319,8 @@ export function useUpdateTask() {
   })
 }
 
+// Fallback for legacy useDeleteTask (now maps to useMoveToTrash for safety, or permanent if specified)
 export function useDeleteTask() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Task deleted successfully!')
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete task: ${error.message}`)
-    },
-  })
+  const moveToTrash = useMoveToTrash()
+  return moveToTrash
 }

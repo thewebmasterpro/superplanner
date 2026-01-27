@@ -8,6 +8,8 @@ import { Calendar } from './pages/Calendar'
 import { Campaigns } from './pages/Campaigns'
 import { Contacts } from './pages/Contacts'
 import { Settings } from './pages/Settings'
+import { Trash } from './pages/Trash'
+import { ArchivePage } from './pages/Archive'
 import LoginSupabase from './components/LoginSupabase'
 import { useUserStore } from './stores/userStore'
 import './globals.css'
@@ -29,6 +31,8 @@ const routes = {
   '/campaigns': Campaigns,
   '/contacts': Contacts,
   '/settings': Settings,
+  '/trash': Trash,
+  '/archive': ArchivePage,
 }
 
 function AppContent() {

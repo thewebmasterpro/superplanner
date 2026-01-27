@@ -1,4 +1,4 @@
-import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users } from 'lucide-react'
+import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2 } from 'lucide-react'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,8 @@ export function Sidebar() {
       badge: null
     },
     { label: 'Settings', icon: Settings, href: '/settings' },
+    { label: 'Archive', icon: Archive, href: '/archive', badge: null },
+    { label: 'Trash', icon: Trash2, href: '/trash', badge: null }
   ]
 
   return (
