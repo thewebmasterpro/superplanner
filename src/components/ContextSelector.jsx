@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { ChevronDown, Globe, Building, Briefcase } from 'lucide-react'
-import { useContextStore } from '../../stores/contextStore'
+import { useContextStore } from '../stores/contextStore'
 import {
     DropdownMenu,
     DropdownMenuContent,
