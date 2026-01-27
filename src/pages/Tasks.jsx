@@ -386,51 +386,39 @@ export function Tasks() {
                       priorityColors={priorityColors}
                     />
                   )
-                    < div className = "flex items-center gap-2" >
-                          <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${priorityColors[task.priority || 1]}`}
-                              style={{ width: `${((task.priority || 1) / 5) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground">{task.priority || 1}</span>
-                        </div>
-          </td>
-        </tr>
-        )
                 })
               )}
-      </tbody>
-    </table>
+            </tbody>
+          </table>
         </div >
       </Card >
 
-    {/* Results count */ }
-  {
-    filteredTasks.length > 0 && (
-      <p className="text-sm text-muted-foreground text-center">
-        Showing {filteredTasks.length} of {tasks.length} tasks
-      </p>
-    )
-  }
+      {/* Results count */}
+      {
+        filteredTasks.length > 0 && (
+          <p className="text-sm text-muted-foreground text-center">
+            Showing {filteredTasks.length} of {tasks.length} tasks
+          </p>
+        )
+      }
 
-  {/* Bulk Actions Bar */ }
-  {
-    selectedIds.length > 0 && (
-      <BulkActionsBar
-        selectedIds={selectedIds}
-        onClear={clearSelection}
-        onSuccess={clearSelection}
+      {/* Bulk Actions Bar */}
+      {
+        selectedIds.length > 0 && (
+          <BulkActionsBar
+            selectedIds={selectedIds}
+            onClear={clearSelection}
+            onSuccess={clearSelection}
+          />
+        )
+      }
+
+      {/* Task Modal */}
+      <TaskModal
+        open={isTaskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        task={selectedTask}
       />
-    )
-  }
-
-  {/* Task Modal */ }
-  <TaskModal
-    open={isTaskModalOpen}
-    onOpenChange={setTaskModalOpen}
-    task={selectedTask}
-  />
     </div >
   )
 }
