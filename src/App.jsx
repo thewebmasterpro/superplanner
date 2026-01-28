@@ -13,6 +13,7 @@ import { ArchivePage } from './pages/Archive'
 import { LandingPage } from './pages/LandingPage'
 import { TeamSettings } from './pages/TeamSettings'
 import { Meetings } from './pages/Meetings'
+import { Workspace } from './pages/Workspace'
 import { LoginModal } from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -40,6 +41,7 @@ const routes = {
   '/trash': Trash,
   '/archive': ArchivePage,
   '/team': TeamSettings,
+  '/workspace': Workspace,
 }
 
 function AppContent() {

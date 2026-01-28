@@ -7,123 +7,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Settings as SettingsIcon } from 'lucide-react'
+import { Settings as SettingsIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { TagManager } from '@/components/TagManager'
-import { ContextManager } from '@/components/ContextManager'
 import { DataBackupSettings } from '@/components/settings/DataBackupSettings'
 
 export function Settings() {
   const { preferences, setPreferences } = useUserStore()
   const { sendTestNotification } = useTelegramNotifications()
-  const [categories, setCategories] = useState([])
-  const [projects, setProjects] = useState([])
-  const [newCategory, setNewCategory] = useState({ name: '', color: '#3b82f6' })
-  const [newProject, setNewProject] = useState({ name: '', description: '' })
-
-  // Load categories and projects
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      const [categoriesRes, projectsRes] = await Promise.all([
-        supabase.from('task_categories').select('*').order('name'),
-        supabase.from('projects').select('*').order('name')
-      ])
-
-      if (categoriesRes.data) setCategories(categoriesRes.data)
-      if (projectsRes.data) setProjects(projectsRes.data)
-    } catch (error) {
-      console.error('Error loading data:', error)
-    }
-  }
-
-  const handleAddCategory = async (e) => {
-    e.preventDefault()
-    if (!newCategory.name.trim()) return
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase
-        .from('task_categories')
-        .insert({
-          name: newCategory.name,
-          color: newCategory.color,
-          user_id: user.id
-        })
-
-      if (error) throw error
-
-      toast.success('Category added successfully!')
-      setNewCategory({ name: '', color: '#3b82f6' })
-      loadData()
-    } catch (error) {
-      toast.error(`Failed to add category: ${error.message}`)
-    }
-  }
-
-  const handleDeleteCategory = async (id) => {
-    if (!window.confirm('Delete this category? Tasks using it will remain unaffected.')) return
-
-    try {
-      const { error } = await supabase
-        .from('task_categories')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
-      toast.success('Category deleted successfully!')
-      loadData()
-    } catch (error) {
-      toast.error(`Failed to delete category: ${error.message}`)
-    }
-  }
-
-  const handleAddProject = async (e) => {
-    e.preventDefault()
-    if (!newProject.name.trim()) return
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await supabase
-        .from('projects')
-        .insert({
-          name: newProject.name,
-          description: newProject.description || null,
-          user_id: user.id
-        })
-
-      if (error) throw error
-
-      toast.success('Project added successfully!')
-      setNewProject({ name: '', description: '' })
-      loadData()
-    } catch (error) {
-      toast.error(`Failed to add project: ${error.message}`)
-    }
-  }
-
-  const handleDeleteProject = async (id) => {
-    if (!window.confirm('Delete this project? Tasks using it will remain unaffected.')) return
-
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
-      toast.success('Project deleted successfully!')
-      loadData()
-    } catch (error) {
-      toast.error(`Failed to delete project: ${error.message}`)
-    }
-  }
 
   const handleTestTelegram = async () => {
     const result = await sendTestNotification()
@@ -137,33 +27,24 @@ export function Settings() {
   return (
     <div className="container-tight py-8 space-y-6">
       <div className="flex items-center gap-2">
-        <SettingsIcon className="w-8 h-8" />
+        <div className="p-2 bg-primary/10 rounded-xl">
+          <SettingsIcon className="w-8 h-8 text-primary" />
+        </div>
         <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your preferences and data</p>
+          <h1 className="text-3xl font-bold font-display">Settings</h1>
+          <p className="text-muted-foreground font-medium">Manage your personal preferences and data</p>
         </div>
       </div>
 
-      <Tabs defaultValue="contexts" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="contexts">Contexts</TabsTrigger>
+      <Tabs defaultValue="preferences" className="space-y-4">
+        <TabsList className="bg-muted/50 p-1 rounded-lg">
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="data">💾 Data & Backup</TabsTrigger>
         </TabsList>
 
-        {/* Contexts Tab */}
-        <TabsContent value="contexts" className="space-y-4">
-          <ContextManager />
-        </TabsContent>
-
         {/* Preferences Tab */}
-        <TabsContent value="preferences" className="space-y-4">
-
-
+        <TabsContent value="preferences" className="space-y-4 outline-none">
           <Card>
             <CardHeader>
               <CardTitle>🕌 Prayer Times Location</CardTitle>
@@ -209,7 +90,7 @@ export function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>📱 Telegram Notifications</CardTitle>
-              <CardDescription>Configure reminders via @Henry_anouar_bot</CardDescription>
+              <CardDescription>Configure reminders via telegram bot</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -226,7 +107,7 @@ export function Settings() {
                   placeholder="123456789"
                 />
                 <p className="text-xs text-muted-foreground">
-                  💡 To get your Chat ID: Send <code className="bg-muted px-1 py-0.5 rounded">/start</code> to your bot (Lisa) on Telegram
+                  💡 To get your Chat ID: Send <code className="bg-muted px-1 py-0.5 rounded">/start</code> to your bot on Telegram
                 </p>
               </div>
 
@@ -280,7 +161,7 @@ export function Settings() {
         </TabsContent>
 
         {/* Dashboard Tab */}
-        <TabsContent value="dashboard" className="space-y-4">
+        <TabsContent value="dashboard" className="space-y-4 outline-none">
           <Card>
             <CardHeader>
               <CardTitle>📊 Dashboard Widgets</CardTitle>
@@ -404,178 +285,24 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Categories Tab */}
-        <TabsContent value="categories" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add New Category</CardTitle>
-              <CardDescription>Create a new task category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddCategory} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="categoryName">Category Name</Label>
-                    <Input
-                      id="categoryName"
-                      value={newCategory.name}
-                      onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                      placeholder="e.g., Development, Marketing, Personal"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="categoryColor">Color</Label>
-                    <Input
-                      id="categoryColor"
-                      type="color"
-                      value={newCategory.color}
-                      onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <Button type="submit">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Category
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Categories</CardTitle>
-              <CardDescription>{categories.length} categories configured</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {categories.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No categories yet. Create one above!</p>
-                ) : (
-                  categories.map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-6 h-6 rounded"
-                          style={{ backgroundColor: cat.color }}
-                        />
-                        <span className="font-medium">{cat.name}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteCategory(cat.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Projects Tab */}
-        <TabsContent value="projects" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add New Project</CardTitle>
-              <CardDescription>Create a new project to organize your tasks</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAddProject} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="projectName">Project Name</Label>
-                  <Input
-                    id="projectName"
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                    placeholder="e.g., Website Redesign, Product Launch"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="projectDesc">Description (Optional)</Label>
-                  <Input
-                    id="projectDesc"
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                    placeholder="Brief description of the project"
-                  />
-                </div>
-                <Button type="submit">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Project
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Projects</CardTitle>
-              <CardDescription>{projects.length} projects configured</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {projects.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No projects yet. Create one above!</p>
-                ) : (
-                  projects.map((proj) => (
-                    <div key={proj.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{proj.name}</p>
-                        {proj.description && (
-                          <p className="text-sm text-muted-foreground">{proj.description}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteProject(proj.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tags Tab */}
-        <TabsContent value="tags" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Tags</CardTitle>
-              <CardDescription>Create and categorize your tasks with tags</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TagManager />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Data & Backup Tab */}
-        <TabsContent value="data" className="space-y-4">
+        <TabsContent value="data" className="space-y-4 outline-none">
           <DataBackupSettings />
         </TabsContent>
       </Tabs>
 
       {/* Sticky Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 flex justify-end md:left-64">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t p-4 flex justify-end md:left-64 z-10">
         <Button
           onClick={async () => {
             try {
-              // Safety filter: Only send columns that exist in Prod DB
-              // This prevents 'Could not find column' errors if migrations haven't run
+              const { data: { user } } = await supabase.auth.getUser()
               const safePayload = {
-                user_id: (await supabase.auth.getUser()).data.user.id,
+                user_id: user.id,
                 telegram: preferences.telegram,
                 dashboardWidgets: preferences.dashboardWidgets,
                 prayerLocation: preferences.prayerLocation,
                 spotify_playlist_url: preferences.spotify_playlist_url
-                // Exclude campaigns and work hours until DB migrated
               }
 
               const { error } = await supabase
@@ -588,7 +315,7 @@ export function Settings() {
               toast.error('Failed to save: ' + e.message)
             }
           }}
-          className="px-8"
+          className="px-8 shadow-lg"
         >
           💾 Save Preferences
         </Button>
