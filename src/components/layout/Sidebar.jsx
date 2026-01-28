@@ -159,6 +159,11 @@ export function Sidebar() {
             <SpotifyPlayer playlistUrl={preferences.spotify_playlist_url} />
           </div>
         )}
+
+        {/* Version Display */}
+        <div className="p-2 text-center text-[10px] text-muted-foreground/40 font-mono">
+          v1.1.0
+        </div>
       </motion.aside>
     </>
   )
