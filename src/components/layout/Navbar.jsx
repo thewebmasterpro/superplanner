@@ -8,6 +8,7 @@ import { CampaignModal } from '../CampaignModal'
 import { ContactModal } from '../ContactModal'
 import { supabase } from '../../lib/supabase'
 import { ThemeToggle } from '../ThemeToggle'
+import { GlobalSearch } from './GlobalSearch'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,20 +36,7 @@ export function Navbar() {
   } = useUIStore()
   const { user } = useUserStore()
   const [selectedTask, setSelectedTask] = useState(null)
-  const searchInputRef = useRef(null)
   const currentPath = window.location.pathname || '/'
-
-  // Keyboard shortcut CMD+K for search
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        searchInputRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
 
   const getPageTitle = () => {
     switch (currentPath) {
@@ -60,6 +48,7 @@ export function Navbar() {
       case '/campaigns': return 'Campaigns'
       case '/team': return 'Team'
       case '/settings': return 'Settings'
+      case '/workspace': return 'Workspace'
       case '/archive': return 'Archive'
       case '/trash': return 'Trash'
       default: return 'Superplanner'
@@ -111,22 +100,10 @@ export function Navbar() {
         </div>
 
         {/* Global Search Center */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4 relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <Input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search across Superplanner..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-12 bg-muted/50 border-transparent focus:bg-background focus:border-primary/20 transition-all rounded-full h-10"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-border bg-background text-[10px] font-medium text-muted-foreground pointer-events-none opacity-50 group-focus-within:opacity-0 transition-opacity">
-            ⌘K
-          </div>
-        </div>
+        <GlobalSearch />
 
         {/* Right - User menu */}
+
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
