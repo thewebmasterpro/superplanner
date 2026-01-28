@@ -506,7 +506,7 @@ export function Tasks() {
               <table className="w-full">
                 <thead className="bg-muted/30 border-b border-border/50">
                   <tr>
-                    <th className="px-4 py-3 text-left w-10">
+                    <th className="px-3 py-3 text-left w-8">
                       <Checkbox
                         checked={isAllSelected}
                         ref={el => el && (el.indeterminate = isSomeSelected)}
@@ -514,6 +514,9 @@ export function Tasks() {
                         aria-label="Select all"
                         className="border-border/50"
                       />
+                    </th>
+                    <th className="px-2 py-3 text-left w-10">
+                      {/* Placeholder for completion checkbox column */}
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
                     {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
@@ -524,14 +527,14 @@ export function Tasks() {
                 <tbody className="divide-y divide-border/30">
                   {isLoading ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                      <td colSpan="6" className="px-6 py-12 text-center text-muted-foreground">
                         <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                         <p>Loading tasks...</p>
                       </td>
                     </tr>
                   ) : filteredTasks.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                      <td colSpan="6" className="px-6 py-12 text-center text-muted-foreground">
                         {tasks.length === 0
                           ? 'No tasks yet. Create one to get started!'
                           : 'No tasks match your filters.'}
@@ -547,14 +550,13 @@ export function Tasks() {
                           task={task}
                           isSelected={selectedIds.includes(task.id)}
                           isCompleting={completingTaskId === task.id}
-                          onSelect={(e) => {
+                          onSelect={() => toggleSelect(task.id)}
+                          onComplete={async (e) => {
                             e?.stopPropagation()
-                            toggleSelect(task.id)
-                          }}
-                          onComplete={async () => {
                             setCompletingTaskId(task.id)
-                            await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
-                            setTimeout(() => setCompletingTaskId(null), 1000)
+                            const newStatus = task.status === 'done' ? 'todo' : 'done'
+                            await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: newStatus } })
+                            setCompletingTaskId(null)
                           }}
                           onClick={() => {
                             setSelectedTask(task)
@@ -625,32 +627,33 @@ export function Tasks() {
 // Task Row Component with polish
 function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
 
-  const handleCheck = (checked) => {
-    if (checked && task.status !== 'done') {
-      onComplete()
-    }
-    onSelect()
-  }
-
   return (
     <tr
       className={`border-b border-border/30 transition-all duration-300 cursor-pointer group relative
         ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
       `}
       style={{
-        borderLeft: isSelected && task.context?.color
+        borderLeft: (isSelected || task.status === 'done') && task.context?.color
           ? `3px solid ${task.context.color}`
           : '3px solid transparent'
       }}
       onClick={onClick}
     >
-      <td className="px-4 py-4 w-[50px]">
+      <td className="px-3 py-4 w-8">
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={onSelect}
+          onClick={(e) => e.stopPropagation()}
+          className="opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+        />
+      </td>
+      <td className="px-2 py-4 w-10">
         <div className="relative flex items-center justify-center">
           <Checkbox
-            checked={isSelected || task.status === 'done'}
-            onCheckedChange={handleCheck}
+            checked={task.status === 'done'}
+            onCheckedChange={onComplete}
             onClick={(e) => e.stopPropagation()}
-            className={`transition-all duration-300 ${isCompleting ? 'animate-complete scale-125' : ''}`}
+            className={`transition-all duration-300 rounded-full ${isCompleting ? 'animate-complete scale-125' : ''}`}
           />
         </div>
       </td>
