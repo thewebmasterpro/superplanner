@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket, User, Archive } from 'lucide-react'
+import { Trash2, FolderOpen, Tag, Layers, X, Check, Calendar, Rocket, User, Archive, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -9,6 +9,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -36,7 +46,10 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const [meetings, setMeetings] = useState([])
     const [campaigns, setCampaigns] = useState([])
     const { data: contactsList = [] } = useContactsList()
+    const [teamMembers, setTeamMembers] = useState([])
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showScheduleDialog, setShowScheduleDialog] = useState(false)
+    const [scheduleData, setScheduleData] = useState({ due_date: '', scheduled_time: '' })
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -56,7 +69,46 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         setTags(tagsRes.data || [])
         setCategories(catsRes.data || [])
         setMeetings(meetingsRes.data || [])
+        setMeetings(meetingsRes.data || [])
         setCampaigns(campaignsRes.data || [])
+
+        // Fetch team members if user is in a team
+        // Simplification: fetch all members user has access to or just for current team?
+        // Bulk actions are global list usually.
+        // Let's fetch from all teams the user belongs to.
+        const { data: members } = await supabase.from('team_members').select('user_id')
+        // This is generic. Ideally we want to know WHO they are.
+        // If we can't get profiles, we skipping for now or showing generic "User ID".
+        // Better: Fetch from `team_members` with `team_id` in (user's teams).
+        // Since we don't have easy profile access, we rely on context.
+        // Let's assume we can fetch profiles via a view or RPC if avail.
+        // For now, I will use a simple query that might return limited info if RLS restricts.
+        // Actually, let's just use `useUserStore` for current team members?
+        // But what if tasks are from different teams?
+        // Let's try to fetch members of the "Active Team" if set, otherwise maybe empty.
+        // I'll grab members of the current context team if possible.
+        // For MVP, I will try to fetch distinct members from `team_members` for the user's teams.
+
+        // Quick fix: Fetch all team members associated with user's teams
+        const { data: userTeams } = await supabase.from('team_members').select('team_id').eq('user_id', user.id)
+        if (userTeams && userTeams.length > 0) {
+            const teamIds = userTeams.map(t => t.team_id)
+            const { data: distinctMembers } = await supabase
+                .from('team_members')
+                .select('user_id, role')
+                .in('team_id', teamIds)
+
+            // Deduplicate
+            const uniqueMembers = []
+            const seen = new Set()
+            distinctMembers?.forEach(m => {
+                if (!seen.has(m.user_id)) {
+                    seen.add(m.user_id)
+                    uniqueMembers.push(m)
+                }
+            })
+            setTeamMembers(uniqueMembers)
+        }
     }
 
     const count = selectedIds.length
@@ -265,6 +317,57 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         }
     }
 
+    // Bulk assignee
+    const handleAssigneeChange = async (userId) => {
+        setLoading(true)
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({ assigned_to: userId === 'none' ? null : userId })
+                .in('id', selectedIds)
+
+            if (error) throw error
+
+            toast.success(`${count} task(s) assigned`)
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
+            onClear()
+            onSuccess?.()
+        } catch (error) {
+            toast.error('Failed to assign tasks')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Bulk schedule (Due Date / Time)
+    const handleScheduleSubmit = async () => {
+        setLoading(true)
+        try {
+            const updates = {}
+            if (scheduleData.due_date) updates.due_date = scheduleData.due_date
+            if (scheduleData.scheduled_time) updates.scheduled_time = scheduleData.scheduled_time
+
+            if (Object.keys(updates).length === 0) return
+
+            const { error } = await supabase
+                .from('tasks')
+                .update(updates)
+                .in('id', selectedIds)
+
+            if (error) throw error
+
+            toast.success(`${count} task(s) scheduled`)
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
+            setShowScheduleDialog(false)
+            onClear()
+            onSuccess?.()
+        } catch (error) {
+            toast.error('Failed to schedule tasks')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <>
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 animate-in slide-in-from-bottom-4 flex-wrap max-w-[95vw]">
@@ -321,6 +424,30 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                         ))}
                     </SelectContent>
                 </Select>
+
+                {/* Assignee */}
+                {teamMembers.length > 0 && (
+                    <Select onValueChange={handleAssigneeChange} disabled={loading}>
+                        <SelectTrigger className="w-[130px] h-9">
+                            <Users className="w-4 h-4 mr-1" />
+                            <SelectValue placeholder="Assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Unassigned</SelectItem>
+                            {teamMembers.map(member => (
+                                <SelectItem key={member.user_id} value={member.user_id}>
+                                    User {member.user_id.slice(0, 5)}...
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+
+                {/* Schedule Dialog Trigger */}
+                <Button variant="outline" size="sm" onClick={() => setShowScheduleDialog(true)} disabled={loading}>
+                    <Clock className="w-4 h-4 mr-1" />
+                    Schedule
+                </Button>
 
                 {/* Context */}
                 <Select onValueChange={handleContextChange} disabled={loading}>
@@ -455,6 +582,37 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Schedule Dialog */}
+            <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Schedule {count} Tasks</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Due Date</Label>
+                            <Input
+                                type="date"
+                                value={scheduleData.due_date}
+                                onChange={e => setScheduleData({ ...scheduleData, due_date: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Scheduled Time</Label>
+                            <Input
+                                type="datetime-local"
+                                value={scheduleData.scheduled_time}
+                                onChange={e => setScheduleData({ ...scheduleData, scheduled_time: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
+                        <Button onClick={handleScheduleSubmit} disabled={loading}>Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
