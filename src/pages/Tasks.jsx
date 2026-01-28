@@ -551,12 +551,14 @@ export function Tasks() {
                           isSelected={selectedIds.includes(task.id)}
                           isCompleting={completingTaskId === task.id}
                           onSelect={() => toggleSelect(task.id)}
-                          onComplete={async (e) => {
-                            e?.stopPropagation()
+                          onComplete={async (checked) => {
                             setCompletingTaskId(task.id)
-                            const newStatus = task.status === 'done' ? 'todo' : 'done'
-                            await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: newStatus } })
-                            setCompletingTaskId(null)
+                            const newStatus = checked ? 'done' : 'todo'
+                            try {
+                              await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: newStatus } })
+                            } finally {
+                              setCompletingTaskId(null)
+                            }
                           }}
                           onClick={() => {
                             setSelectedTask(task)
