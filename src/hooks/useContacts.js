@@ -26,17 +26,17 @@ export function useContacts(filters = {}) {
                 query = query.eq('status', filters.status)
             }
 
-            if (filters.contextId && filters.contextId !== 'all') {
-                // Filter by context - need subquery
+            if (filters.workspaceId && filters.workspaceId !== 'all') {
+                // Filter by workspace - need subquery
                 const { data: contactIds } = await supabase
                     .from('contact_contexts')
                     .select('contact_id')
-                    .eq('context_id', filters.contextId)
+                    .eq('context_id', filters.workspaceId)
 
                 if (contactIds && contactIds.length > 0) {
                     query = query.in('id', contactIds.map(c => c.contact_id))
                 } else {
-                    return [] // No contacts in this context
+                    return [] // No contacts in this workspace
                 }
             }
 
@@ -117,12 +117,36 @@ export function useContacts(filters = {}) {
                 }
             }
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['contacts'] })
-            toast.success('Contact updated')
+        onMutate: async (updatedContact) => {
+            // Cancel any outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ['contacts'] })
+
+            // Snapshot the previous value
+            const previousContacts = queryClient.getQueryData(['contacts', filters])
+
+            // Optimistically update to the new value
+            if (previousContacts) {
+                queryClient.setQueryData(['contacts', filters], (old) => {
+                    return old.map(contact =>
+                        contact.id === updatedContact.id
+                            ? { ...contact, ...updatedContact }
+                            : contact
+                    )
+                })
+            }
+
+            // Return a context object with the snapshotted value
+            return { previousContacts }
         },
-        onError: () => {
+        onError: (err, newContact, context) => {
+            queryClient.setQueryData(['contacts', filters], context.previousContacts)
             toast.error('Failed to update contact')
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['contacts'] })
+        },
+        onSuccess: () => {
+            toast.success('Contact updated')
         }
     })
 
@@ -145,14 +169,31 @@ export function useContacts(filters = {}) {
         }
     })
 
+    // Send email
+    const sendEmail = useMutation({
+        mutationFn: async ({ to, subject, html, contactId }) => {
+            const { data, error } = await supabase.functions.invoke('send-email', {
+                body: { to, subject, html, contactId }
+            })
+
+            if (error) throw error
+            return data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['contacts'] })
+        }
+    })
+
     return {
         contacts: contactsQuery.data || [],
         isLoading: contactsQuery.isLoading,
         createContact: createContact.mutate,
         updateContact: updateContact.mutate,
         deleteContact: deleteContact.mutate,
+        sendEmail: sendEmail.mutate,
         isCreating: createContact.isPending,
-        isUpdating: updateContact.isPending
+        isUpdating: updateContact.isPending,
+        isSendingEmail: sendEmail.isPending
     }
 }
 

@@ -37,6 +37,7 @@ const routes = {
   '/calendar': Calendar,
   '/campaigns': Campaigns,
   '/contacts': Contacts,
+  '/pipeline': () => <Contacts initialView="pipeline" />,
   '/settings': Settings,
   '/trash': Trash,
   '/archive': ArchivePage,

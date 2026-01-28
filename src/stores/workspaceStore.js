@@ -2,14 +2,14 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
 
-export const useContextStore = create(
+export const useWorkspaceStore = create(
     persist(
         (set, get) => ({
-            contexts: [],
-            activeContextId: null, // null = Global view
+            workspaces: [],
+            activeWorkspaceId: null, // null = Global view
             loading: false,
 
-            loadContexts: async () => {
+            loadWorkspaces: async () => {
                 set({ loading: true })
                 try {
                     const { data: { user } } = await supabase.auth.getUser()
@@ -23,45 +23,45 @@ export const useContextStore = create(
                         .order('name')
 
                     if (error) throw error
-                    set({ contexts: data || [], loading: false })
+                    set({ workspaces: data || [], loading: false })
                 } catch (error) {
-                    console.error('Error loading contexts:', error)
+                    console.error('Error loading workspaces:', error)
                     set({ loading: false })
                 }
             },
 
-            setActiveContext: (contextId) => {
-                set({ activeContextId: contextId })
+            setActiveWorkspace: (workspaceId) => {
+                set({ activeWorkspaceId: workspaceId })
             },
 
-            getActiveContext: () => {
-                const { contexts, activeContextId } = get()
-                if (!activeContextId) return null
-                return contexts.find(c => c.id === activeContextId) || null
+            getActiveWorkspace: () => {
+                const { workspaces, activeWorkspaceId } = get()
+                if (!activeWorkspaceId) return null
+                return workspaces.find(w => w.id === activeWorkspaceId) || null
             },
 
-            createContext: async (contextData) => {
+            createWorkspace: async (workspaceData) => {
                 try {
                     const { data: { user } } = await supabase.auth.getUser()
                     if (!user) throw new Error('Not authenticated')
 
                     const { data, error } = await supabase
                         .from('contexts')
-                        .insert({ ...contextData, user_id: user.id })
+                        .insert({ ...workspaceData, user_id: user.id })
                         .select()
                         .single()
 
                     if (error) throw error
 
-                    set(state => ({ contexts: [...state.contexts, data] }))
+                    set(state => ({ workspaces: [...state.workspaces, data] }))
                     return data
                 } catch (error) {
-                    console.error('Error creating context:', error)
+                    console.error('Error creating workspace:', error)
                     throw error
                 }
             },
 
-            updateContext: async (id, updates) => {
+            updateWorkspace: async (id, updates) => {
                 try {
                     const { data, error } = await supabase
                         .from('contexts')
@@ -73,16 +73,16 @@ export const useContextStore = create(
                     if (error) throw error
 
                     set(state => ({
-                        contexts: state.contexts.map(c => c.id === id ? data : c)
+                        workspaces: state.workspaces.map(w => w.id === id ? data : w)
                     }))
                     return data
                 } catch (error) {
-                    console.error('Error updating context:', error)
+                    console.error('Error updating workspace:', error)
                     throw error
                 }
             },
 
-            deleteContext: async (id, mode = 'soft') => {
+            deleteWorkspace: async (id, mode = 'soft') => {
                 try {
                     if (mode === 'soft') {
                         // Soft delete = archive
@@ -96,21 +96,19 @@ export const useContextStore = create(
                     }
 
                     set(state => ({
-                        contexts: state.contexts.filter(c => c.id !== id),
-                        activeContextId: state.activeContextId === id ? null : state.activeContextId
+                        workspaces: state.workspaces.filter(w => w.id !== id),
+                        activeWorkspaceId: state.activeWorkspaceId === id ? null : state.activeWorkspaceId
                     }))
                 } catch (error) {
-                    console.error('Error deleting context:', error)
+                    console.error('Error deleting workspace:', error)
                     throw error
                 }
             }
         }),
         {
-            name: 'superplanner-context',
-            name: 'superplanner-context',
+            name: 'superplanner-workspace',
             partialize: (state) => ({
-                // Don't persist activeContextId so it defaults to Global View on reload
-                contexts: state.contexts
+                workspaces: state.workspaces
             })
         }
     )

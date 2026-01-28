@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ContextManager } from '../components/ContextManager'
+import { WorkspaceManager } from '../components/WorkspaceManager'
 import { CategoryManager } from '../components/CategoryManager'
 import { ProjectManager } from '../components/ProjectManager'
 import { TagManager } from '../components/TagManager'
@@ -14,15 +14,14 @@ export function Workspace() {
                 </div>
                 <div>
                     <h1 className="text-3xl font-extrabold tracking-tight font-display">Workspace Setup</h1>
-                    <p className="text-muted-foreground font-medium">Manage your contexts, projects, and metadata</p>
+                    <p className="text-muted-foreground font-medium">Manage your workspaces, projects, and metadata</p>
                 </div>
             </div>
-
-            <Tabs defaultValue="contexts" className="space-y-6">
+            <Tabs defaultValue="workspaces" className="space-y-6">
                 <TabsList className="bg-muted/50 p-1 rounded-xl h-12 w-full justify-start overflow-x-auto no-scrollbar">
-                    <TabsTrigger value="contexts" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6">
+                    <TabsTrigger value="workspaces" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6">
                         <Building className="w-4 h-4 mr-2" />
-                        Contexts
+                        Workspaces
                     </TabsTrigger>
                     <TabsTrigger value="projects" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-6">
                         <FolderKanban className="w-4 h-4 mr-2" />
@@ -38,8 +37,8 @@ export function Workspace() {
                     </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="contexts" className="space-y-4 outline-none">
-                    <ContextManager />
+                <TabsContent value="workspaces" className="space-y-4 outline-none">
+                    <WorkspaceManager />
                 </TabsContent>
 
                 <TabsContent value="projects" className="space-y-4 outline-none">
@@ -53,7 +52,7 @@ export function Workspace() {
                 <TabsContent value="tags" className="space-y-4 outline-none">
                     <TagManager />
                 </TabsContent>
-            </Tabs>
-        </div>
+            </Tabs >
+        </div >
     )
 }

@@ -20,11 +20,12 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, X, Calendar, CheckSquare, MessageSquare, Clock } from 'lucide-react'
+import { Loader2, X, Calendar, CheckSquare, MessageSquare, Clock, Mail, Phone, MessageCircle } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { supabase } from '../lib/supabase'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ComposeEmailModal } from './ComposeEmailModal'
 
 const STATUS_OPTIONS = [
     { value: 'prospect_new', label: '🆕 New Prospect', color: 'bg-blue-100 text-blue-700' },
@@ -38,8 +39,9 @@ const STATUS_OPTIONS = [
 
 export function ContactModal({ open, onOpenChange, contact }) {
     const { createContact, updateContact, isCreating, isUpdating } = useContacts()
-    const { contexts } = useContextStore()
+    const { workspaces } = useWorkspaceStore()
     const isEditing = !!contact?.id
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
 
     const [formData, setFormData] = useState({
         name: '',
@@ -49,7 +51,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
         status: 'prospect_new',
         type: 'individual',
         notes: '',
-        contextIds: []
+        workspaceIds: []
     })
 
     const [activities, setActivities] = useState([])
@@ -69,7 +71,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                 .select('*')
                 .eq('contact_id', contact.id)
                 .order('created_at', { ascending: false })
-                .limit(10)
+                .limit(20) // Increased limit to show emails
 
             if (tError) throw tError
             setActivities(tasks || [])
@@ -90,7 +92,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                 status: contact.status || 'prospect_new',
                 type: contact.type || 'individual',
                 notes: contact.notes || '',
-                contextIds: contact.contact_contexts?.map(cc => cc.context?.id).filter(Boolean) || []
+                workspaceIds: contact.contact_contexts?.map(cc => cc.context?.id).filter(Boolean) || []
             })
         } else {
             setFormData({
@@ -101,7 +103,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                 status: 'prospect_new',
                 type: 'individual',
                 notes: '',
-                contextIds: []
+                workspaceIds: []
             })
         }
     }, [contact, open])
@@ -110,22 +112,22 @@ export function ContactModal({ open, onOpenChange, contact }) {
         e.preventDefault()
 
         if (isEditing) {
-            updateContact({ id: contact.id, ...formData }, {
+            updateContact({ id: contact.id, ...formData, contextIds: formData.workspaceIds }, {
                 onSuccess: () => onOpenChange(false)
             })
         } else {
-            createContact(formData, {
+            createContact({ ...formData, contextIds: formData.workspaceIds }, {
                 onSuccess: () => onOpenChange(false)
             })
         }
     }
 
-    const toggleContext = (contextId) => {
+    const toggleWorkspace = (workspaceId) => {
         setFormData(prev => ({
             ...prev,
-            contextIds: prev.contextIds.includes(contextId)
-                ? prev.contextIds.filter(id => id !== contextId)
-                : [...prev.contextIds, contextId]
+            workspaceIds: prev.workspaceIds.includes(workspaceId)
+                ? prev.workspaceIds.filter(id => id !== workspaceId)
+                : [...prev.workspaceIds, workspaceId]
         }))
     }
 
@@ -149,6 +151,44 @@ export function ContactModal({ open, onOpenChange, contact }) {
 
                     <TabsContent value="details">
                         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                            {/* Quick Actions for Existing Contacts */}
+                            {isEditing && (formData.email || formData.phone) && (
+                                <div className="flex items-center gap-2 mb-4 p-3 bg-muted/30 rounded-lg border border-dashed border-border/60">
+                                    <span className="text-xs font-medium text-muted-foreground mr-auto">Quick Actions:</span>
+
+                                    {formData.email && (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 gap-2 bg-background hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                                            onClick={() => setIsEmailModalOpen(true)}
+                                        >
+                                            <Mail className="w-3.5 h-3.5" />
+                                            Email
+                                        </Button>
+                                    )}
+
+                                    {formData.phone && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 gap-2 bg-background hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+                                            asChild
+                                        >
+                                            <a
+                                                href={`https://wa.me/${formData.phone.replace(/[^0-9]/g, '')}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <MessageCircle className="w-3.5 h-3.5" />
+                                                WhatsApp
+                                            </a>
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Name & Company */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
@@ -228,23 +268,23 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                 </div>
                             </div>
 
-                            {/* Contexts (multi-select) */}
+                            {/* Workspaces (multi-select) */}
                             <div className="space-y-2">
-                                <Label>Contexts</Label>
+                                <Label>Workspaces</Label>
                                 <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/20">
-                                    {contexts.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground">No contexts available</p>
+                                    {workspaces.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">No workspaces available</p>
                                     ) : (
-                                        contexts.map(ctx => (
+                                        workspaces.map(w => (
                                             <Badge
-                                                key={ctx.id}
-                                                variant={formData.contextIds.includes(ctx.id) ? "default" : "outline"}
+                                                key={w.id}
+                                                variant={formData.workspaceIds.includes(w.id) ? "default" : "outline"}
                                                 className="cursor-pointer transition-all hover:scale-105"
-                                                style={formData.contextIds.includes(ctx.id) ? { backgroundColor: ctx.color } : {}}
-                                                onClick={() => toggleContext(ctx.id)}
+                                                style={formData.workspaceIds.includes(w.id) ? { backgroundColor: w.color } : {}}
+                                                onClick={() => toggleWorkspace(w.id)}
                                             >
-                                                {formData.contextIds.includes(ctx.id) && '✓ '}
-                                                {ctx.name}
+                                                {formData.workspaceIds.includes(w.id) && '✓ '}
+                                                {w.name}
                                             </Badge>
                                         ))
                                     )}
@@ -292,19 +332,26 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                     {activities.map((activity, idx) => (
                                         <div key={activity.id} className="relative pl-8 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
                                             <div className="absolute left-0 top-1 w-5 h-5 rounded-full bg-background border-2 border-primary flex items-center justify-center z-10">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                <div className={`w-1.5 h-1.5 rounded-full ${activity.type === 'email' ? 'bg-orange-500' : 'bg-primary'}`} />
                                             </div>
                                             <div className="bg-muted/30 p-3 rounded-lg border border-border/40 hover:border-primary/30 transition-colors">
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                                                        {activity.type === 'meeting' ? 'Meeting' : 'Task'}
+                                                    <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider flex items-center gap-1">
+                                                        {activity.type === 'email' && <Mail className="w-3 h-3" />}
+                                                        {activity.type === 'meeting' ? 'Meeting' : activity.type === 'email' ? 'Email Sent' : 'Task'}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground">
-                                                        {new Date(activity.created_at).toLocaleDateString()}
+                                                        {new Date(activity.created_at).toLocaleDateString()} {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                                 <h5 className="text-sm font-medium">{activity.title}</h5>
-                                                {activity.status === 'done' && (
+                                                {activity.type === 'email' && (
+                                                    <div
+                                                        className="mt-2 text-xs text-muted-foreground line-clamp-2 bg-background p-2 rounded border border-border/50"
+                                                        dangerouslySetInnerHTML={{ __html: activity.description }}
+                                                    />
+                                                )}
+                                                {activity.status === 'done' && activity.type !== 'email' && (
                                                     <Badge variant="secondary" className="mt-2 bg-green-500/10 text-green-600 border-none h-5 px-1.5 text-[10px]">
                                                         Completed
                                                     </Badge>
@@ -317,6 +364,15 @@ export function ContactModal({ open, onOpenChange, contact }) {
                         </div>
                     </TabsContent>
                 </Tabs>
+                <ComposeEmailModal
+                    open={isEmailModalOpen}
+                    onOpenChange={setIsEmailModalOpen}
+                    contact={contact}
+                    onSuccess={() => {
+                        // Refresh activities
+                        loadActivities()
+                    }}
+                />
             </DialogContent>
         </Dialog>
     )

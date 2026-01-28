@@ -60,7 +60,7 @@ export function LandingPage({ onLoginClick }) {
                         <FeatureCard
                             icon={Layout}
                             title="Task Management"
-                            description="Organize with Kanban boards, lists, and calendar views. Context-aware filtering keeps you focused."
+                            description="Organize with Kanban boards, lists, and calendar views. Workspace-aware filtering keeps you focused."
                         />
                         <FeatureCard
                             icon={Users}

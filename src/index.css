@@ -25,14 +25,14 @@
     --ring: 222.2 84% 4.9%;
     --radius: 0.5rem;
 
-    /* Context Colors */
-    --context-amp: 99 102 241;
+    /* Workspace Colors */
+    --workspace-amp: 99 102 241;
     /* Indigo */
-    --context-web: 245 158 11;
+    --workspace-web: 245 158 11;
     /* Amber */
-    --context-agency: 34 197 94;
+    --workspace-agency: 34 197 94;
     /* Green */
-    --context-wazo: 20 184 166;
+    --workspace-wazo: 20 184 166;
     /* Teal */
   }
 

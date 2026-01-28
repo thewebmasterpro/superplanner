@@ -12,11 +12,11 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2, FolderKanban, AlertCircle } from 'lucide-react'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import toast from 'react-hot-toast'
 
 export function ProjectManager() {
-    const { contexts, loadContexts } = useContextStore()
+    const { workspaces, loadWorkspaces } = useWorkspaceStore()
     const [projects, setProjects] = useState([])
     const [newProject, setNewProject] = useState({ name: '', description: '', context_id: '' })
     const [loading, setLoading] = useState(false)
@@ -27,7 +27,7 @@ export function ProjectManager() {
 
     const loadData = async () => {
         try {
-            await loadContexts()
+            await loadWorkspaces()
             const { data, error } = await supabase
                 .from('projects')
                 .select(`
@@ -53,7 +53,7 @@ export function ProjectManager() {
             return
         }
         if (!newProject.context_id) {
-            toast.error('Context is mandatory for all projects')
+            toast.error('Workspace is mandatory for all projects')
             return
         }
 
@@ -107,7 +107,7 @@ export function ProjectManager() {
                         <FolderKanban className="w-5 h-5 text-primary" />
                         Add New Project
                     </CardTitle>
-                    <CardDescription>Create a new project. Each project must be linked to a context.</CardDescription>
+                    <CardDescription>Create a new project. Each project must be linked to a workspace.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleAddProject} className="space-y-4">
@@ -122,23 +122,23 @@ export function ProjectManager() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="projectContext">Context *</Label>
+                                <Label htmlFor="projectWorkspace">Workspace *</Label>
                                 <Select
                                     value={newProject.context_id}
                                     onValueChange={(value) => setNewProject({ ...newProject, context_id: value })}
                                 >
-                                    <SelectTrigger id="projectContext">
-                                        <SelectValue placeholder="Select a context" />
+                                    <SelectTrigger id="projectWorkspace">
+                                        <SelectValue placeholder="Select a workspace" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {contexts.map((ctx) => (
-                                            <SelectItem key={ctx.id} value={ctx.id}>
+                                        {workspaces.map((w) => (
+                                            <SelectItem key={w.id} value={w.id}>
                                                 <div className="flex items-center gap-2">
                                                     <div
                                                         className="w-2 h-2 rounded-full"
-                                                        style={{ backgroundColor: ctx.color }}
+                                                        style={{ backgroundColor: w.color }}
                                                     />
-                                                    {ctx.name}
+                                                    {w.name}
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -203,7 +203,7 @@ export function ProjectManager() {
                                         ) : (
                                             <div className="flex items-center gap-1 text-xs text-destructive font-medium">
                                                 <AlertCircle className="w-3 h-3" />
-                                                No context (Migration required)
+                                                No workspace (Migration required)
                                             </div>
                                         )}
                                     </div>

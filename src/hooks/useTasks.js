@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export function useTasks() {
-  const activeContextId = useContextStore(state => state.activeContextId)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   return useQuery({
-    queryKey: ['tasks', activeContextId],
+    queryKey: ['tasks', activeWorkspaceId],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return []
@@ -27,17 +27,17 @@ export function useTasks() {
         .order('created_at', { ascending: false })
 
       // Filter logic for Trash/Archive
-      if (activeContextId === 'trash') {
+      if (activeWorkspaceId === 'trash') {
         query = query.not('deleted_at', 'is', null)
-      } else if (activeContextId === 'archive') {
+      } else if (activeWorkspaceId === 'archive') {
         query = query.is('deleted_at', null).not('archived_at', 'is', null)
       } else {
-        // Default view (Global or Context): Not deleted, Not archived
+        // Default view (Global or Workspace): Not deleted, Not archived
         query = query.is('deleted_at', null).is('archived_at', null)
 
-        // Filter by specific context if selected (and not 'all')
-        if (activeContextId && activeContextId !== 'all') {
-          query = query.eq('context_id', activeContextId)
+        // Filter by specific workspace if selected (and not 'all')
+        if (activeWorkspaceId && activeWorkspaceId !== 'all') {
+          query = query.eq('context_id', activeWorkspaceId)
         }
       }
 
@@ -140,6 +140,130 @@ export function usePermanentDeleteTask() {
     },
     onError: (error) => {
       toast.error(`Failed to delete task: ${error.message}`)
+    },
+  })
+}
+
+// Bulk restore tasks
+export function useBulkRestoreTasks() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: null, archived_at: null })
+        .in('id', ids)
+
+      if (error) throw error
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success(`${ids.length} tasks restored`)
+    },
+    onError: (error) => {
+      toast.error(`Failed to restore tasks: ${error.message}`)
+    },
+  })
+}
+
+// Bulk permanent delete
+export function useBulkPermanentDeleteTasks() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .in('id', ids)
+
+      if (error) throw error
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success(`${ids.length} tasks permanently deleted`)
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete tasks: ${error.message}`)
+    },
+  })
+}
+
+// Bulk move to trash
+export function useBulkMoveToTrash() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: new Date().toISOString() })
+        .in('id', ids)
+
+      if (error) throw error
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success(`${ids.length} tasks moved to trash`)
+    },
+    onError: (error) => {
+      toast.error(`Failed to move tasks to trash: ${error.message}`)
+    },
+  })
+}
+
+// Empty Trash
+export function useEmptyTrash() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('user_id', user.id)
+        .not('deleted_at', 'is', null)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Trash emptied')
+    },
+    onError: (error) => {
+      toast.error(`Failed to empty trash: ${error.message}`)
+    },
+  })
+}
+
+// Empty Archive (Move all archived to trash)
+export function useEmptyArchive() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .is('deleted_at', null)
+        .not('archived_at', 'is', null)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('Archive emptied (moved to trash)')
+    },
+    onError: (error) => {
+      toast.error(`Failed to empty archive: ${error.message}`)
     },
   })
 }

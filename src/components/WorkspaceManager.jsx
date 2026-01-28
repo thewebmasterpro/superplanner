@@ -12,6 +12,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog'
 import {
     DropdownMenu,
@@ -20,7 +21,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -35,14 +36,14 @@ const PRESET_COLORS = [
     '#14b8a6', // Teal
 ]
 
-export function ContextManager() {
-    const { contexts, loadContexts, createContext, updateContext, deleteContext } = useContextStore()
+export function WorkspaceManager() {
+    const { workspaces, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace } = useWorkspaceStore()
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [editingContext, setEditingContext] = useState(null)
-    const [contextStats, setContextStats] = useState({})
+    const [editingWorkspace, setEditingWorkspace] = useState(null)
+    const [workspaceStats, setWorkspaceStats] = useState({})
     const [loading, setLoading] = useState(false)
     const [showArchived, setShowArchived] = useState(false)
-    const [allContexts, setAllContexts] = useState([])
+    const [allWorkspaces, setAllWorkspaces] = useState([])
 
     const [formData, setFormData] = useState({
         name: '',
@@ -52,16 +53,16 @@ export function ContextManager() {
     })
 
     useEffect(() => {
-        loadContexts()
-        loadAllContextsWithStats()
+        loadWorkspaces()
+        loadAllWorkspacesWithStats()
     }, [])
 
-    const loadAllContextsWithStats = async () => {
+    const loadAllWorkspacesWithStats = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
-            // Fetch all contexts including archived
+            // Fetch all workspaces including archived
             const { data: ctxs, error: ctxError } = await supabase
                 .from('contexts')
                 .select('*')
@@ -69,9 +70,9 @@ export function ContextManager() {
                 .order('name')
 
             if (ctxError) throw ctxError
-            setAllContexts(ctxs || [])
+            setAllWorkspaces(ctxs || [])
 
-            // Fetch stats for each context
+            // Fetch stats for each workspace
             const stats = {}
             for (const ctx of ctxs || []) {
                 const [tasksRes, campaignsRes] = await Promise.all([
@@ -83,20 +84,20 @@ export function ContextManager() {
                     campaigns: campaignsRes.count || 0
                 }
             }
-            setContextStats(stats)
+            setWorkspaceStats(stats)
         } catch (error) {
-            console.error('Error loading contexts with stats:', error)
+            console.error('Error loading workspaces with stats:', error)
         }
     }
 
     const handleOpenCreate = () => {
-        setEditingContext(null)
+        setEditingWorkspace(null)
         setFormData({ name: '', description: '', color: '#6366f1', icon: 'briefcase' })
         setIsModalOpen(true)
     }
 
     const handleOpenEdit = (ctx) => {
-        setEditingContext(ctx)
+        setEditingWorkspace(ctx)
         setFormData({
             name: ctx.name || '',
             description: ctx.description || '',
@@ -109,21 +110,21 @@ export function ContextManager() {
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!formData.name.trim()) {
-            toast.error('Context name is required')
+            toast.error('Workspace name is required')
             return
         }
 
         setLoading(true)
         try {
-            if (editingContext) {
-                await updateContext(editingContext.id, formData)
-                toast.success('Context updated!')
+            if (editingWorkspace) {
+                await updateWorkspace(editingWorkspace.id, formData)
+                toast.success('Workspace updated!')
             } else {
-                await createContext(formData)
-                toast.success('Context created!')
+                await createWorkspace(formData)
+                toast.success('Workspace created!')
             }
             setIsModalOpen(false)
-            loadAllContextsWithStats()
+            loadAllWorkspacesWithStats()
         } catch (error) {
             toast.error(error.message)
         } finally {
@@ -132,40 +133,40 @@ export function ContextManager() {
     }
 
     const handleDelete = async (ctx) => {
-        const stats = contextStats[ctx.id] || { tasks: 0, campaigns: 0 }
+        const stats = workspaceStats[ctx.id] || { tasks: 0, campaigns: 0 }
         const totalItems = stats.tasks + stats.campaigns
 
         let message = `Delete "${ctx.name}"?`
         if (totalItems > 0) {
-            message += `\n\n⚠️ This context has ${stats.tasks} tasks and ${stats.campaigns} campaigns linked. They will become orphaned (no context).`
+            message += `\n\n⚠️ This workspace has ${stats.tasks} tasks and ${stats.campaigns} campaigns linked. They will become orphaned (no workspace).`
         }
 
         if (!window.confirm(message)) return
 
         try {
-            await deleteContext(ctx.id, 'hard')
-            toast.success('Context deleted')
-            loadAllContextsWithStats()
+            await deleteWorkspace(ctx.id, 'hard')
+            toast.success('Workspace deleted')
+            loadAllWorkspacesWithStats()
         } catch (error) {
-            toast.error('Failed to delete context')
+            toast.error('Failed to delete workspace')
         }
     }
 
     const handleArchive = async (ctx) => {
         try {
             const newStatus = ctx.status === 'archived' ? 'active' : 'archived'
-            await updateContext(ctx.id, { status: newStatus })
-            toast.success(ctx.status === 'archived' ? 'Context restored!' : 'Context archived!')
-            loadAllContextsWithStats()
-            loadContexts() // Refresh store
+            await updateWorkspace(ctx.id, { status: newStatus })
+            toast.success(ctx.status === 'archived' ? 'Workspace restored!' : 'Workspace archived!')
+            loadAllWorkspacesWithStats()
+            loadWorkspaces() // Refresh store
         } catch (error) {
-            toast.error('Failed to update context')
+            toast.error('Failed to update workspace')
         }
     }
 
-    const displayedContexts = showArchived
-        ? allContexts
-        : allContexts.filter(c => c.status !== 'archived')
+    const displayedWorkspaces = showArchived
+        ? allWorkspaces
+        : allWorkspaces.filter(c => c.status !== 'archived')
 
     return (
         <div className="space-y-6">
@@ -174,10 +175,10 @@ export function ContextManager() {
                 <div>
                     <h3 className="text-lg font-semibold flex items-center gap-2">
                         <Building className="w-5 h-5" />
-                        Your Contexts
+                        Your Workspaces
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {allContexts.filter(c => c.status === 'active').length} active contexts
+                        {allWorkspaces.filter(c => c.status === 'active').length} active workspaces
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -186,30 +187,30 @@ export function ContextManager() {
                     </Button>
                     <Button onClick={handleOpenCreate}>
                         <Plus className="w-4 h-4 mr-2" />
-                        New Context
+                        New Workspace
                     </Button>
                 </div>
             </div>
 
-            {/* Context List */}
-            {displayedContexts.length === 0 ? (
+            {/* Workspace List */}
+            {displayedWorkspaces.length === 0 ? (
                 <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12">
                         <Building className="w-12 h-12 text-muted-foreground mb-4" />
-                        <h4 className="font-medium mb-2">No contexts yet</h4>
+                        <h4 className="font-medium mb-2">No workspaces yet</h4>
                         <p className="text-sm text-muted-foreground text-center mb-4">
-                            Create contexts to organize your work by company or project scope.
+                            Create workspaces to organize your work by company or project scope.
                         </p>
                         <Button onClick={handleOpenCreate}>
                             <Plus className="w-4 h-4 mr-2" />
-                            Create Your First Context
+                            Create Your First Workspace
                         </Button>
                     </CardContent>
                 </Card>
             ) : (
                 <div className="grid gap-4">
-                    {displayedContexts.map(ctx => {
-                        const stats = contextStats[ctx.id] || { tasks: 0, campaigns: 0 }
+                    {displayedWorkspaces.map(ctx => {
+                        const stats = workspaceStats[ctx.id] || { tasks: 0, campaigns: 0 }
                         const isArchived = ctx.status === 'archived'
 
                         return (
@@ -281,15 +282,15 @@ export function ContextManager() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{editingContext ? 'Edit Context' : 'Create New Context'}</DialogTitle>
+                        <DialogTitle>{editingWorkspace ? 'Edit Workspace' : 'Create New Workspace'}</DialogTitle>
                         <DialogDescription>
-                            Contexts represent workspaces like companies or major project scopes.
+                            Workspaces represent contexts like companies or major project scopes.
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Context Name *</Label>
+                            <Label htmlFor="name">Workspace Name *</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
@@ -337,7 +338,7 @@ export function ContextManager() {
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={loading}>
-                                {editingContext ? 'Save Changes' : 'Create Context'}
+                                {editingWorkspace ? 'Save Changes' : 'Create Workspace'}
                             </Button>
                         </DialogFooter>
                     </form>

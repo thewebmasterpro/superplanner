@@ -4,24 +4,25 @@ import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import SpotifyPlayer from '../SpotifyPlayer'
-import { ContextSelector } from '../ContextSelector'
-import { useContextStore } from '../../stores/contextStore'
+import { WorkspaceSelector } from '../WorkspaceSelector'
+import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function Sidebar() {
   const { isSidebarOpen, setSidebarOpen, toggleSidebar } = useUIStore()
   const { preferences } = useUserStore()
-  const { getActiveContext } = useContextStore()
+  const { getActiveWorkspace } = useWorkspaceStore()
   const currentPath = window.location.pathname
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024
 
-  const activeContext = getActiveContext()
+  const activeWorkspace = getActiveWorkspace()
 
   const menuItems = [
     { label: 'Dashboard', icon: Home, href: '/' },
     { label: 'Tasks', icon: CheckSquare, href: '/tasks' },
     { label: 'Meetings', icon: Video, href: '/meetings' },
     { label: 'Contacts', icon: Users, href: '/contacts' },
+    { label: 'Pipeline', icon: BarChart3, href: '/pipeline' },
     { label: 'Calendar', icon: Calendar, href: '/calendar' },
     {
       label: 'Campaigns',
@@ -102,9 +103,9 @@ export function Sidebar() {
           <h2 className="text-lg font-bold text-primary">🚀 Superplanner</h2>
         </div>
 
-        {/* Context Selector */}
+        {/* Workspace Selector */}
         <div className="p-3 border-b border-border bg-muted/30">
-          <ContextSelector />
+          <WorkspaceSelector />
         </div>
 
         {/* Menu items */}
@@ -131,10 +132,10 @@ export function Sidebar() {
                       : 'hover:bg-muted text-foreground'
                   }
                 `}
-                style={isActive && activeContext ? {
-                  color: activeContext.color,
-                  backgroundColor: `${activeContext.color}15`,
-                  borderRight: `3px solid ${activeContext.color}`
+                style={isActive && activeWorkspace ? {
+                  color: activeWorkspace.color,
+                  backgroundColor: `${activeWorkspace.color}15`,
+                  borderRight: `3px solid ${activeWorkspace.color}`
                 } : isActive ? {
                   color: 'var(--primary)',
                   backgroundColor: 'var(--secondary)'

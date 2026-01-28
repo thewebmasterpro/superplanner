@@ -14,7 +14,7 @@ import TaskTimer from '../components/TaskTimer'
 import { TaskModal } from '../components/TaskModal'
 import { useUIStore } from '../stores/uiStore'
 import { CampaignProgressBar } from '../components/CampaignProgressBar'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { Skeleton } from '../components/ui/skeleton'
 
 
@@ -25,7 +25,7 @@ export function Dashboard() {
   const [userPreferences, setUserPreferences] = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
   const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
-  const { contexts, activeContextId } = useContextStore()
+  const { workspaces, activeWorkspaceId } = useWorkspaceStore()
   const [activeCampaigns, setActiveCampaigns] = useState([])
 
   // Load prayer schedule and preferences

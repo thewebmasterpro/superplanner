@@ -30,7 +30,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { supabase } from '../lib/supabase'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
@@ -40,7 +40,7 @@ import toast from 'react-hot-toast'
  */
 export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const queryClient = useQueryClient()
-    const { contexts } = useContextStore()
+    const { workspaces } = useWorkspaceStore()
     const [tags, setTags] = useState([])
     const [categories, setCategories] = useState([])
     const [meetings, setMeetings] = useState([])
@@ -158,24 +158,24 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         }
     }
 
-    // Bulk update context
-    const handleContextChange = async (contextId) => {
+    // Bulk update workspace
+    const handleWorkspaceChange = async (workspaceId) => {
         setLoading(true)
         try {
             const { error } = await supabase
                 .from('tasks')
-                .update({ context_id: contextId === 'none' ? null : contextId })
+                .update({ context_id: workspaceId === 'none' ? null : workspaceId })
                 .in('id', selectedIds)
 
             if (error) throw error
 
-            const contextName = contexts.find(c => c.id === contextId)?.name || 'None'
-            toast.success(`${count} task(s) moved to ${contextName}`)
+            const workspaceName = workspaces.find(w => w.id === workspaceId)?.name || 'None'
+            toast.success(`${count} task(s) moved to ${workspaceName}`)
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
         } catch (error) {
-            toast.error('Failed to update context')
+            toast.error('Failed to update workspace')
         } finally {
             setLoading(false)
         }
@@ -449,19 +449,19 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                     Schedule
                 </Button>
 
-                {/* Context */}
-                <Select onValueChange={handleContextChange} disabled={loading}>
+                {/* Workspace */}
+                <Select onValueChange={handleWorkspaceChange} disabled={loading}>
                     <SelectTrigger className="w-[130px] h-9">
                         <FolderOpen className="w-4 h-4 mr-1" />
-                        <SelectValue placeholder="Context" />
+                        <SelectValue placeholder="Workspace" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {contexts.map(ctx => (
-                            <SelectItem key={ctx.id} value={ctx.id}>
+                        {workspaces.map(w => (
+                            <SelectItem key={w.id} value={w.id}>
                                 <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color }} />
-                                    {ctx.name}
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color }} />
+                                    {w.name}
                                 </div>
                             </SelectItem>
                         ))}

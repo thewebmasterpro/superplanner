@@ -3,7 +3,7 @@ import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns, User, CheckSqua
 import { useTasks } from '../hooks/useTasks'
 import { useContactsList } from '../hooks/useContacts'
 import { useUIStore } from '../stores/uiStore'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -37,10 +37,10 @@ export function Tasks() {
   const { data: contactsList = [] } = useContactsList()
   const updateTaskMutation = useUpdateTask()
   const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery } = useUIStore()
-  const { contexts, activeContextId } = useContextStore()
+  const { workspaces, activeWorkspaceId } = useWorkspaceStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
-  const [contextFilter, setContextFilter] = useState('all')
+  const [workspaceFilter, setWorkspaceFilter] = useState('all')
   const [campaignFilter, setCampaignFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('task')
   const [tagFilter, setTagFilter] = useState('all')
@@ -68,12 +68,10 @@ export function Tasks() {
     loadFilterOptions()
   }, [])
 
-  // Reset context filter when active context changes (e.g. switching to Trash/Archive or between contexts)
+  // Reset workspace filter when active workspace changes
   useEffect(() => {
-    setContextFilter('all')
-    // We might want to reset other filters too, but context filter is critical to avoid empty states
-    // if switching from Context A to Context B while filtering by Context A.
-  }, [activeContextId])
+    setWorkspaceFilter('all')
+  }, [activeWorkspaceId])
 
   const loadFilterOptions = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -116,11 +114,11 @@ export function Tasks() {
       const matchesSearch = !query ||
         task.title?.toLowerCase().includes(query) ||
         task.description?.toLowerCase().includes(query) ||
-        task.context?.name?.toLowerCase().includes(query)
+        task.context?.name?.toLowerCase()?.includes(query)
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter
       const matchesPriority = priorityFilter === 'all' || task.priority === parseInt(priorityFilter)
-      const matchesContext = contextFilter === 'all' ||
-        (contextFilter === 'none' ? !task.context_id : task.context_id === contextFilter)
+      const matchesWorkspace = workspaceFilter === 'all' ||
+        (workspaceFilter === 'none' ? !task.context_id : task.context_id === workspaceFilter)
       const matchesCampaign = campaignFilter === 'all' ||
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
       const matchesType = typeFilter === 'all' || task.type === typeFilter
@@ -163,7 +161,7 @@ export function Tasks() {
         matchesDueDate = !task.due_date
       }
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesContext &&
+      return matchesSearch && matchesStatus && matchesPriority && matchesWorkspace &&
         matchesCampaign && matchesType && matchesTag && matchesDueDate && matchesClient && matchesAssignee
     })
 
@@ -191,17 +189,15 @@ export function Tasks() {
           return new Date(b.created_at) - new Date(a.created_at)
       }
     })
-  }, [tasks, searchQuery, statusFilter, priorityFilter, contextFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
+  }, [tasks, searchQuery, statusFilter, priorityFilter, workspaceFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
 
   // Count active filters
   const activeFilterCount = [
     statusFilter !== 'all',
     priorityFilter !== 'all',
-    contextFilter !== 'all',
+    workspaceFilter !== 'all',
     campaignFilter !== 'all',
     typeFilter !== 'all',
-    tagFilter !== 'all',
-    clientFilter !== 'all',
     tagFilter !== 'all',
     clientFilter !== 'all',
     dueDateFilter !== 'all',
@@ -213,7 +209,7 @@ export function Tasks() {
     setSearchQuery('')
     setStatusFilter('all')
     setPriorityFilter('all')
-    setContextFilter('all')
+    setWorkspaceFilter('all')
     setCampaignFilter('all')
     setTypeFilter('all')
     setTagFilter('all')
@@ -253,7 +249,7 @@ export function Tasks() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-extrabold tracking-tight font-display flex items-center gap-2">
-            <CheckSquare className="w-8 h-8" style={activeContextId && contexts.find(c => c.id === activeContextId) ? { color: contexts.find(c => c.id === activeContextId).color } : { color: 'var(--primary)' }} />
+            <CheckSquare className="w-8 h-8" style={activeWorkspaceId && workspaces.find(w => w.id === activeWorkspaceId) ? { color: workspaces.find(w => w.id === activeWorkspaceId).color } : { color: 'var(--primary)' }} />
             Tasks
           </h1>
           <p className="text-muted-foreground font-medium">Manage your tasks and projects</p>
@@ -340,19 +336,19 @@ export function Tasks() {
             </SelectContent>
           </Select>
 
-          {/* Context */}
-          <Select value={contextFilter} onValueChange={setContextFilter}>
+          {/* Workspace */}
+          <Select value={workspaceFilter} onValueChange={setWorkspaceFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Context" />
+              <SelectValue placeholder="Workspace" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Context</SelectItem>
-              <SelectItem value="none">No Context</SelectItem>
-              {contexts.map(ctx => (
-                <SelectItem key={ctx.id} value={ctx.id}>
+              <SelectItem value="all">All Workspaces</SelectItem>
+              <SelectItem value="none">No Workspace</SelectItem>
+              {workspaces.map(w => (
+                <SelectItem key={w.id} value={w.id}>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color }} />
-                    {ctx.name}
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color }} />
+                    {w.name}
                   </div>
                 </SelectItem>
               ))}

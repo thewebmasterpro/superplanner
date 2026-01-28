@@ -88,9 +88,9 @@ Success. No rows returned
 ### Étape 5: Configurer l'URL de redirection
 
 1. Toujours dans **Authentication** → **URL Configuration**
-2. **Site URL** : `https://sp.thewebmaster.pro`
+2. **Site URL** : `https://client.hagendigital.com`
 3. **Redirect URLs** : Ajoutez :
-   - `https://sp.thewebmaster.pro`
+   - `https://client.hagendigital.com`
    - `http://localhost:5173` (pour dev local)
 4. Cliquez **Save**
 
@@ -198,7 +198,7 @@ Uploadez sur Hostinger :
 
 2. **Configurez l'URL de production dans Supabase** :
    - Retournez dans Supabase → **Authentication** → **URL Configuration**
-   - Ajoutez `https://sp.thewebmaster.pro` dans **Redirect URLs**
+   - Ajoutez `https://client.hagendigital.com` dans **Redirect URLs**
 
 3. **Redémarrez l'application** (si nécessaire)
 
@@ -303,7 +303,7 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_gYGUDBOk_YLM4d3xh_gJuQ_0jYZMbCK
 ## 🎉 Résultat final
 
 Une fois tout configuré :
-1. Allez sur [https://sp.thewebmaster.pro](https://sp.thewebmaster.pro)
+1. Allez sur [https://client.hagendigital.com](https://client.hagendigital.com)
 2. Cliquez sur **"Sign in with Google"**
 3. Connectez-vous en 2 clics
 4. C'est tout ! 🚀

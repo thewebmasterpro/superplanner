@@ -27,7 +27,7 @@ import { TaskNotes } from './TaskNotes'
 import { TaskComments } from './TaskComments'
 import { BlockerManager } from './BlockerManager'
 import { MeetingAgendaManager } from './MeetingAgendaManager'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
@@ -38,7 +38,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const archiveTask = useArchiveTask()
-  const { contexts, activeContextId, getActiveContext } = useContextStore()
+  const { workspaces, activeWorkspaceId, getActiveWorkspace } = useWorkspaceStore()
   const { currentTeam } = useUserStore()
   const { data: contactsList = [] } = useContactsList()
 
@@ -70,7 +70,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     type: 'task',    // 'task' or 'meeting'
     agenda: '',       // for meetings (deprecated, replaced by agendaItems)
     campaign_id: '',   // Link to campaign
-    context_id: '',    // Link to context (auto-filled from activeContextId)
+    context_id: '',    // Link to workspace (auto-filled from activeWorkspaceId)
     contact_id: '',    // Link to client/contact
     team_id: '',       // Link to team
     assigned_to: ''    // Link to team member
@@ -147,13 +147,13 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         type: 'task',
         agenda: '',
         campaign_id: '',
-        context_id: (activeContextId === 'trash' || activeContextId === 'archive') ? '' : (activeContextId || ''),
+        context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? '' : (activeWorkspaceId || ''),
         contact_id: '',
         team_id: currentTeam ? currentTeam.id : '',
         assigned_to: ''
       })
     }
-  }, [task, activeContextId])
+  }, [task, activeWorkspaceId])
 
   const [campaigns, setCampaigns] = useState([])
 
@@ -288,8 +288,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     }
 
     // Validate context_id is required in Global view (when creating)
-    if (!isEditing && !activeContextId && !formData.context_id) {
-      toast.error('Please select a context before creating')
+    if (!isEditing && !activeWorkspaceId && !formData.context_id) {
+      toast.error('Please select a workspace before creating')
       return
     }
 
@@ -646,27 +646,27 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                 </div>
               )}
 
-              {/* Context Selector - shown prominently in Global view, hidden when context is active */}
-              {(!activeContextId || activeContextId === 'trash' || activeContextId === 'archive') ? (
+              {/* Workspace Selector - shown prominently in Global view, hidden when workspace is active */}
+              {(!activeWorkspaceId || activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (
                 <div className="space-y-2 p-3 border border-dashed rounded-lg bg-muted/30">
                   <Label htmlFor="context" className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-amber-500" />
-                    Context * <span className="text-xs text-muted-foreground font-normal">(required)</span>
+                    Workspace * <span className="text-xs text-muted-foreground font-normal">(required)</span>
                   </Label>
                   <Select
                     value={formData.context_id || 'none'}
                     onValueChange={(value) => setFormData({ ...formData, context_id: value === 'none' ? '' : value })}
                   >
                     <SelectTrigger className={!formData.context_id ? 'border-amber-500' : ''}>
-                      <SelectValue placeholder="Select a context" />
+                      <SelectValue placeholder="Select a workspace" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" disabled>Select a context...</SelectItem>
-                      {contexts.map((ctx) => (
-                        <SelectItem key={ctx.id} value={ctx.id}>
+                      <SelectItem value="none" disabled>Select a workspace...</SelectItem>
+                      {workspaces.map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color || '#6366f1' }} />
-                            {ctx.name}
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color || '#6366f1' }} />
+                            {w.name}
                           </div>
                         </SelectItem>
                       ))}
@@ -676,8 +676,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
               ) : (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>Creating in:</span>
-                  <Badge variant="outline" style={{ borderColor: getActiveContext()?.color, color: getActiveContext()?.color }}>
-                    {getActiveContext()?.name || 'Unknown Context'}
+                  <Badge variant="outline" style={{ borderColor: getActiveWorkspace()?.color, color: getActiveWorkspace()?.color }}>
+                    {getActiveWorkspace()?.name || 'Unknown Workspace'}
                   </Badge>
                 </div>
               )}

@@ -22,12 +22,12 @@ import {
 } from '@/components/ui/select'
 import { Loader2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useContextStore } from '../stores/contextStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }) {
     const isEditing = !!campaign
     const [loading, setLoading] = useState(false)
-    const { contexts, activeContextId, getActiveContext, loadContexts } = useContextStore()
+    const { workspaces, activeWorkspaceId, getActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -41,7 +41,7 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
     useEffect(() => {
         if (open) {
-            loadContexts()
+            loadWorkspaces()
             if (campaign) {
                 setFormData({
                     name: campaign.name || '',
@@ -53,19 +53,19 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                     status: campaign.status || 'draft'
                 })
             } else {
-                // For new campaigns: inherit activeContextId
+                // For new campaigns: inherit activeWorkspaceId
                 setFormData({
                     name: '',
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: '',
-                    context_id: activeContextId || '',  // Auto-inherit
+                    context_id: activeWorkspaceId || '',  // Auto-inherit
                     priority: 3,
                     status: 'draft'
                 })
             }
         }
-    }, [open, campaign, activeContextId])
+    }, [open, campaign, activeWorkspaceId])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -80,8 +80,8 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
         }
 
         // Validate context_id is required in Global view (when creating)
-        if (!isEditing && !activeContextId && !formData.context_id) {
-            toast.error('Please select a context before creating')
+        if (!isEditing && !activeWorkspaceId && !formData.context_id) {
+            toast.error('Please select a workspace before creating')
             return
         }
 
@@ -178,21 +178,21 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="context" className="flex items-center gap-2">
-                                Context
-                                {!activeContextId && !isEditing && (
+                            <Label htmlFor="workspace" className="flex items-center gap-2">
+                                Workspace
+                                {!activeWorkspaceId && !isEditing && (
                                     <span className="text-xs text-amber-500 flex items-center gap-1">
                                         <AlertCircle className="w-3 h-3" /> Required
                                     </span>
                                 )}
                             </Label>
-                            {activeContextId && !isEditing ? (
+                            {activeWorkspaceId && !isEditing ? (
                                 <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
                                     <div
                                         className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: getActiveContext()?.color || '#6366f1' }}
+                                        style={{ backgroundColor: getActiveWorkspace()?.color || '#6366f1' }}
                                     />
-                                    <span className="text-sm">{getActiveContext()?.name || 'Unknown'}</span>
+                                    <span className="text-sm">{getActiveWorkspace()?.name || 'Unknown'}</span>
                                     <Badge variant="outline" className="ml-auto text-xs">Auto</Badge>
                                 </div>
                             ) : (
@@ -200,16 +200,16 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                                     value={formData.context_id || "none"}
                                     onValueChange={(val) => setFormData({ ...formData, context_id: val === "none" ? "" : val })}
                                 >
-                                    <SelectTrigger className={!activeContextId && !formData.context_id && !isEditing ? 'border-amber-500' : ''}>
-                                        <SelectValue placeholder="Select context" />
+                                    <SelectTrigger className={!activeWorkspaceId && !formData.context_id && !isEditing ? 'border-amber-500' : ''}>
+                                        <SelectValue placeholder="Select workspace" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {isEditing && <SelectItem value="none">None</SelectItem>}
-                                        {contexts.map(ctx => (
-                                            <SelectItem key={ctx.id} value={ctx.id}>
+                                        {workspaces.map(w => (
+                                            <SelectItem key={w.id} value={w.id}>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color || '#6366f1' }} />
-                                                    {ctx.name}
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color || '#6366f1' }} />
+                                                    {w.name}
                                                 </div>
                                             </SelectItem>
                                         ))}
