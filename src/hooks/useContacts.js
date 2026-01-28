@@ -176,7 +176,15 @@ export function useContacts(filters = {}) {
                 body: { to, subject, html, contactId }
             })
 
-            if (error) throw error
+            if (error) {
+                console.error('Edge Function Error Detail:', {
+                    message: error.message,
+                    context: error.context,
+                    status: error.status, // Check if this property exists on the error object
+                    fullError: error
+                })
+                throw error
+            }
             return data
         },
         onSuccess: () => {
