@@ -90,12 +90,15 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                         <p className="text-muted-foreground mt-1 max-w-2xl">{campaign.description}</p>
                     )}
                 </div>
-                <div className="flex gap-2 items-start">
+                <div className="flex gap-2 items-start shrink-0">
                     <Button variant="outline" onClick={() => onEdit(campaign)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit Campaign
                     </Button>
-                    <Button onClick={() => { setSelectedTask({ campaign_id: campaign.id }); setTaskModalOpen(true) }}>
-                        + Add Item
+                    <Button variant="outline" onClick={() => { setSelectedTask({ campaign_id: campaign.id, type: 'task' }); setTaskModalOpen(true) }}>
+                        + New Task
+                    </Button>
+                    <Button onClick={() => { setSelectedTask({ campaign_id: campaign.id, type: 'meeting' }); setTaskModalOpen(true) }}>
+                        + New Meeting
                     </Button>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2, Building } from 'lucide-react'
+import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2, Building, Video } from 'lucide-react'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ export function Sidebar() {
   const menuItems = [
     { label: 'Dashboard', icon: Home, href: '/' },
     { label: 'Tasks', icon: CheckSquare, href: '/tasks' },
+    { label: 'Meetings', icon: Video, href: '/meetings' },
     { label: 'Contacts', icon: Users, href: '/contacts' },
     { label: 'Calendar', icon: Calendar, href: '/calendar' },
     {

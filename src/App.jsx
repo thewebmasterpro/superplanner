@@ -12,6 +12,7 @@ import { Trash } from './pages/Trash'
 import { ArchivePage } from './pages/Archive'
 import { LandingPage } from './pages/LandingPage'
 import { TeamSettings } from './pages/TeamSettings'
+import { Meetings } from './pages/Meetings'
 import { LoginModal } from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 import './globals.css'
@@ -29,6 +30,7 @@ const queryClient = new QueryClient({
 const routes = {
   '/': Dashboard,
   '/tasks': Tasks,
+  '/meetings': Meetings,
   '/calendar': Calendar,
   '/campaigns': Campaigns,
   '/contacts': Contacts,

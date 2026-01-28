@@ -30,7 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { supabase } from '../lib/supabase'
 import { CampaignModal } from '../components/CampaignModal'
 
-export function Tasks() {
+export function Meetings() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
@@ -40,7 +40,7 @@ export function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [contextFilter, setContextFilter] = useState('all')
   const [campaignFilter, setCampaignFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('task')
+  const [typeFilter, setTypeFilter] = useState('meeting')
   const [tagFilter, setTagFilter] = useState('all')
   const [dueDateFilter, setDueDateFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
@@ -244,8 +244,8 @@ export function Tasks() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Tasks</h1>
-          <p className="text-muted-foreground">Manage your tasks and projects</p>
+          <h1 className="text-3xl font-bold">Meetings</h1>
+          <p className="text-muted-foreground">Manage your scheduled meetings and agendas</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setCampaignModalOpen(true)}>
@@ -253,11 +253,11 @@ export function Tasks() {
             New Campaign
           </Button>
           <Button onClick={() => {
-            setSelectedTask({ type: 'task' })
+            setSelectedTask({ type: 'meeting' })
             setTaskModalOpen(true)
           }}>
             <Plus className="w-4 h-4 mr-2" />
-            New Task
+            New Meeting
           </Button>
         </div>
       </div>
@@ -269,7 +269,7 @@ export function Tasks() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search tasks..."
+                placeholder="Search meetings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -365,7 +365,7 @@ export function Tasks() {
               </SelectContent>
             </Select>
 
-            {/* Type filter removed */}
+            {/* Type Filter Removed */}
 
             {/* Tag */}
             <Select value={tagFilter} onValueChange={setTagFilter}>
@@ -573,7 +573,7 @@ export function Tasks() {
       <CampaignModal
         open={isCampaignModalOpen}
         onOpenChange={setCampaignModalOpen}
-        onSuccess={loadFilterOptions} // Reload campaigns for filter
+        onSuccess={loadFilterOptions}
       />
     </div >
   )

@@ -49,6 +49,7 @@ export function TaskNotes({ taskId }) {
                 .from('task_notes')
                 .insert({
                     task_id: taskId,
+                    user_id: user.id,
                     content: newNote.trim()
                 })
 
