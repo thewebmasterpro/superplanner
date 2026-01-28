@@ -15,6 +15,8 @@ import { TeamSettings } from './pages/TeamSettings'
 import { Meetings } from './pages/Meetings'
 import { LoginModal } from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
+import { ThemeProvider } from './components/ThemeProvider'
+import { motion, AnimatePresence } from 'framer-motion'
 import './globals.css'
 
 const queryClient = new QueryClient({
@@ -129,9 +131,22 @@ function AppContent() {
 
   // Show app with MainLayout
   return (
-    <MainLayout>
-      <PageComponent />
-    </MainLayout>
+    <ThemeProvider defaultTheme="light" storageKey="superplanner-theme">
+      <MainLayout>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPath}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="flex-1 flex flex-col"
+          >
+            <PageComponent />
+          </motion.div>
+        </AnimatePresence>
+      </MainLayout>
+    </ThemeProvider>
   )
 }
 

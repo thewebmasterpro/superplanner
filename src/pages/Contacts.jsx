@@ -82,51 +82,60 @@ export function Contacts() {
     }
 
     return (
-        <div className="container-tight py-8 space-y-6">
+        <div className="container-tight py-8 section-gap">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Contacts</h1>
-                    <p className="text-muted-foreground">Manage your clients and prospects</p>
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-extrabold tracking-tight font-display flex items-center gap-2">
+                        <User className="w-8 h-8 text-primary" />
+                        Contacts
+                    </h1>
+                    <p className="text-muted-foreground font-medium">Manage your clients and prospects</p>
                 </div>
-                <Button onClick={handleNew}>
+                <Button onClick={handleNew} className="shadow-lg shadow-primary/20">
                     <Plus className="w-4 h-4 mr-2" />
                     New Contact
                 </Button>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <Card className="glass-card card-hover border-border/40">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
+                        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold">{stats.all}</p>
+                        <p className="text-3xl font-bold tracking-tight">{stats.all}</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card card-hover border-border/40">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Clients</CardTitle>
+                        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Clients</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold text-green-600">{stats.clients}</p>
+                        <p className="text-3xl font-bold tracking-tight text-green-600">{stats.clients}</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card card-hover border-border/40">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Prospects</CardTitle>
+                        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prospects</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold text-blue-600">{stats.prospects}</p>
+                        <p className="text-3xl font-bold tracking-tight text-blue-600">{stats.prospects}</p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card card-hover border-border/40 relative overflow-hidden">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">In Pipeline</CardTitle>
+                        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">In Pipeline</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-2xl font-bold text-purple-600">{stats.pipeline}</p>
+                        <p className="text-3xl font-bold tracking-tight text-purple-600">{stats.pipeline}</p>
+                        {stats.pipeline > 0 && (
+                            <div className="absolute top-2 right-2 flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -178,7 +187,7 @@ export function Contacts() {
             </Card>
 
             {/* Contacts List */}
-            <Card>
+            <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl">
                 <div className="overflow-x-auto">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-12">
@@ -192,16 +201,16 @@ export function Contacts() {
                         </div>
                     ) : (
                         <table className="w-full">
-                            <thead className="bg-muted/50 border-b">
+                            <thead className="bg-muted/30 border-b border-border/50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Contact</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Contexts</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Contact Info</th>
-                                    <th className="px-6 py-3 text-right text-sm font-semibold">Actions</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contexts</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Info</th>
+                                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-border/30">
                                 {contacts.map(contact => (
                                     <tr
                                         key={contact.id}

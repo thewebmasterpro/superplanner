@@ -16,13 +16,15 @@ export function TeamSettings() {
     const [loading, setLoading] = useState(false)
     const [members, setMembers] = useState([])
     const [invitations, setInvitations] = useState([])
+    const [receivedInvitations, setReceivedInvitations] = useState([]) // Invites TO the user
     const [createTeamName, setCreateTeamName] = useState('')
     const [inviteEmail, setInviteEmail] = useState('')
 
     // Load teams on mount
     useEffect(() => {
         loadTeams()
-    }, [])
+        loadReceivedInvitations()
+    }, [user]) // Re-run if user changes or on mount
 
     // Load members when currentTeam changes
     useEffect(() => {
@@ -59,6 +61,45 @@ export function TeamSettings() {
         }
     }
 
+    const loadReceivedInvitations = async () => {
+        if (!user) return
+        try {
+            const { data, error } = await supabase
+                .from('team_invitations')
+                .select(`
+                    *,
+                    team:team_id(name)
+                `)
+                .ilike('email', user.email)
+                .is('accepted_at', null)
+
+            if (error) throw error
+            setReceivedInvitations(data)
+        } catch (error) {
+            console.error('Error loading received invitations:', error)
+        }
+    }
+
+    const handleAcceptInvite = async (inviteId) => {
+        setLoading(true)
+        try {
+            const { data, error } = await supabase.rpc('accept_invitation', {
+                _invite_id: inviteId
+            })
+
+            if (error) throw error
+
+            toast.success('Joined team successfully!')
+            loadTeams() // Refresh teams list
+            loadReceivedInvitations() // Refresh invites list
+        } catch (error) {
+            toast.error(`Error: ${error.message}`)
+            console.error(error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const loadTeamDetails = async (teamId) => {
         try {
             // Load Members
@@ -67,23 +108,17 @@ export function TeamSettings() {
                 .select(`
           *,
           user:user_id(email)
-        `) // Note: user_id references auth.users which might not be directly queryable if not in public schema. 
-                // Usually we keep a public profiles table. For now assuming we might get errors here if no public profile.
-                // If auth.users is restricted, we rely on what supabase returns.
-                // Actually, standard Supabase doesn't expose auth.users to public API.
-                // We might need a secure function or a profiles table.
-                // For MVP, we'll try to rely on 'user_id' and if possible get metadata.
-                // EDIT: Let's assume we need to fix this later or use a workaround. 
-                // For now, let's just show the user_id or email if available in a view.
+        `)
                 .eq('team_id', teamId)
 
             if (!membersError) setMembers(membersData)
 
-            // Load Invitations
+            // Load Invitations (Sent BY the team)
             const { data: invData, error: invError } = await supabase
                 .from('team_invitations')
                 .select('*')
                 .eq('team_id', teamId)
+                .is('accepted_at', null)
 
             if (!invError) setInvitations(invData)
 
@@ -194,6 +229,29 @@ export function TeamSettings() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {receivedInvitations.length > 0 && (
+                        <Card className="border-primary/20 bg-primary/5">
+                            <CardHeader className="py-3">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <Mail className="w-4 h-4 text-primary" />
+                                    New Invitations ({receivedInvitations.length})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {receivedInvitations.map(inv => (
+                                    <div key={inv.id} className="flex items-center justify-between p-2 bg-background border rounded-md">
+                                        <div className="text-xs">
+                                            <p className="font-medium">Invitation to join <span className="text-primary font-bold">{inv.team?.name}</span></p>
+                                        </div>
+                                        <Button size="sm" onClick={() => handleAcceptInvite(inv.id)} disabled={loading}>
+                                            Accept
+                                        </Button>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
 
                     <Card>
                         <CardHeader className="bg-muted/50 py-3">

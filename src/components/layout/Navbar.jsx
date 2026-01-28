@@ -1,7 +1,11 @@
-import { Menu, Settings, LogOut, User } from 'lucide-react'
+import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
+import { useState } from 'react'
+import { TaskModal } from '../TaskModal'
 import { supabase } from '../../lib/supabase'
+import { ThemeToggle } from '../ThemeToggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +17,35 @@ import {
 import { Button } from '@/components/ui/button'
 
 export function Navbar() {
-  const { isSidebarOpen, setSidebarOpen } = useUIStore()
+  const { isSidebarOpen, toggleSidebar, setSidebarOpen, isTaskModalOpen, setTaskModalOpen } = useUIStore()
   const { user } = useUserStore()
+  const [selectedTask, setSelectedTask] = useState(null)
+  const currentPath = window.location.pathname || '/'
+
+  const getPageTitle = () => {
+    switch (currentPath) {
+      case '/': return 'Dashboard'
+      case '/tasks': return 'Tasks'
+      case '/meetings': return 'Meetings'
+      case '/contacts': return 'Contacts'
+      case '/calendar': return 'Calendar'
+      case '/campaigns': return 'Campaigns'
+      case '/team': return 'Team'
+      case '/settings': return 'Settings'
+      case '/archive': return 'Archive'
+      case '/trash': return 'Trash'
+      default: return 'Superplanner'
+    }
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  const openCreateModal = (type) => {
+    setSelectedTask({ type })
+    setTaskModalOpen(true)
   }
 
   return (
@@ -29,17 +56,52 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSidebarOpen(!isSidebarOpen)}
-            className="lg:hidden"
+            onClick={() => toggleSidebar()}
+            className="flex items-center justify-center"
           >
-            <Menu className="w-5 h-5" />
+            <motion.div
+              animate={{ rotate: isSidebarOpen ? 0 : 180 }}
+              transition={{ duration: 0.3 }}
+            >
+              {isSidebarOpen ? <Menu className="w-5 h-5" /> : <Plus className="w-5 h-5 rotate-45" />}
+            </motion.div>
           </Button>
 
-          <h1 className="text-xl font-bold text-foreground">Superplanner</h1>
+          <div className="flex items-center gap-2">
+            {!isSidebarOpen && (
+              <span className="text-xl font-bold text-foreground hidden sm:inline-block"> Superplanner </span>
+            )}
+            {!isSidebarOpen && <span className="text-muted-foreground/40 hidden sm:inline-block">/</span>}
+            <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
+          </div>
         </div>
 
         {/* Right - User menu */}
         <div className="flex items-center gap-2">
+          {/* Quick Create Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default" size="sm" className="hidden sm:flex gap-2">
+                <Plus className="w-4 h-4" />
+                <span>New</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Quick Create</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => openCreateModal('task')}>
+                <CheckSquare className="w-4 h-4 mr-2" />
+                New Task
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openCreateModal('meeting')}>
+                <Calendar className="w-4 h-4 mr-2" />
+                New Meeting
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <ThemeToggle />
+
           <Button
             variant="ghost"
             size="icon"
@@ -72,6 +134,11 @@ export function Navbar() {
           </DropdownMenu>
         </div>
       </div>
+      <TaskModal
+        open={isTaskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        task={selectedTask}
+      />
     </nav>
   )
 }

@@ -33,7 +33,7 @@ import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
 
 export function TaskModal({ open, onOpenChange, task = null }) {
-  const isEditing = !!task
+  const isEditing = !!task?.id
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
@@ -69,7 +69,6 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     recurrence_end: '',
     type: 'task',    // 'task' or 'meeting'
     agenda: '',       // for meetings (deprecated, replaced by agendaItems)
-    campaign_id: '',   // Link to campaign
     campaign_id: '',   // Link to campaign
     context_id: '',    // Link to context (auto-filled from activeContextId)
     contact_id: '',    // Link to client/contact
@@ -365,9 +364,17 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? (formData.type === 'meeting' ? 'Edit Meeting' : 'Edit Task') : (formData.type === 'meeting' ? 'Create New Meeting' : 'Create New Task')}</DialogTitle>
+          <DialogTitle>
+            {isEditing
+              ? (formData.type === 'meeting' ? 'Edit Meeting' : 'Edit Task')
+              : (formData.type === 'meeting' ? 'Create New Meeting' : 'Create New Task')
+            }
+          </DialogTitle>
           <DialogDescription>
-            {isEditing ? (formData.type === 'meeting' ? 'Update meeting details below' : 'Update task details below') : (formData.type === 'meeting' ? 'Fill in the meeting details below' : 'Fill in the task details below')}
+            {isEditing
+              ? (formData.type === 'meeting' ? 'Update meeting details below' : 'Update task details below')
+              : (formData.type === 'meeting' ? 'Fill in the meeting details below' : 'Fill in the task details below')
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -382,8 +389,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="space-y-4">
-            {/* Task/Meeting Type Toggle (only when creating) */}
-            {!isEditing && (
+            {/* Task/Meeting Type Toggle (only when creating AND type not pre-set) */}
+            {!isEditing && !task?.type && (
               <div className="flex gap-2 p-1 bg-muted rounded-lg">
                 <Button
                   type="button"

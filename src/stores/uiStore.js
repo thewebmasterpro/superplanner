@@ -4,14 +4,26 @@ export const useUIStore = create((set) => ({
   // Modals
   isTaskModalOpen: false,
   setTaskModalOpen: (open) => set({ isTaskModalOpen: open }),
-  
+
   isCampaignModalOpen: false,
   setCampaignModalOpen: (open) => set({ isCampaignModalOpen: open }),
-  
+
   // Sidebar
-  isSidebarOpen: true,
-  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
-  
+  isSidebarOpen: (() => {
+    const saved = localStorage.getItem('superplanner-sidebar-open')
+    if (saved !== null) return saved === 'true'
+    return window.innerWidth > 1024 // Default to open on desktop, closed on mobile
+  })(),
+  setSidebarOpen: (open) => {
+    localStorage.setItem('superplanner-sidebar-open', open)
+    set({ isSidebarOpen: open })
+  },
+  toggleSidebar: () => set((state) => {
+    const newState = !state.isSidebarOpen
+    localStorage.setItem('superplanner-sidebar-open', newState)
+    return { isSidebarOpen: newState }
+  }),
+
   // Toasts (basic tracking)
   toasts: [],
   addToast: (toast) => set((state) => ({
@@ -20,7 +32,7 @@ export const useUIStore = create((set) => ({
   removeToast: (id) => set((state) => ({
     toasts: state.toasts.filter(t => t.id !== id)
   })),
-  
+
   // Loading states
   isLoading: false,
   setLoading: (loading) => set({ isLoading: loading }),

@@ -29,7 +29,7 @@ BEGIN
   END IF;
 
   -- 2. Lookup user ID from email
-  SELECT id INTO found_user_id FROM auth.users WHERE email = _email;
+  SELECT id INTO found_user_id FROM auth.users WHERE lower(email) = lower(_email);
 
   -- 3. Check if user is already in the team
   IF found_user_id IS NOT NULL THEN
@@ -45,7 +45,7 @@ BEGIN
   -- 4. Check if invite already exists
   IF EXISTS (
     SELECT 1 FROM team_invitations 
-    WHERE team_id = _team_id AND email = _email AND accepted_at IS NULL
+    WHERE team_id = _team_id AND lower(email) = lower(_email) AND accepted_at IS NULL
   ) THEN
      RETURN jsonb_build_object('status', 'already_invited', 'message', 'Invitation already pending');
   END IF;
@@ -80,7 +80,7 @@ BEGIN
   END IF;
 
   -- Verify email matches current user
-  IF invite_record.email != auth.email() THEN
+  IF lower(invite_record.email) != lower(auth.email()) THEN
     RAISE EXCEPTION 'This invitation does not belong to you';
   END IF;
 
@@ -95,13 +95,14 @@ BEGIN
 END;
 $$;
 
--- 3. RLS for viewing invitations
 -- Allow users to see invitations sent to their email
+DROP POLICY IF EXISTS "Users can view their own invitations" ON team_invitations;
 CREATE POLICY "Users can view their own invitations" ON team_invitations
 FOR SELECT TO authenticated
-USING (email = auth.email());
+USING (lower(email) = lower(auth.email()));
 
 -- Allow team admins to see invitations for their team
+DROP POLICY IF EXISTS "Admins can view team invitations" ON team_invitations;
 CREATE POLICY "Admins can view team invitations" ON team_invitations
 FOR SELECT TO authenticated
 USING (

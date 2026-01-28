@@ -20,9 +20,11 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, X } from 'lucide-react'
+import { Loader2, X, Calendar, CheckSquare, MessageSquare, Clock } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
 import { useContextStore } from '../stores/contextStore'
+import { supabase } from '../lib/supabase'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const STATUS_OPTIONS = [
     { value: 'prospect_new', label: '🆕 New Prospect', color: 'bg-blue-100 text-blue-700' },
@@ -49,6 +51,34 @@ export function ContactModal({ open, onOpenChange, contact }) {
         notes: '',
         contextIds: []
     })
+
+    const [activities, setActivities] = useState([])
+    const [loadingActivities, setLoadingActivities] = useState(false)
+
+    useEffect(() => {
+        if (contact?.id) {
+            loadActivities()
+        }
+    }, [contact, open])
+
+    const loadActivities = async () => {
+        setLoadingActivities(true)
+        try {
+            const { data: tasks, error: tError } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('contact_id', contact.id)
+                .order('created_at', { ascending: false })
+                .limit(10)
+
+            if (tError) throw tError
+            setActivities(tasks || [])
+        } catch (error) {
+            console.error('Error loading activities:', error)
+        } finally {
+            setLoadingActivities(false)
+        }
+    }
 
     useEffect(() => {
         if (contact) {
@@ -111,127 +141,182 @@ export function ContactModal({ open, onOpenChange, contact }) {
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Name & Company */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Name *</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="John Doe"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="company">Company</Label>
-                            <Input
-                                id="company"
-                                value={formData.company}
-                                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                                placeholder="Acme Inc."
-                            />
-                        </div>
-                    </div>
+                <Tabs defaultValue="details" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1">
+                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                    </TabsList>
 
-                    {/* Email & Phone */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="john@example.com"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input
-                                id="phone"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                placeholder="+33 6 12 34 56 78"
-                            />
-                        </div>
-                    </div>
+                    <TabsContent value="details">
+                        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                            {/* Name & Company */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Name *</Label>
+                                    <Input
+                                        id="name"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="John Doe"
+                                        required
+                                        className="bg-background/50"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="company">Company</Label>
+                                    <Input
+                                        id="company"
+                                        value={formData.company}
+                                        onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                                        placeholder="Acme Inc."
+                                        className="bg-background/50"
+                                    />
+                                </div>
+                            </div>
 
-                    {/* Type & Status */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Type</Label>
-                            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="individual">👤 Individual</SelectItem>
-                                    <SelectItem value="company">🏢 Company</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {STATUS_OPTIONS.map(opt => (
-                                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
+                            {/* Email & Phone */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        placeholder="john@example.com"
+                                        className="bg-background/50"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone">Phone</Label>
+                                    <Input
+                                        id="phone"
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        placeholder="+33 6 12 34 56 78"
+                                        className="bg-background/50"
+                                    />
+                                </div>
+                            </div>
 
-                    {/* Contexts (multi-select) */}
-                    <div className="space-y-2">
-                        <Label>Contexts</Label>
-                        <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/30">
-                            {contexts.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No contexts available</p>
+                            {/* Type & Status */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Type</Label>
+                                    <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                                        <SelectTrigger className="bg-background/50">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="individual">👤 Individual</SelectItem>
+                                            <SelectItem value="company">🏢 Company</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Status</Label>
+                                    <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                                        <SelectTrigger className="bg-background/50">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STATUS_OPTIONS.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            {/* Contexts (multi-select) */}
+                            <div className="space-y-2">
+                                <Label>Contexts</Label>
+                                <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/20">
+                                    {contexts.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">No contexts available</p>
+                                    ) : (
+                                        contexts.map(ctx => (
+                                            <Badge
+                                                key={ctx.id}
+                                                variant={formData.contextIds.includes(ctx.id) ? "default" : "outline"}
+                                                className="cursor-pointer transition-all hover:scale-105"
+                                                style={formData.contextIds.includes(ctx.id) ? { backgroundColor: ctx.color } : {}}
+                                                onClick={() => toggleContext(ctx.id)}
+                                            >
+                                                {formData.contextIds.includes(ctx.id) && '✓ '}
+                                                {ctx.name}
+                                            </Badge>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            <div className="space-y-2">
+                                <Label htmlFor="notes">Notes</Label>
+                                <Textarea
+                                    id="notes"
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    placeholder="Additional notes about this contact..."
+                                    rows={3}
+                                    className="bg-background/50"
+                                />
+                            </div>
+
+                            <DialogFooter className="pt-2">
+                                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={loading || !formData.name.trim()} className="shadow-lg shadow-primary/10">
+                                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                    {isEditing ? 'Save Changes' : 'Create Contact'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </TabsContent>
+
+                    <TabsContent value="timeline">
+                        <div className="h-[400px] w-full pr-4 pt-4 overflow-y-auto">
+                            {loadingActivities ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="w-8 h-8 animate-spin text-primary/50" />
+                                </div>
+                            ) : activities.length === 0 ? (
+                                <div className="text-center py-20 text-muted-foreground">
+                                    <Clock className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                    <p>No recorded activities yet.</p>
+                                </div>
                             ) : (
-                                contexts.map(ctx => (
-                                    <Badge
-                                        key={ctx.id}
-                                        variant={formData.contextIds.includes(ctx.id) ? "default" : "outline"}
-                                        className="cursor-pointer transition-colors"
-                                        style={formData.contextIds.includes(ctx.id) ? { backgroundColor: ctx.color } : {}}
-                                        onClick={() => toggleContext(ctx.id)}
-                                    >
-                                        {formData.contextIds.includes(ctx.id) && '✓ '}
-                                        {ctx.name}
-                                    </Badge>
-                                ))
+                                <div className="space-y-6 relative before:absolute before:inset-0 before:left-2.5 before:w-px before:bg-border/50">
+                                    {activities.map((activity, idx) => (
+                                        <div key={activity.id} className="relative pl-8 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
+                                            <div className="absolute left-0 top-1 w-5 h-5 rounded-full bg-background border-2 border-primary flex items-center justify-center z-10">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                            </div>
+                                            <div className="bg-muted/30 p-3 rounded-lg border border-border/40 hover:border-primary/30 transition-colors">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+                                                        {activity.type === 'meeting' ? 'Meeting' : 'Task'}
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        {new Date(activity.created_at).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <h5 className="text-sm font-medium">{activity.title}</h5>
+                                                {activity.status === 'done' && (
+                                                    <Badge variant="secondary" className="mt-2 bg-green-500/10 text-green-600 border-none h-5 px-1.5 text-[10px]">
+                                                        Completed
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div className="space-y-2">
-                        <Label htmlFor="notes">Notes</Label>
-                        <Textarea
-                            id="notes"
-                            value={formData.notes}
-                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                            placeholder="Additional notes about this contact..."
-                            rows={3}
-                        />
-                    </div>
-
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={loading || !formData.name.trim()}>
-                            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {isEditing ? 'Save Changes' : 'Create Contact'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                    </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
     )

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns, User } from 'lucide-react'
+import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns, User, Video } from 'lucide-react'
 import { useTasks } from '../hooks/useTasks'
 import { useContactsList } from '../hooks/useContacts'
 import { useUIStore } from '../stores/uiStore'
@@ -29,10 +29,13 @@ import { BulkActionsBar } from '@/components/BulkActionsBar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { supabase } from '../lib/supabase'
 import { CampaignModal } from '../components/CampaignModal'
+import { KanbanView } from '../components/KanbanView'
+import { useUpdateTask } from '../hooks/useTasks'
 
 export function Meetings() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
+  const updateTaskMutation = useUpdateTask()
   const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
   const { contexts, activeContextId } = useContextStore()
   const [searchQuery, setSearchQuery] = useState('')
@@ -55,6 +58,8 @@ export function Meetings() {
   const [selectedIds, setSelectedIds] = useState([])
   const [showFilters, setShowFilters] = useState(false)
   const [isCampaignModalOpen, setCampaignModalOpen] = useState(false)
+  const [viewMode, setViewMode] = useState('table') // 'table' or 'kanban'
+  const [completingTaskId, setCompletingTaskId] = useState(null)
 
   // Fetch tags and campaigns for filters
   const [tags, setTags] = useState([])
@@ -240,17 +245,45 @@ export function Meetings() {
   const isSomeSelected = selectedIds.length > 0 && selectedIds.length < filteredTasks.length
 
   return (
-    <div className="container-tight py-8 space-y-6">
+    <div className="container-tight py-8 section-gap context-transition animate-in fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Meetings</h1>
-          <p className="text-muted-foreground">Manage your scheduled meetings and agendas</p>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight font-display flex items-center gap-2">
+            <Video className="w-8 h-8" style={activeContextId && contexts.find(c => c.id === activeContextId) ? { color: contexts.find(c => c.id === activeContextId).color } : { color: 'var(--primary)' }} />
+            Meetings
+          </h1>
+          <p className="text-muted-foreground font-medium">Manage your scheduled meetings and agendas</p>
         </div>
         <div className="flex gap-2">
+          <div className="bg-muted p-1 rounded-lg flex mr-2">
+            <Button
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-8 px-3"
+            >
+              List
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className="h-8 px-3"
+            >
+              Board
+            </Button>
+          </div>
           <Button variant="outline" onClick={() => setCampaignModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Campaign
+          </Button>
+          <Button variant="outline" onClick={() => {
+            setSelectedTask({ type: 'task' })
+            setTaskModalOpen(true)
+          }}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Task
           </Button>
           <Button onClick={() => {
             setSelectedTask({ type: 'meeting' })
@@ -263,16 +296,16 @@ export function Meetings() {
       </div>
 
       {/* Search + Filter Toggle */}
-      <Card className="p-4">
+      <Card className="glass-panel p-4 border-border/40 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="Search meetings..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-background/50 border-border/50 focus:bg-background transition-all"
               />
             </div>
           </div>
@@ -477,71 +510,103 @@ export function Meetings() {
         )}
       </Card>
 
-      {/* Tasks Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left w-10">
-                  <Checkbox
-                    checked={isAllSelected}
-                    ref={el => el && (el.indeterminate = isSomeSelected)}
-                    onCheckedChange={toggleSelectAll}
-                    aria-label="Select all"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold">Title</th>
-                {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>}
-                {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold">Due Date</th>}
-                {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold">Priority</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                    <p>Loading tasks...</p>
-                  </td>
-                </tr>
-              ) : filteredTasks.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                    {tasks.length === 0
-                      ? 'No tasks yet. Create one to get started!'
-                      : 'No tasks match your filters.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredTasks.map((task) => {
-                  const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
+      {/* Selection count */}
+      {selectedIds.length > 0 && viewMode === 'table' && (
+        <div className="flex items-center gap-2 px-1">
+          <Badge variant="secondary" className="px-3 py-1">
+            {selectedIds.length} meetings selected
+          </Badge>
+          <Button variant="ghost" size="sm" onClick={clearSelection} className="h-8">
+            Clear Selection
+          </Button>
+        </div>
+      )}
 
-                  return (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      isSelected={selectedIds.includes(task.id)}
-                      onSelect={(e) => {
-                        e?.stopPropagation()
-                        toggleSelect(task.id)
-                      }}
-                      onClick={() => {
-                        setSelectedTask(task)
-                        setTaskModalOpen(true)
-                      }}
-                      isOverdue={isOverdue}
-                      statusColors={statusColors}
-                      priorityColors={priorityColors}
-                      visibleColumns={visibleColumns}
+      {/* Content: Table or Kanban */}
+      {viewMode === 'table' ? (
+        <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/30 border-b border-border/50">
+                <tr>
+                  <th className="px-4 py-3 text-left w-10">
+                    <Checkbox
+                      checked={isAllSelected}
+                      ref={el => el && (el.indeterminate = isSomeSelected)}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                      className="border-border/50"
                     />
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div >
-      </Card >
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
+                  {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
+                  {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Due Date</th>}
+                  {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Priority</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                      <p>Loading meetings...</p>
+                    </td>
+                  </tr>
+                ) : filteredTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                      {tasks.length === 0
+                        ? 'No meetings yet. Create one to get started!'
+                        : 'No meetings match your filters.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTasks.map((task) => {
+                    const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
+
+                    return (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        isSelected={selectedIds.includes(task.id)}
+                        isCompleting={completingTaskId === task.id}
+                        onSelect={(e) => {
+                          e?.stopPropagation()
+                          toggleSelect(task.id)
+                        }}
+                        onComplete={async () => {
+                          setCompletingTaskId(task.id)
+                          await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
+                          setTimeout(() => setCompletingTaskId(null), 1000)
+                        }}
+                        onClick={() => {
+                          setSelectedTask(task)
+                          setTaskModalOpen(true)
+                        }}
+                        isOverdue={isOverdue}
+                        statusColors={statusColors}
+                        priorityColors={priorityColors}
+                        visibleColumns={visibleColumns}
+                      />
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : (
+        <KanbanView
+          tasks={filteredTasks}
+          onStatusChange={(taskId, newStatus) => {
+            updateTaskMutation.mutate({ id: taskId, updates: { status: newStatus } })
+          }}
+          onTaskClick={(task) => {
+            setSelectedTask(task)
+            setTaskModalOpen(true)
+          }}
+        />
+      )}
 
       {/* Results count */}
       {
@@ -580,17 +645,25 @@ export function Meetings() {
 }
 
 // Task Row Component with polish
-function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
+function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
 
-  const handleCheck = () => {
+  const handleCheck = (checked) => {
+    if (checked && task.status !== 'done') {
+      onComplete()
+    }
     onSelect()
   }
 
   return (
     <tr
-      className={`border-b transition-all duration-200 cursor-pointer group
-        ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'}
+      className={`border-b border-border/30 transition-all duration-300 cursor-pointer group relative
+        ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
       `}
+      style={{
+        borderLeft: isSelected && task.context?.color
+          ? `3px solid ${task.context.color}`
+          : '3px solid transparent'
+      }}
       onClick={onClick}
     >
       <td className="px-4 py-4 w-[50px]">
@@ -673,7 +746,7 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue, statusColors,
       {
         visibleColumns.status && (
           <td className="px-6 py-4">
-            <Badge className={`${statusColors[task.status]} transition-transform group-hover:scale-105`}>
+            <Badge className={`${statusColors[task.status]} transition-all duration-300 shadow-sm border border-border/20 group-hover:scale-105 group-hover:shadow-md`}>
               {task.status?.replace('_', ' ')}
             </Badge>
           </td>

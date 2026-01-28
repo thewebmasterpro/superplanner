@@ -1,4 +1,4 @@
-import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2, Building, Video } from 'lucide-react'
+import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2, Building, Video, ChevronLeft } from 'lucide-react'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
@@ -6,12 +6,14 @@ import { Badge } from '@/components/ui/badge'
 import SpotifyPlayer from '../SpotifyPlayer'
 import { ContextSelector } from '../ContextSelector'
 import { useContextStore } from '../../stores/contextStore'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function Sidebar() {
-  const { isSidebarOpen, setSidebarOpen } = useUIStore()
+  const { isSidebarOpen, setSidebarOpen, toggleSidebar } = useUIStore()
   const { preferences } = useUserStore()
   const { getActiveContext } = useContextStore()
   const currentPath = window.location.pathname
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024
 
   const activeContext = getActiveContext()
 
@@ -34,22 +36,44 @@ export function Sidebar() {
     { label: 'Trash', icon: Trash2, href: '/trash', badge: null }
   ]
 
+  const sidebarVariants = {
+    open: {
+      x: 0,
+      width: 256,
+      transition: { type: 'spring', stiffness: 300, damping: 30 }
+    },
+    closed: {
+      x: isMobile ? -256 : -256,
+      width: isMobile ? 256 : 0,
+      transition: { type: 'spring', stiffness: 300, damping: 30 }
+    }
+  }
+
   return (
     <>
       {/* Mobile overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isMobile && isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
-      <aside className={`
-        fixed lg:relative top-0 left-0 h-screen z-50 w-64 border-r border-border bg-card
-        transition-all duration-200 lg:translate-x-0 flex flex-col
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      <motion.aside
+        initial={false}
+        animate={isSidebarOpen ? 'open' : 'closed'}
+        variants={sidebarVariants}
+        className={`
+          fixed lg:sticky top-0 left-0 h-screen z-50 border-r border-border bg-card
+          flex flex-col overflow-hidden
+        `}
+      >
         {/* Close button mobile */}
         <Button
           variant="ghost"
@@ -59,6 +83,18 @@ export function Sidebar() {
         >
           <X className="w-5 h-5" />
         </Button>
+
+        {/* Slide-out indicator (desktop only) */}
+        {!isMobile && isSidebarOpen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(false)}
+            className="absolute top-4 right-2 hidden lg:flex h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        )}
 
         {/* Logo */}
         <div className="p-4 border-b border-border">
@@ -83,10 +119,10 @@ export function Sidebar() {
                 href={item.href}
                 onClick={(e) => {
                   if (isDisabled) e.preventDefault()
-                  setSidebarOpen(false) // Close on mobile
+                  if (isMobile) setSidebarOpen(false)
                 }}
                 className={`
-                  flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+                  flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 tap-target
                   ${isActive
                     ? 'font-medium bg-primary/10'
                     : isDisabled
@@ -121,7 +157,7 @@ export function Sidebar() {
             <SpotifyPlayer playlistUrl={preferences.spotify_playlist_url} />
           </div>
         )}
-      </aside>
+      </motion.aside>
     </>
   )
 }
