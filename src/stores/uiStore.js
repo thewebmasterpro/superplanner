@@ -8,6 +8,9 @@ export const useUIStore = create((set) => ({
   isCampaignModalOpen: false,
   setCampaignModalOpen: (open) => set({ isCampaignModalOpen: open }),
 
+  isContactModalOpen: false,
+  setContactModalOpen: (open) => set({ isContactModalOpen: open }),
+
   // Sidebar
   isSidebarOpen: (() => {
     const saved = localStorage.getItem('superplanner-sidebar-open')

@@ -274,24 +274,9 @@ export function Tasks() {
               Board
             </Button>
           </div>
-          <Button variant="outline" onClick={() => setCampaignModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Campaign
-          </Button>
-          <Button variant="outline" onClick={() => {
-            setSelectedTask({ type: 'task' })
-            setTaskModalOpen(true)
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </Button>
-          <Button className="shadow-lg shadow-primary/20" onClick={() => {
-            setSelectedTask({ type: 'meeting' })
-            setTaskModalOpen(true)
-          }}>
-            <Video className="w-4 h-4 mr-2" />
-            New Meeting
-          </Button>
+          <div className="flex gap-2">
+            {/* Centralized creation handled by Navbar */}
+          </div>
         </div>
       </div>
 

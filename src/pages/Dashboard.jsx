@@ -169,20 +169,7 @@ export function Dashboard() {
           <p className="text-muted-foreground font-medium">Welcome back! Here's your overview.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => {
-            setSelectedTask({ type: 'task' })
-            setTaskModalOpen(true)
-          }} className="shadow-lg shadow-primary/10">
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </Button>
-          <Button onClick={() => {
-            setSelectedTask({ type: 'meeting' })
-            setTaskModalOpen(true)
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Meeting
-          </Button>
+          {/* Centralized creation handled by Navbar */}
         </div>
       </div>
 

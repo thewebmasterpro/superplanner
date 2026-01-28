@@ -165,10 +165,9 @@ export function Campaigns() {
               <GanttChartSquare className="w-4 h-4" />
             </Button>
           </div>
-          <Button onClick={() => { setEditingCampaign(null); setIsModalOpen(true) }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Campaign
-          </Button>
+          <div className="flex gap-2">
+            {/* Centralized creation handled by Navbar */}
+          </div>
         </div>
       </div>
 

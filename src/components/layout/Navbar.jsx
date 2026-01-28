@@ -4,6 +4,8 @@ import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
 import { useState } from 'react'
 import { TaskModal } from '../TaskModal'
+import { CampaignModal } from '../CampaignModal'
+import { ContactModal } from '../ContactModal'
 import { supabase } from '../../lib/supabase'
 import { ThemeToggle } from '../ThemeToggle'
 import {
@@ -17,7 +19,17 @@ import {
 import { Button } from '@/components/ui/button'
 
 export function Navbar() {
-  const { isSidebarOpen, toggleSidebar, setSidebarOpen, isTaskModalOpen, setTaskModalOpen } = useUIStore()
+  const {
+    isSidebarOpen,
+    toggleSidebar,
+    setSidebarOpen,
+    isTaskModalOpen,
+    setTaskModalOpen,
+    isCampaignModalOpen,
+    setCampaignModalOpen,
+    isContactModalOpen,
+    setContactModalOpen
+  } = useUIStore()
   const { user } = useUserStore()
   const [selectedTask, setSelectedTask] = useState(null)
   const currentPath = window.location.pathname || '/'
@@ -44,8 +56,14 @@ export function Navbar() {
   }
 
   const openCreateModal = (type) => {
-    setSelectedTask({ type })
-    setTaskModalOpen(true)
+    if (type === 'task' || type === 'meeting') {
+      setSelectedTask({ type })
+      setTaskModalOpen(true)
+    } else if (type === 'campaign') {
+      setCampaignModalOpen(true)
+    } else if (type === 'client') {
+      setContactModalOpen(true)
+    }
   }
 
   return (
@@ -81,13 +99,13 @@ export function Navbar() {
           {/* Quick Create Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm" className="hidden sm:flex gap-2">
+              <Button variant="default" size="sm" className="hidden sm:flex gap-2 font-bold px-4">
                 <Plus className="w-4 h-4" />
-                <span>New</span>
+                <span>+ NEW CONTENT</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Quick Create</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Create New</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openCreateModal('task')}>
                 <CheckSquare className="w-4 h-4 mr-2" />
@@ -96,6 +114,15 @@ export function Navbar() {
               <DropdownMenuItem onClick={() => openCreateModal('meeting')}>
                 <Calendar className="w-4 h-4 mr-2" />
                 New Meeting
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => openCreateModal('campaign')}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Campaign
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openCreateModal('client')}>
+                <User className="w-4 h-4 mr-2" />
+                New Client
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -138,6 +165,15 @@ export function Navbar() {
         open={isTaskModalOpen}
         onOpenChange={setTaskModalOpen}
         task={selectedTask}
+      />
+      <CampaignModal
+        open={isCampaignModalOpen}
+        onOpenChange={setCampaignModalOpen}
+        onSuccess={() => window.location.reload()}
+      />
+      <ContactModal
+        open={isContactModalOpen}
+        onOpenChange={setContactModalOpen}
       />
     </nav>
   )

@@ -92,10 +92,9 @@ export function Contacts() {
                     </h1>
                     <p className="text-muted-foreground font-medium">Manage your clients and prospects</p>
                 </div>
-                <Button onClick={handleNew} className="shadow-lg shadow-primary/20">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Contact
-                </Button>
+                <div className="flex gap-2">
+                    {/* Centralized creation handled by Navbar */}
+                </div>
             </div>
 
             {/* Stats Cards */}

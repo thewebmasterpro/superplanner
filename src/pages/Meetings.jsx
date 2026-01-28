@@ -256,42 +256,7 @@ export function Meetings() {
           <p className="text-muted-foreground font-medium">Manage your scheduled meetings and agendas</p>
         </div>
         <div className="flex gap-2">
-          <div className="bg-muted p-1 rounded-lg flex mr-2">
-            <Button
-              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-              className="h-8 px-3"
-            >
-              List
-            </Button>
-            <Button
-              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('kanban')}
-              className="h-8 px-3"
-            >
-              Board
-            </Button>
-          </div>
-          <Button variant="outline" onClick={() => setCampaignModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Campaign
-          </Button>
-          <Button variant="outline" onClick={() => {
-            setSelectedTask({ type: 'task' })
-            setTaskModalOpen(true)
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </Button>
-          <Button onClick={() => {
-            setSelectedTask({ type: 'meeting' })
-            setTaskModalOpen(true)
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Meeting
-          </Button>
+          {/* Centralized creation handled by Navbar */}
         </div>
       </div>
 
