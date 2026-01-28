@@ -33,7 +33,7 @@ export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
-  const { contexts } = useContextStore()
+  const { contexts, activeContextId } = useContextStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -61,6 +61,13 @@ export function Tasks() {
   useEffect(() => {
     loadFilterOptions()
   }, [])
+
+  // Reset context filter when active context changes (e.g. switching to Trash/Archive or between contexts)
+  useEffect(() => {
+    setContextFilter('all')
+    // We might want to reset other filters too, but context filter is critical to avoid empty states
+    // if switching from Context A to Context B while filtering by Context A.
+  }, [activeContextId])
 
   const loadFilterOptions = async () => {
     const { data: { user } } = await supabase.auth.getUser()
