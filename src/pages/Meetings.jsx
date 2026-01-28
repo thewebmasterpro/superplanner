@@ -36,9 +36,8 @@ export function Meetings() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const updateTaskMutation = useUpdateTask()
-  const { isTaskModalOpen, setTaskModalOpen } = useUIStore()
+  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery } = useUIStore()
   const { contexts, activeContextId } = useContextStore()
-  const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [contextFilter, setContextFilter] = useState('all')
@@ -260,318 +259,308 @@ export function Meetings() {
         </div>
       </div>
 
-      {/* Search + Filter Toggle */}
-      <Card className="glass-panel p-4 border-border/40 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input
-                placeholder="Search meetings..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background/50 border-border/50 focus:bg-background transition-all"
-              />
-            </div>
-          </div>
-
-          <Button
-            variant={showFilters ? "secondary" : "outline"}
-            onClick={() => setShowFilters(!showFilters)}
-            className="relative"
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                {activeFilterCount}
-              </Badge>
-            )}
+      {/* Filter Toggle */}
+      <div className="flex items-center justify-end mb-4 gap-2">
+        {(activeFilterCount > 0 || searchQuery) && (
+          <Button variant="ghost" onClick={clearAllFilters} size="sm">
+            <X className="w-4 h-4 mr-1" />
+            Clear Filters
           </Button>
-
-          {(activeFilterCount > 0 || searchQuery) && (
-            <Button variant="ghost" onClick={clearAllFilters}>
-              <X className="w-4 h-4 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        {/* Expanded Filters */}
-        {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-4 pt-4 border-t">
-            {/* Status */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Priority */}
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="5">P5 (High)</SelectItem>
-                <SelectItem value="4">P4</SelectItem>
-                <SelectItem value="3">P3</SelectItem>
-                <SelectItem value="2">P2</SelectItem>
-                <SelectItem value="1">P1 (Low)</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Context */}
-            <Select value={contextFilter} onValueChange={setContextFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Context" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Context</SelectItem>
-                <SelectItem value="none">No Context</SelectItem>
-                {contexts.map(ctx => (
-                  <SelectItem key={ctx.id} value={ctx.id}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color }} />
-                      {ctx.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Campaign */}
-            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Campaign" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Campaign</SelectItem>
-                <SelectItem value="none">No Campaign</SelectItem>
-                {campaigns.map(camp => (
-                  <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Type Filter Removed */}
-
-            {/* Tag */}
-            <Select value={tagFilter} onValueChange={setTagFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tags</SelectItem>
-                {tags.map(tag => (
-                  <SelectItem key={tag.id} value={tag.id}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                      {tag.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Due Date */}
-            <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Due Date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Dates</SelectItem>
-                <SelectItem value="overdue">🔴 Overdue</SelectItem>
-                <SelectItem value="today">📅 Today</SelectItem>
-                <SelectItem value="week">📆 This Week</SelectItem>
-                <SelectItem value="no_date">No Date</SelectItem>
-              </SelectContent>
-            </Select>
-            {/* Client (New) */}
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Client" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Clients</SelectItem>
-                {contactsList.map(contact => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    {contact.name} {contact.company && `(${contact.company})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Assignee Filter */}
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tasks</SelectItem>
-                <SelectItem value="assigned">👷 Assigned</SelectItem>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Sorting (New) */}
-            <Select value={sortOrder} onValueChange={setSortOrder}>
-              <SelectTrigger className="border-dashed">
-                <ArrowUpDown className="w-4 h-4 mr-2 opacity-50" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created_desc">Newest Created</SelectItem>
-                <SelectItem value="created_asc">Oldest Created</SelectItem>
-                <SelectItem value="priority_desc">Highest Priority</SelectItem>
-                <SelectItem value="priority_asc">Lowest Priority</SelectItem>
-                <SelectItem value="duedate_asc">Due Soonest</SelectItem>
-                <SelectItem value="duedate_desc">Due Latest</SelectItem>
-                <SelectItem value="title_asc">Title (A-Z)</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Column Visibility (New) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="border-dashed">
-                  <Columns className="w-4 h-4 mr-2 opacity-50" />
-                  Columns
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={visibleColumns.status}
-                  onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, status: checked }))}
-                >
-                  Status
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={visibleColumns.dueDate}
-                  onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, dueDate: checked }))}
-                >
-                  Due Date
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={visibleColumns.priority}
-                  onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, priority: checked }))}
-                >
-                  Priority
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         )}
-      </Card>
+        <Button
+          variant={showFilters ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="relative"
+        >
+          <Filter className="w-4 h-4 mr-2" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
+      {/* Expanded Filters */}
+      {showFilters && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-4 pt-4 border-t">
+          {/* Status */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="todo">To Do</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+              <SelectItem value="done">Done</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Priority */}
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="5">P5 (High)</SelectItem>
+              <SelectItem value="4">P4</SelectItem>
+              <SelectItem value="3">P3</SelectItem>
+              <SelectItem value="2">P2</SelectItem>
+              <SelectItem value="1">P1 (Low)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Context */}
+          <Select value={contextFilter} onValueChange={setContextFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Context" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Context</SelectItem>
+              <SelectItem value="none">No Context</SelectItem>
+              {contexts.map(ctx => (
+                <SelectItem key={ctx.id} value={ctx.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ctx.color }} />
+                    {ctx.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Campaign */}
+          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Campaign" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Campaign</SelectItem>
+              <SelectItem value="none">No Campaign</SelectItem>
+              {campaigns.map(camp => (
+                <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Type Filter Removed */}
+
+          {/* Tag */}
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tags</SelectItem>
+              {tags.map(tag => (
+                <SelectItem key={tag.id} value={tag.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                    {tag.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Due Date */}
+          <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Due Date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Dates</SelectItem>
+              <SelectItem value="overdue">🔴 Overdue</SelectItem>
+              <SelectItem value="today">📅 Today</SelectItem>
+              <SelectItem value="week">📆 This Week</SelectItem>
+              <SelectItem value="no_date">No Date</SelectItem>
+            </SelectContent>
+          </Select>
+          {/* Client (New) */}
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {contactsList.map(contact => (
+                <SelectItem key={contact.id} value={contact.id}>
+                  {contact.name} {contact.company && `(${contact.company})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Assignee Filter */}
+          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Assignee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tasks</SelectItem>
+              <SelectItem value="assigned">👷 Assigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Sorting (New) */}
+          <Select value={sortOrder} onValueChange={setSortOrder}>
+            <SelectTrigger className="border-dashed">
+              <ArrowUpDown className="w-4 h-4 mr-2 opacity-50" />
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_desc">Newest Created</SelectItem>
+              <SelectItem value="created_asc">Oldest Created</SelectItem>
+              <SelectItem value="priority_desc">Highest Priority</SelectItem>
+              <SelectItem value="priority_asc">Lowest Priority</SelectItem>
+              <SelectItem value="duedate_asc">Due Soonest</SelectItem>
+              <SelectItem value="duedate_desc">Due Latest</SelectItem>
+              <SelectItem value="title_asc">Title (A-Z)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Column Visibility (New) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-dashed">
+                <Columns className="w-4 h-4 mr-2 opacity-50" />
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.status}
+                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, status: checked }))}
+              >
+                Status
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.dueDate}
+                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, dueDate: checked }))}
+              >
+                Due Date
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={visibleColumns.priority}
+                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, priority: checked }))}
+              >
+                Priority
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
 
       {/* Selection count */}
-      {selectedIds.length > 0 && viewMode === 'table' && (
-        <div className="flex items-center gap-2 px-1">
-          <Badge variant="secondary" className="px-3 py-1">
-            {selectedIds.length} meetings selected
-          </Badge>
-          <Button variant="ghost" size="sm" onClick={clearSelection} className="h-8">
-            Clear Selection
-          </Button>
-        </div>
-      )}
+      {
+        selectedIds.length > 0 && viewMode === 'table' && (
+          <div className="flex items-center gap-2 px-1">
+            <Badge variant="secondary" className="px-3 py-1">
+              {selectedIds.length} meetings selected
+            </Badge>
+            <Button variant="ghost" size="sm" onClick={clearSelection} className="h-8">
+              Clear Selection
+            </Button>
+          </div>
+        )
+      }
 
       {/* Content: Table or Kanban */}
-      {viewMode === 'table' ? (
-        <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/30 border-b border-border/50">
-                <tr>
-                  <th className="px-4 py-3 text-left w-10">
-                    <Checkbox
-                      checked={isAllSelected}
-                      ref={el => el && (el.indeterminate = isSomeSelected)}
-                      onCheckedChange={toggleSelectAll}
-                      aria-label="Select all"
-                      className="border-border/50"
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
-                  {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
-                  {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Due Date</th>}
-                  {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Priority</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {isLoading ? (
+      {
+        viewMode === 'table' ? (
+          <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/30 border-b border-border/50">
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                      <p>Loading meetings...</p>
-                    </td>
-                  </tr>
-                ) : filteredTasks.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                      {tasks.length === 0
-                        ? 'No meetings yet. Create one to get started!'
-                        : 'No meetings match your filters.'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTasks.map((task) => {
-                    const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
-
-                    return (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        isSelected={selectedIds.includes(task.id)}
-                        isCompleting={completingTaskId === task.id}
-                        onSelect={(e) => {
-                          e?.stopPropagation()
-                          toggleSelect(task.id)
-                        }}
-                        onComplete={async () => {
-                          setCompletingTaskId(task.id)
-                          await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
-                          setTimeout(() => setCompletingTaskId(null), 1000)
-                        }}
-                        onClick={() => {
-                          setSelectedTask(task)
-                          setTaskModalOpen(true)
-                        }}
-                        isOverdue={isOverdue}
-                        statusColors={statusColors}
-                        priorityColors={priorityColors}
-                        visibleColumns={visibleColumns}
+                    <th className="px-4 py-3 text-left w-10">
+                      <Checkbox
+                        checked={isAllSelected}
+                        ref={el => el && (el.indeterminate = isSomeSelected)}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all"
+                        className="border-border/50"
                       />
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      ) : (
-        <KanbanView
-          tasks={filteredTasks}
-          onStatusChange={(taskId, newStatus) => {
-            updateTaskMutation.mutate({ id: taskId, updates: { status: newStatus } })
-          }}
-          onTaskClick={(task) => {
-            setSelectedTask(task)
-            setTaskModalOpen(true)
-          }}
-        />
-      )}
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
+                    {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
+                    {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Due Date</th>}
+                    {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Priority</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                        <p>Loading meetings...</p>
+                      </td>
+                    </tr>
+                  ) : filteredTasks.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
+                        {tasks.length === 0
+                          ? 'No meetings yet. Create one to get started!'
+                          : 'No meetings match your filters.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTasks.map((task) => {
+                      const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
+
+                      return (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          isSelected={selectedIds.includes(task.id)}
+                          isCompleting={completingTaskId === task.id}
+                          onSelect={(e) => {
+                            e?.stopPropagation()
+                            toggleSelect(task.id)
+                          }}
+                          onComplete={async () => {
+                            setCompletingTaskId(task.id)
+                            await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
+                            setTimeout(() => setCompletingTaskId(null), 1000)
+                          }}
+                          onClick={() => {
+                            setSelectedTask(task)
+                            setTaskModalOpen(true)
+                          }}
+                          isOverdue={isOverdue}
+                          statusColors={statusColors}
+                          priorityColors={priorityColors}
+                          visibleColumns={visibleColumns}
+                        />
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        ) : (
+          <KanbanView
+            tasks={filteredTasks}
+            onStatusChange={(taskId, newStatus) => {
+              updateTaskMutation.mutate({ id: taskId, updates: { status: newStatus } })
+            }}
+            onTaskClick={(task) => {
+              setSelectedTask(task)
+              setTaskModalOpen(true)
+            }}
+          />
+        )
+      }
 
       {/* Results count */}
       {

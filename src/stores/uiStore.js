@@ -39,4 +39,8 @@ export const useUIStore = create((set) => ({
   // Loading states
   isLoading: false,
   setLoading: (loading) => set({ isLoading: loading }),
+
+  // Global Search
+  searchQuery: '',
+  setSearchQuery: (query) => set({ searchQuery: query }),
 }))

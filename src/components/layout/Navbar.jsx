@@ -1,8 +1,8 @@
-import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar } from 'lucide-react'
+import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { TaskModal } from '../TaskModal'
 import { CampaignModal } from '../CampaignModal'
 import { ContactModal } from '../ContactModal'
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export function Navbar() {
   const {
@@ -28,11 +29,26 @@ export function Navbar() {
     isCampaignModalOpen,
     setCampaignModalOpen,
     isContactModalOpen,
-    setContactModalOpen
+    setContactModalOpen,
+    searchQuery,
+    setSearchQuery
   } = useUIStore()
   const { user } = useUserStore()
   const [selectedTask, setSelectedTask] = useState(null)
+  const searchInputRef = useRef(null)
   const currentPath = window.location.pathname || '/'
+
+  // Keyboard shortcut CMD+K for search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const getPageTitle = () => {
     switch (currentPath) {
@@ -91,6 +107,22 @@ export function Navbar() {
             )}
             {!isSidebarOpen && <span className="text-muted-foreground/40 hidden sm:inline-block">/</span>}
             <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
+          </div>
+        </div>
+
+        {/* Global Search Center */}
+        <div className="hidden md:flex flex-1 max-w-md mx-4 relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search across Superplanner..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-12 bg-muted/50 border-transparent focus:bg-background focus:border-primary/20 transition-all rounded-full h-10"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-border bg-background text-[10px] font-medium text-muted-foreground pointer-events-none opacity-50 group-focus-within:opacity-0 transition-opacity">
+            ⌘K
           </div>
         </div>
 

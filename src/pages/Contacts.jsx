@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Search, User, Building2, Phone, Mail, Filter, MoreHorizontal, Trash2, Edit2, Loader2 } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
 import { useContextStore } from '../stores/contextStore'
+import { useUIStore } from '../stores/uiStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -32,7 +33,7 @@ import {
 import { ContactModal, STATUS_OPTIONS } from '../components/ContactModal'
 
 export function Contacts() {
-    const [searchQuery, setSearchQuery] = useState('')
+    const { searchQuery } = useUIStore()
     const [statusFilter, setStatusFilter] = useState('all')
     const [contextFilter, setContextFilter] = useState('all')
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -141,18 +142,7 @@ export function Contacts() {
 
             {/* Filters */}
             <Card className="p-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex-1 min-w-[200px]">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search contacts..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
+                <div className="flex items-center gap-4 flex-wrap justify-end">
 
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="w-[160px]">
