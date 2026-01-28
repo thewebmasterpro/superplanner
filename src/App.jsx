@@ -38,7 +38,6 @@ const routes = {
   '/contacts': Contacts,
   '/settings': Settings,
   '/trash': Trash,
-  '/trash': Trash,
   '/archive': ArchivePage,
   '/team': TeamSettings,
 }
