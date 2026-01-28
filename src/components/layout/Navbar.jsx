@@ -96,12 +96,11 @@ export function Navbar() {
 
         {/* Right - User menu */}
         <div className="flex items-center gap-2">
-          {/* Quick Create Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm" className="hidden sm:flex gap-2 font-bold px-4">
+              <Button variant="default" size="sm" className="hidden sm:flex gap-2 font-semibold px-4">
                 <Plus className="w-4 h-4" />
-                <span>+ NEW CONTENT</span>
+                <span>New content</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -163,7 +162,10 @@ export function Navbar() {
       </div>
       <TaskModal
         open={isTaskModalOpen}
-        onOpenChange={setTaskModalOpen}
+        onOpenChange={(open) => {
+          setTaskModalOpen(open)
+          if (!open) setSelectedTask(null)
+        }}
         task={selectedTask}
       />
       <CampaignModal

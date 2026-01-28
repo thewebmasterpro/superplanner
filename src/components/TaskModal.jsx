@@ -389,8 +389,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="space-y-4">
-            {/* Task/Meeting Type Toggle (only when creating AND type not pre-set) */}
-            {!isEditing && !task?.type && (
+            {/* Task/Meeting Type Toggle (only when creating AND type not explicitly set) */}
+            {!isEditing && (!task || !task.type) && (
               <div className="flex gap-2 p-1 bg-muted rounded-lg">
                 <Button
                   type="button"
