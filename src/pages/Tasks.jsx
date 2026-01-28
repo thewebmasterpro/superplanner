@@ -515,8 +515,8 @@ export function Tasks() {
                         className="border-border/50"
                       />
                     </th>
-                    <th className="px-2 py-3 text-left w-10">
-                      {/* Placeholder for completion checkbox column */}
+                    <th className="px-2 py-3 text-left w-10 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Done
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
                     {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
