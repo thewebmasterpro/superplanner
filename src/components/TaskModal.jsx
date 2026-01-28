@@ -389,27 +389,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="space-y-4">
-            {/* Task/Meeting Type Toggle (only when creating AND type not explicitly set) */}
-            {!isEditing && (!task || !task.type) && (
-              <div className="flex gap-2 p-1 bg-muted rounded-lg">
-                <Button
-                  type="button"
-                  variant={formData.type === 'task' ? 'default' : 'ghost'}
-                  className="flex-1"
-                  onClick={() => setFormData({ ...formData, type: 'task' })}
-                >
-                  ✅ Task
-                </Button>
-                <Button
-                  type="button"
-                  variant={formData.type === 'meeting' ? 'default' : 'ghost'}
-                  className="flex-1"
-                  onClick={() => setFormData({ ...formData, type: 'meeting' })}
-                >
-                  📅 Meeting
-                </Button>
-              </div>
-            )}
+            {/* Task/Meeting selection is handled by the Navbar menu or derived from existing task */}
+
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Title */}
