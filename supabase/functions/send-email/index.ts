@@ -47,6 +47,8 @@ serve(async (req) => {
         }
 
         // 4. Send Email via Resend
+        const SENDER = Deno.env.get('SENDER_EMAIL') || 'Onboarding <onboarding@resend.dev>'
+
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -54,7 +56,7 @@ serve(async (req) => {
                 Authorization: `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: 'Onboarding <onboarding@resend.dev>', // Default Resend test domain
+                from: SENDER,
                 to,
                 subject,
                 html,

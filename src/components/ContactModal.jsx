@@ -346,10 +346,15 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                                 </div>
                                                 <h5 className="text-sm font-medium">{activity.title}</h5>
                                                 {activity.type === 'email' && (
-                                                    <div
-                                                        className="mt-2 text-xs text-muted-foreground line-clamp-2 bg-background p-2 rounded border border-border/50"
-                                                        dangerouslySetInnerHTML={{ __html: activity.description }}
-                                                    />
+                                                    <div className="mt-3 text-sm border rounded-md bg-background overflow-hidden">
+                                                        <div className="px-3 py-2 bg-muted/50 border-b text-xs font-mono text-muted-foreground">
+                                                            Message Body
+                                                        </div>
+                                                        <div
+                                                            className="p-3 prose prose-sm max-w-none dark:prose-invert"
+                                                            dangerouslySetInnerHTML={{ __html: activity.description }}
+                                                        />
+                                                    </div>
                                                 )}
                                                 {activity.status === 'done' && activity.type !== 'email' && (
                                                     <Badge variant="secondary" className="mt-2 bg-green-500/10 text-green-600 border-none h-5 px-1.5 text-[10px]">
