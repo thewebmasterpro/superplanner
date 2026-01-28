@@ -16,6 +16,7 @@ import {
     verticalListSortingStrategy,
     useSortable,
 } from '@dnd-kit/sortable'
+import { useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -45,11 +46,18 @@ export function KanbanView({ tasks, onStatusChange, onTaskClick }) {
         const { active, over } = event
         if (!over) return
 
-        const taskId = active.id
-        const newStatus = over.id
+        const activeTask = active.data.current
+        const overData = over.data.current
 
-        if (active.data.current.status !== newStatus && COLUMNS.find(c => c.id === newStatus)) {
-            onStatusChange(taskId, newStatus)
+        let newStatus = over.id
+
+        // If dropping over another card, get its status
+        if (overData && overData.type === 'task') {
+            newStatus = overData.status
+        }
+
+        if (activeTask.status !== newStatus && COLUMNS.find(c => c.id === newStatus)) {
+            onStatusChange(active.id, newStatus)
         }
     }
 
@@ -74,8 +82,16 @@ export function KanbanView({ tasks, onStatusChange, onTaskClick }) {
 }
 
 function KanbanColumn({ column, tasks, onTaskClick }) {
+    const { setNodeRef } = useDroppable({
+        id: column.id,
+        data: {
+            type: 'column',
+            status: column.id
+        }
+    })
+
     return (
-        <div className="flex flex-col gap-4 min-h-[500px]">
+        <div ref={setNodeRef} className="flex flex-col gap-4 min-h-[500px]">
             <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${column.color}`} />
