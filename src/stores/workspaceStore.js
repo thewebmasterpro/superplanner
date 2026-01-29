@@ -15,7 +15,7 @@ export const useWorkspaceStore = create(
                     const user = pb.authStore.model
                     if (!user) return
 
-                    const records = await pb.collection('contexts').getFullList({
+                    const records = await pb.collection('workspaces').getFullList({
                         filter: `user_id = "${user.id}" && status = "active"`,
                         sort: 'name'
                     })
@@ -42,7 +42,7 @@ export const useWorkspaceStore = create(
                     const user = pb.authStore.model
                     if (!user) throw new Error('Not authenticated')
 
-                    const record = await pb.collection('contexts').create({
+                    const record = await pb.collection('workspaces').create({
                         ...workspaceData,
                         user_id: user.id
                     })
@@ -57,7 +57,7 @@ export const useWorkspaceStore = create(
 
             updateWorkspace: async (id, updates) => {
                 try {
-                    const record = await pb.collection('contexts').update(id, updates)
+                    const record = await pb.collection('workspaces').update(id, updates)
 
                     set(state => ({
                         workspaces: state.workspaces.map(w => w.id === id ? record : w)
@@ -73,10 +73,10 @@ export const useWorkspaceStore = create(
                 try {
                     if (mode === 'soft') {
                         // Soft delete = archive
-                        await pb.collection('contexts').update(id, { status: 'archived' })
+                        await pb.collection('workspaces').update(id, { status: 'archived' })
                     } else {
                         // Hard delete (orphan tasks)
-                        await pb.collection('contexts').delete(id)
+                        await pb.collection('workspaces').delete(id)
                     }
 
                     set(state => ({

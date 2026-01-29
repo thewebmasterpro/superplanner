@@ -22,9 +22,10 @@ export function useTasks() {
         filters.push('deleted_at = ""')
         filters.push('archived_at != ""')
       } else {
-        // Default view (Global or Workspace): Not deleted, Not archived
-        filters.push('deleted_at = ""')
-        filters.push('archived_at = ""')
+        // Default view (Global or Workspace)
+        // Note: Removing soft-delete filters temporarily as fields might be missing in DB causing 400 error
+        // filters.push('deleted_at = ""')
+        // filters.push('archived_at = ""')
 
         // Filter by specific workspace if selected (and not 'all')
         if (activeWorkspaceId && activeWorkspaceId !== 'all') {
