@@ -23,13 +23,15 @@ export function useTasks() {
         filters.push('archived_at != ""')
       } else {
         // Default view (Global or Workspace): Not deleted, Not archived
-        filters.push('deleted_at = ""')
-        filters.push('archived_at = ""')
+        filters.push('(deleted_at = "" || deleted_at = null)')
+        filters.push('(archived_at = "" || archived_at = null)')
 
         // Filter by specific workspace if selected (and not 'all')
         if (activeWorkspaceId && activeWorkspaceId !== 'all') {
+          // If a workspace is active, ONLY show tasks for that workspace
           filters.push(`context_id = "${activeWorkspaceId}"`)
         }
+        // If no workspace selected (Global View), we show everything that matches user_id (already set above)
       }
 
       // Expand relations. 
