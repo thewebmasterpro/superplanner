@@ -232,18 +232,9 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
             const promises = selectedIds.map((taskId, index) => {
                 return pb.collection('meeting_items').create({
                     meeting_id: meetingId,
-                    type: 'task', // Ensure field matches schema (item_type or type?)
-                    task_id: taskId, // Assuming schema has task_id relation
-                    // If schema used generic 'item_id' and 'item_type', adjust.
-                    // Based on previous Supabase 'item_type' and 'item_id'.
-                    // PB usually prefers explicit relations. Let's assume 'task_id'.
-                    // If migration used 'item_id' (text), use that.
-                    // Previous Supabase: item_type='task', item_id=taskId.
-                    // Let's assume PB schema mirrors this or has task_id.
-                    // Safest: Use same fields if migration copied them.
                     item_type: 'task',
                     task_id: taskId,
-                    title: 'Task Reference', // Mandatory?
+                    title: 'Task Reference',
                     position: nextPosition + index
                 }).catch(err => {
                     // Ignore duplicates if any unique constraint
