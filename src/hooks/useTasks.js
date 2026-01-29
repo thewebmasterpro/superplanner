@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import toast from 'react-hot-toast'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
@@ -9,45 +9,39 @@ export function useTasks() {
   return useQuery({
     queryKey: ['tasks', activeWorkspaceId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = pb.authStore.model
       if (!user) return []
 
-      let query = supabase
-        .from('tasks')
-        .select(`
-          *,
-          category:task_categories(name, color),
-          project:projects(name),
-          parent_meeting:parent_meeting_id(id, title, type),
-          task_tags(tag:tags(id, name, color)),
-          campaign:campaigns(name),
-          context:contexts(name, color)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const filters = [`user_id = "${user.id}"`]
 
       // Filter logic for Trash/Archive
+      // Note: In PocketBase, date fields are strings. Empty string means null/unset.
       if (activeWorkspaceId === 'trash') {
-        query = query.not('deleted_at', 'is', null)
+        filters.push('deleted_at != ""')
       } else if (activeWorkspaceId === 'archive') {
-        query = query.is('deleted_at', null).not('archived_at', 'is', null)
+        filters.push('deleted_at = ""')
+        filters.push('archived_at != ""')
       } else {
         // Default view (Global or Workspace): Not deleted, Not archived
-        query = query.is('deleted_at', null).is('archived_at', null)
+        filters.push('deleted_at = ""')
+        filters.push('archived_at = ""')
 
         // Filter by specific workspace if selected (and not 'all')
         if (activeWorkspaceId && activeWorkspaceId !== 'all') {
-          query = query.eq('context_id', activeWorkspaceId)
+          filters.push(`context_id = "${activeWorkspaceId}"`)
         }
       }
 
-      const { data, error } = await query
+      // Expand relations. 
+      // Assumption: Field names match the relation names.
+      // Supabase query had: category, project, tags (via task_tags), campaign, context
+      const records = await pb.collection('tasks').getFullList({
+        filter: filters.join(' && '),
+        sort: '-created',
+        expand: 'category_id,project_id,tags,campaign_id,context_id,parent_meeting_id',
+      })
 
-      if (error) {
-        console.error('Error fetching tasks details:', error)
-        throw error
-      }
-      return data || []
+      return records
     },
   })
 }
@@ -58,12 +52,9 @@ export function useMoveToTrash() {
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) throw error
+      await pb.collection('tasks').update(id, {
+        deleted_at: new Date().toISOString()
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -81,12 +72,9 @@ export function useArchiveTask() {
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ archived_at: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) throw error
+      await pb.collection('tasks').update(id, {
+        archived_at: new Date().toISOString()
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -104,12 +92,10 @@ export function useRestoreTask() {
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: null, archived_at: null })
-        .eq('id', id)
-
-      if (error) throw error
+      await pb.collection('tasks').update(id, {
+        deleted_at: "", // PocketBase: empty string for null date
+        archived_at: ""
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -127,12 +113,7 @@ export function usePermanentDeleteTask() {
 
   return useMutation({
     mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      await pb.collection('tasks').delete(id)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -150,12 +131,13 @@ export function useBulkRestoreTasks() {
 
   return useMutation({
     mutationFn: async (ids) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: null, archived_at: null })
-        .in('id', ids)
-
-      if (error) throw error
+      // PocketBase doesn't support bulk update in one call easily via SDK without batch (if supported) 
+      // or loop. Looping is easiest for migration.
+      const promises = ids.map(id => pb.collection('tasks').update(id, {
+        deleted_at: "",
+        archived_at: ""
+      }))
+      await Promise.all(promises)
     },
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -173,12 +155,8 @@ export function useBulkPermanentDeleteTasks() {
 
   return useMutation({
     mutationFn: async (ids) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .in('id', ids)
-
-      if (error) throw error
+      const promises = ids.map(id => pb.collection('tasks').delete(id))
+      await Promise.all(promises)
     },
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -196,12 +174,10 @@ export function useBulkMoveToTrash() {
 
   return useMutation({
     mutationFn: async (ids) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .in('id', ids)
-
-      if (error) throw error
+      const promises = ids.map(id => pb.collection('tasks').update(id, {
+        deleted_at: new Date().toISOString()
+      }))
+      await Promise.all(promises)
     },
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -219,16 +195,17 @@ export function useEmptyTrash() {
 
   return useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('user_id', user.id)
-        .not('deleted_at', 'is', null)
+      // Fetch all items to delete first
+      // Warning: iterating to delete can be slow.
+      const items = await pb.collection('tasks').getFullList({
+        filter: `user_id = "${user.id}" && deleted_at != ""`
+      })
 
-      if (error) throw error
+      const promises = items.map(item => pb.collection('tasks').delete(item.id))
+      await Promise.all(promises)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -246,17 +223,17 @@ export function useEmptyArchive() {
 
   return useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .not('archived_at', 'is', null)
+      const items = await pb.collection('tasks').getFullList({
+        filter: `user_id = "${user.id}" && deleted_at = "" && archived_at != ""`
+      })
 
-      if (error) throw error
+      const promises = items.map(item => pb.collection('tasks').update(item.id, {
+        deleted_at: new Date().toISOString()
+      }))
+      await Promise.all(promises)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -273,10 +250,10 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async (taskData) => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      // Sanitize empty strings to null
+      // Sanitize empty strings to null or leave them (PB handles strict types, but usually forgiving)
       const sanitizedData = { ...taskData }
       Object.keys(sanitizedData).forEach(key => {
         if (sanitizedData[key] === '') {
@@ -284,24 +261,28 @@ export function useCreateTask() {
         }
       })
 
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({
-          ...sanitizedData,
-          user_id: user.id,
-        })
-        .select()
-        .single()
+      const record = await pb.collection('tasks').create({
+        ...sanitizedData,
+        user_id: user.id
+      })
 
-      if (error) throw error
-      return data
+      return record
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task created successfully!')
     },
     onError: (error) => {
-      toast.error(`Failed to create task: ${error.message}`)
+      console.error("Task creation failed:", error)
+      if (error.data && error.data.data) {
+        console.error("Validation errors:", error.data.data)
+        const fieldErrors = Object.entries(error.data.data)
+          .map(([field, err]) => `${field}: ${err.message}`)
+          .join(', ')
+        toast.error(`Failed to create task: ${fieldErrors}`)
+      } else {
+        toast.error(`Failed to create task: ${error.message}`)
+      }
     },
   })
 }
@@ -312,11 +293,7 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: async ({ id, updates }) => {
       // Get the current task first (to check recurrence)
-      const { data: currentTask } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', id)
-        .single()
+      const currentTask = await pb.collection('tasks').getOne(id)
 
       // Sanitize empty strings to null
       const sanitizedUpdates = { ...updates }
@@ -330,39 +307,18 @@ export function useUpdateTask() {
       if (sanitizedUpdates.status === 'done') {
         sanitizedUpdates.completed_at = new Date().toISOString()
       } else if (sanitizedUpdates.status && sanitizedUpdates.status !== 'done') {
-        sanitizedUpdates.completed_at = null
+        sanitizedUpdates.completed_at = ""
       }
 
-      const { data, error } = await supabase
-        .from('tasks')
-        .update(sanitizedUpdates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
+      const updatedRecord = await pb.collection('tasks').update(id, sanitizedUpdates)
 
       // Handle recurrence: create next instance if marking as done
-      console.log('🔍 Checking recurrence conditions:', {
-        statusIsDone: sanitizedUpdates.status === 'done',
-        hasRecurrence: !!currentTask?.recurrence,
-        recurrenceValue: currentTask?.recurrence,
-        hasDueDate: !!currentTask?.due_date,
-        dueDateValue: currentTask?.due_date,
-        hasScheduledTime: !!currentTask?.scheduled_time,
-        scheduledTimeValue: currentTask?.scheduled_time
-      })
-
+      // Logic copied from Supabase version
       if (sanitizedUpdates.status === 'done' && currentTask?.recurrence && (currentTask?.due_date || currentTask?.scheduled_time)) {
-        console.log('🔄 Recurrence triggered for task:', currentTask.title)
         try {
           // Use due_date if available, otherwise extract date from scheduled_time
           const referenceDate = currentTask.due_date || (currentTask.scheduled_time ? currentTask.scheduled_time.split('T')[0] : null)
-          if (!referenceDate) {
-            console.log('⚠️ No valid date found for recurrence')
-            return data
-          }
-          console.log('📅 Reference date for recurrence:', referenceDate)
+          if (!referenceDate) return updatedRecord
 
           const dueDate = new Date(referenceDate)
           let nextDate = new Date(dueDate)
@@ -384,21 +340,20 @@ export function useUpdateTask() {
 
           // Check if next date exceeds recurrence_end
           if (!currentTask.recurrence_end || nextDate <= new Date(currentTask.recurrence_end)) {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = pb.authStore.model
 
             // Calculate the new due_date as a string
             const newDueDate = nextDate.toISOString().split('T')[0]
-            console.log('📅 New due_date:', newDueDate)
 
             // If there's a scheduled_time, update it with the new date but keep the same time
             let newScheduledTime = null
             if (currentTask.scheduled_time) {
-              const originalTime = currentTask.scheduled_time.split('T')[1] // Get the time part (e.g., "11:00:00+00:00")
+              // Usually PB date strings are formatted, but let's trust the logic
+              const originalTime = currentTask.scheduled_time.split('T')[1]
               newScheduledTime = `${newDueDate}T${originalTime}`
-              console.log('🕐 New scheduled_time:', newScheduledTime)
             }
 
-            // Build the new task object, only including fields that exist
+            // Build the new task object
             const newTask = {
               user_id: user.id,
               title: currentTask.title,
@@ -411,30 +366,21 @@ export function useUpdateTask() {
               category_id: currentTask.category_id,
               project_id: currentTask.project_id,
               recurrence: currentTask.recurrence,
-              recurrence_end: currentTask.recurrence_end
+              recurrence_end: currentTask.recurrence_end,
+              type: currentTask.type,
+              agenda: currentTask.agenda
             }
 
-            // Only add type and agenda if they exist (V2 migration)
-            if ('type' in currentTask) newTask.type = currentTask.type
-            if ('agenda' in currentTask) newTask.agenda = currentTask.agenda
-
-            console.log('📝 Creating next occurrence:', newTask)
-            const { error: insertError } = await supabase.from('tasks').insert(newTask)
-
-            if (insertError) {
-              console.error('❌ Error creating recurring task:', insertError)
-              // Don't throw - let the main update succeed even if recurrence fails
-            } else {
-              console.log('✅ Next occurrence created successfully!')
-            }
+            await pb.collection('tasks').create(newTask)
+            console.log('✅ Next occurrence created successfully!')
           }
         } catch (recurrenceError) {
           console.error('Recurrence handling error:', recurrenceError)
-          // Don't throw - let the main update succeed even if recurrence fails
+          // Don't throw
         }
       }
 
-      return data
+      return updatedRecord
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -446,7 +392,6 @@ export function useUpdateTask() {
   })
 }
 
-// Fallback for legacy useDeleteTask (now maps to useMoveToTrash for safety, or permanent if specified)
 export function useDeleteTask() {
   const moveToTrash = useMoveToTrash()
   return moveToTrash

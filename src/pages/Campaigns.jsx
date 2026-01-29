@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { format } from 'date-fns'
 import { CampaignModal } from '../components/CampaignModal'
 import { CampaignGantt } from '../components/CampaignGantt'
@@ -40,29 +40,47 @@ export function Campaigns() {
   const loadCampaigns = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = pb.authStore.model
       if (!user) return
 
-      let query = supabase
-        .from('campaigns')
-        .select(`
-          *,
-          context:contexts(name, color),
-          tasks:tasks(count),
-          meetings:meetings(count)
-        `)
-        .eq('user_id', user.id)
-        .order('start_date', { ascending: false })
+      let filter = `user_id = "${user.id}"`
 
       // Filter by workspace if not Global view
       if (activeWorkspaceId) {
-        query = query.eq('context_id', activeWorkspaceId)
+        filter += ` && context_id = "${activeWorkspaceId}"`
       }
 
-      const { data, error } = await query
+      const records = await pb.collection('campaigns').getFullList({
+        filter,
+        sort: '-start_date',
+        expand: 'context_id'
+      })
 
-      if (error) throw error
-      setCampaigns(data || [])
+      // Fetch counts for tasks and meetings
+      const campaignsWithCounts = await Promise.all(records.map(async (c) => {
+        try {
+          // We can use getList(1, 1) and read totalItems to get counts efficiently
+          const tasks = await pb.collection('tasks').getList(1, 1, {
+            filter: `campaign_id = "${c.id}" && type = "task"`,
+            fields: 'id'
+          })
+          const meetings = await pb.collection('tasks').getList(1, 1, {
+            filter: `campaign_id = "${c.id}" && type = "meeting"`,
+            fields: 'id'
+          })
+
+          return {
+            ...c,
+            tasks: [{ count: tasks.totalItems }],
+            meetings: [{ count: meetings.totalItems }]
+          }
+        } catch (e) {
+          return { ...c, tasks: [{ count: 0 }], meetings: [{ count: 0 }] }
+        }
+      }))
+
+      setCampaigns(campaignsWithCounts)
+
     } catch (error) {
       console.error('Error loading campaigns:', error)
       toast.error('Failed to load campaigns')
@@ -75,8 +93,7 @@ export function Campaigns() {
     if (!confirm('Are you sure you want to delete this campaign?')) return
 
     try {
-      const { error } = await supabase.from('campaigns').delete().eq('id', id)
-      if (error) throw error
+      await pb.collection('campaigns').delete(id)
       toast.success('Campaign deleted')
       loadCampaigns()
       if (selectedCampaignId === id) {
@@ -91,12 +108,7 @@ export function Campaigns() {
   const handleArchive = async (id, currentStatus) => {
     const newStatus = currentStatus === 'archived' ? 'draft' : 'archived'
     try {
-      const { error } = await supabase
-        .from('campaigns')
-        .update({ status: newStatus })
-        .eq('id', id)
-
-      if (error) throw error
+      await pb.collection('campaigns').update(id, { status: newStatus })
       toast.success(`Campaign ${newStatus === 'archived' ? 'archived' : 'restored'}`)
       loadCampaigns()
     } catch (error) {
@@ -273,11 +285,11 @@ export function Campaigns() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Start</p>
-                    <p className="font-medium">{format(new Date(campaign.start_date), 'MMM d, yyyy')}</p>
+                    <p className="font-medium">{format(new Date(campaign.start_date || Date.now()), 'MMM d, yyyy')}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">End</p>
-                    <p className="font-medium">{format(new Date(campaign.end_date), 'MMM d, yyyy')}</p>
+                    <p className="font-medium">{format(new Date(campaign.end_date || Date.now()), 'MMM d, yyyy')}</p>
                   </div>
                 </div>
 

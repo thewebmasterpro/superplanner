@@ -3,7 +3,7 @@
  */
 
 import { useUserStore } from '../stores/userStore'
-import { supabase } from '../lib/supabase'
+
 
 /**
  * Send a Telegram notification
@@ -12,33 +12,8 @@ import { supabase } from '../lib/supabase'
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function sendTelegramMessage(chatId, message) {
-    try {
-        // Get Supabase project URL from the client
-        const supabaseUrl = supabase.supabaseUrl || import.meta.env.VITE_SUPABASE_URL
-        const functionUrl = `${supabaseUrl}/functions/v1/telegram-bot`
-
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                chat_id: chatId,
-                message: message,
-            }),
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.error || 'Failed to send Telegram notification')
-        }
-
-        const data = await response.json()
-        return { success: data.success }
-    } catch (error) {
-        console.error('Error sending Telegram notification:', error)
-        return { success: false, error: error.message }
-    }
+    console.warn("Telegram notifications are temporarily disabled during migration to PocketBase. Please implement a backend hook.")
+    return { success: false, error: 'Migration in progress' }
 }
 
 /**

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Send } from 'lucide-react'
@@ -21,14 +21,11 @@ export function TaskNotes({ taskId }) {
     const loadNotes = async () => {
         setLoading(true)
         try {
-            const { data, error } = await supabase
-                .from('task_notes')
-                .select('*')
-                .eq('task_id', taskId)
-                .order('created_at', { ascending: false })
-
-            if (error) throw error
-            setNotes(data || [])
+            const records = await pb.collection('task_notes').getFullList({
+                filter: `task_id = "${taskId}"`,
+                sort: '-created'
+            })
+            setNotes(records)
         } catch (error) {
             console.error('Error loading notes:', error)
             toast.error('Failed to load notes')
@@ -43,17 +40,11 @@ export function TaskNotes({ taskId }) {
 
         setSubmitting(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            const { error } = await supabase
-                .from('task_notes')
-                .insert({
-                    task_id: taskId,
-                    user_id: user.id,
-                    content: newNote.trim()
-                })
-
-            if (error) throw error
+            await pb.collection('task_notes').create({
+                task_id: taskId,
+                user_id: pb.authStore.model?.id,
+                content: newNote.trim()
+            })
 
             setNewNote('')
             loadNotes()
@@ -82,7 +73,7 @@ export function TaskNotes({ taskId }) {
                         <div key={note.id} className="bg-muted/50 p-3 rounded-lg space-y-1">
                             <div className="flex justify-between items-start text-xs text-muted-foreground">
                                 <span className="font-medium">User</span>
-                                <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+                                <span>{formatDistanceToNow(new Date(note.created), { addSuffix: true })}</span>
                             </div>
                             <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                         </div>

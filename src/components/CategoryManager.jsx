@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,13 +18,10 @@ export function CategoryManager() {
 
     const loadCategories = async () => {
         try {
-            const { data, error } = await supabase
-                .from('task_categories')
-                .select('*')
-                .order('name')
-
-            if (error) throw error
-            setCategories(data || [])
+            const records = await pb.collection('task_categories').getFullList({
+                sort: 'name'
+            })
+            setCategories(records || [])
         } catch (error) {
             console.error('Error loading categories:', error)
         }
@@ -36,16 +33,13 @@ export function CategoryManager() {
 
         setLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            const { error } = await supabase
-                .from('task_categories')
-                .insert({
-                    name: newCategory.name,
-                    color: newCategory.color,
-                    user_id: user.id
-                })
+            const user = pb.authStore.model
 
-            if (error) throw error
+            await pb.collection('task_categories').create({
+                name: newCategory.name,
+                color: newCategory.color,
+                user_id: user.id
+            })
 
             toast.success('Category added successfully!')
             setNewCategory({ name: '', color: '#3b82f6' })
@@ -61,12 +55,7 @@ export function CategoryManager() {
         if (!window.confirm('Delete this category? Tasks using it will remain unaffected.')) return
 
         try {
-            const { error } = await supabase
-                .from('task_categories')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
+            await pb.collection('task_categories').delete(id)
 
             toast.success('Category deleted successfully!')
             loadCategories()

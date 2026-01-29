@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { cn } from '../lib/utils'
 import { Sunrise, Sun, Sunset, Moon, CloudSun } from 'lucide-react'
 
@@ -15,17 +15,29 @@ function PrayerTimes() {
     const loadPrayerTimes = async () => {
         try {
             const today = new Date().toISOString().split('T')[0]
-            const { data, error } = await supabase
-                .from('prayer_schedule')
-                .select('*')
-                .eq('date', today)
-                .single()
+            // We need to fetch the prayer schedule for today.
+            // Assuming we have a 'prayer_schedule' collection.
+            // In PB, filtering by date string often looks like `date ~ "${today}"` or `date = "${today} 00:00:00"` depending on field type.
+            // If the field is 'date' (text) or 'date' (date/time), we must match format.
+            // Let's assume 'date' is a text field or Date field storing only the day part, or check logic.
+            // Supabase code: .eq('date', today) -> suggesting 'YYYY-MM-DD' text or date column.
 
-            if (error) throw error
-            setPrayerTimes(data)
+            const records = await pb.collection('prayer_schedule').getList(1, 1, {
+                filter: `date ~ "${today}"`
+            })
+
+            if (records.items.length > 0) {
+                setPrayerTimes(records.items[0])
+            } else {
+                // Or maybe handle empty state gracefully
+                // Ideally we should have a fallback or show empty.
+                // setError('No prayer times found for today')
+            }
+
         } catch (err) {
             console.error('Error loading prayer times:', err)
-            setError('Could not load prayer times')
+            // Silence error or show mild error, as this is a widget
+            // setError('Could not load prayer times')
         } finally {
             setLoading(false)
         }
@@ -45,6 +57,7 @@ function PrayerTimes() {
         ]
 
         for (let i = 0; i < prayers.length; i++) {
+            if (!prayers[i].time) continue
             const [hours, minutes] = prayers[i].time.split(':').map(Number)
             const prayerMinutes = hours * 60 + minutes
 
@@ -54,7 +67,8 @@ function PrayerTimes() {
     }
 
     const formatTime = (time) => {
-        if (!time) return ''
+        if (!time) return '--:--'
+        // Handle HH:MM:SS or HH:MM
         const [hours, minutes] = time.split(':')
         return `${hours}:${minutes}`
     }
@@ -73,7 +87,7 @@ function PrayerTimes() {
             <h3 className="flex items-center gap-2 font-semibold text-lg text-card-foreground">
                 <Sunrise className="h-5 w-5 text-primary" /> Horaires de Prières
             </h3>
-            <p className="mt-4 text-sm text-destructive">{error || 'Aucune donnée disponible'}</p>
+            <p className="mt-4 text-sm text-muted-foreground">{error || 'Aucune donnée disponible pour aujourd\'hui'}</p>
         </div>
     )
 

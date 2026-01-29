@@ -1,23 +1,8 @@
 import * as React from "react"
 import { Search, CheckSquare, User, FolderKanban, Command as CommandIcon, Calendar, Loader2 } from "lucide-react"
 import { useUIStore } from "../../stores/uiStore"
-import { supabase } from "../../lib/supabase"
-import {
-    Command,
-    CommandDialog,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-    CommandSeparator,
-} from "@/components/ui/command"
+import pb from "../../lib/pocketbase"
 import { Input } from "@/components/ui/input"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export function GlobalSearch() {
@@ -42,6 +27,9 @@ export function GlobalSearch() {
     // Real-time search for preview
     React.useEffect(() => {
         const fetchResults = async () => {
+            // Only search if user authenticated
+            if (!pb.authStore.isValid) return;
+
             if (searchQuery.length < 2) {
                 setResults({ tasks: [], contacts: [], projects: [] })
                 setIsOpen(false)
@@ -52,30 +40,27 @@ export function GlobalSearch() {
             setIsOpen(true)
 
             try {
-                const { data: { user } } = await supabase.auth.getUser()
+                const user = pb.authStore.model
 
                 const [tasksRes, contactsRes, projectsRes] = await Promise.all([
-                    supabase.from('tasks')
-                        .select('id, title, status, due_date')
-                        .eq('user_id', user.id)
-                        .ilike('title', `%${searchQuery}%`)
-                        .limit(5),
-                    supabase.from('contacts')
-                        .select('id, name, company')
-                        .eq('user_id', user.id)
-                        .or(`name.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%`)
-                        .limit(5),
-                    supabase.from('projects')
-                        .select('id, name')
-                        .eq('user_id', user.id)
-                        .ilike('name', `%${searchQuery}%`)
-                        .limit(3)
+                    pb.collection('tasks').getList(1, 5, {
+                        filter: `user_id = "${user.id}" && title ~ "${searchQuery}"`,
+                        sort: '-created'
+                    }),
+                    pb.collection('contacts').getList(1, 5, {
+                        filter: `user_id = "${user.id}" && (name ~ "${searchQuery}" || company ~ "${searchQuery}")`,
+                        sort: '-created'
+                    }),
+                    pb.collection('projects').getList(1, 3, {
+                        filter: `user_id = "${user.id}" && name ~ "${searchQuery}"`,
+                        sort: '-created'
+                    })
                 ])
 
                 setResults({
-                    tasks: tasksRes.data || [],
-                    contacts: contactsRes.data || [],
-                    projects: projectsRes.data || []
+                    tasks: tasksRes.items || [],
+                    contacts: contactsRes.items || [],
+                    projects: projectsRes.items || []
                 })
             } catch (error) {
                 console.error('Search error:', error)

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useUserStore } from '../stores/userStore'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { useTelegramNotifications } from '../hooks/useTelegramNotifications'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,6 +21,44 @@ export function Settings() {
       toast.success('Test notification sent successfully! Check your Telegram.')
     } else {
       toast.error(`Failed to send notification: ${result.error}`)
+    }
+  }
+
+  const savePreferences = async () => {
+    try {
+      const user = pb.authStore.model
+      if (!user) return
+
+      const safePayload = {
+        user_id: user.id,
+        telegram: preferences.telegram,
+        dashboardWidgets: preferences.dashboardWidgets,
+        prayerLocation: preferences.prayerLocation,
+        spotify_playlist_url: preferences.spotify_playlist_url
+      }
+
+      // Check if exists
+      try {
+        const records = await pb.collection('user_preferences').getFullList({
+          filter: `user_id = "${user.id}"`
+        })
+
+        if (records.length > 0) {
+          await pb.collection('user_preferences').update(records[0].id, safePayload)
+        } else {
+          await pb.collection('user_preferences').create(safePayload)
+        }
+        toast.success('Preferences saved successfully!')
+      } catch (e) {
+        // If error in getFullList (e.g. 404 shouldn't happen for getFullList returns empty array)
+        // But if it fails, try create? No, safer to log.
+        // Actually getFullList returns empty array if none found.
+        await pb.collection('user_preferences').create(safePayload)
+        toast.success('Preferences saved successfully!')
+      }
+
+    } catch (e) {
+      toast.error('Failed to save: ' + e.message)
     }
   }
 
@@ -294,27 +332,7 @@ export function Settings() {
       {/* Sticky Save Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-sm border-t p-4 flex justify-end md:left-64 z-10">
         <Button
-          onClick={async () => {
-            try {
-              const { data: { user } } = await supabase.auth.getUser()
-              const safePayload = {
-                user_id: user.id,
-                telegram: preferences.telegram,
-                dashboardWidgets: preferences.dashboardWidgets,
-                prayerLocation: preferences.prayerLocation,
-                spotify_playlist_url: preferences.spotify_playlist_url
-              }
-
-              const { error } = await supabase
-                .from('user_preferences')
-                .upsert(safePayload, { onConflict: 'user_id' })
-
-              if (error) throw error
-              toast.success('Preferences saved successfully!')
-            } catch (e) {
-              toast.error('Failed to save: ' + e.message)
-            }
-          }}
+          onClick={savePreferences}
           className="px-8 shadow-lg"
         >
           💾 Save Preferences

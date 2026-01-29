@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useBlockers, isTaskBlocked, areAllBlockersDone } from '../hooks/useBlockers'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 
 /**
  * Component to display and manage blockers for a task
@@ -26,20 +26,18 @@ export function BlockerManager({ taskId, readOnly = false }) {
         const timer = setTimeout(async () => {
             setSearching(true)
             try {
-                const { data: { user } } = await supabase.auth.getUser()
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .select('id, title, status')
-                    .eq('user_id', user.id)
-                    .neq('id', taskId) // Exclude current task
-                    .ilike('title', `%${searchQuery}%`)
-                    .limit(5)
+                const user = pb.authStore.model
+                if (!user) return
 
-                if (!error) {
-                    // Filter out already added blockers
-                    const blockerIds = blockers.map(b => b.id)
-                    setSearchResults(data?.filter(t => !blockerIds.includes(t.id)) || [])
-                }
+                const result = await pb.collection('tasks').getList(1, 5, {
+                    filter: `user_id = "${user.id}" && id != "${taskId}" && title ~ "${searchQuery}"`,
+                    fields: 'id,title,status', // optimize fetch if needed, but PB returns full object by default usually
+                })
+
+                // Filter out already added blockers
+                const blockerIds = blockers.map(b => b.id)
+                setSearchResults(result.items.filter(t => !blockerIds.includes(t.id)) || [])
+
             } catch (err) {
                 console.error('Search error:', err)
             } finally {

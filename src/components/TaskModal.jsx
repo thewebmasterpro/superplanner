@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useCreateTask, useUpdateTask, useDeleteTask, useArchiveTask } from '../hooks/useTasks'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const [selectedTags, setSelectedTags] = useState([])
   const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(false)
+  const [campaigns, setCampaigns] = useState([])
 
   // Agenda Items (sub-tasks) for meetings
   const [agendaItems, setAgendaItems] = useState([])
@@ -84,7 +85,19 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         if (task.type === 'meeting') {
           loadAgendaItems(task.id)
         }
-        loadTaskTags(task.id)
+        // Load tags from task 'tags' relation field (array of IDs)
+        // If task comes from useTasks with 'expand', task.tags might be IDs or objects depending on SDK version/expansion.
+        // Usually plain field access gives IDs.
+        if (task.tags && Array.isArray(task.tags)) {
+          setSelectedTags(task.tags)
+        } else {
+          // Fallback if using join table or not expanded properly initially
+          // For now assume tasks have tags array.
+          setSelectedTags([])
+          // If we really need to fetch from join table:
+          // loadTaskTags(task.id) 
+        }
+
         if (task.team_id) {
           loadTeamMembers(task.team_id)
         } else if (currentTeam) {
@@ -155,21 +168,18 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     }
   }, [task, activeWorkspaceId])
 
-  const [campaigns, setCampaigns] = useState([])
-
   const loadTeamMembers = async (teamId) => {
     try {
-      // Attempt to fetch with user details (requires profiles table or visible auth.users)
-      // Since we likely don't have a public profiles table yet, this might fail to get emails.
-      // We really should have a public profiles table or a view.
-      // For now, we'll try to get what we can.
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamId)
-
-      if (error) throw error
-      setTeamMembers(data || [])
+      const records = await pb.collection('team_members').getFullList({
+        filter: `team_id = "${teamId}"`,
+        expand: 'user_id'
+      })
+      // Map to structure expected
+      const members = records.map(r => ({
+        ...r,
+        auth_user: r.expand?.user_id // Assuming user_id is the relation to users
+      }))
+      setTeamMembers(members)
     } catch (error) {
       console.error('Error loading team members:', error)
     }
@@ -178,45 +188,28 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const loadCategoriesAndProjects = async () => {
     try {
       const [categoriesRes, projectsRes, tagsRes, campaignsRes] = await Promise.all([
-        supabase.from('task_categories').select('*').order('name'),
-        supabase.from('projects').select('*').order('name'),
-        supabase.from('tags').select('*').order('name'),
-        supabase.from('campaigns').select('id, name').eq('status', 'active').order('name')
+        pb.collection('task_categories').getFullList({ sort: 'name' }),
+        pb.collection('projects').getFullList({ sort: 'name' }),
+        pb.collection('tags').getFullList({ sort: 'name' }),
+        pb.collection('campaigns').getFullList({ filter: 'status = "active"', sort: 'name' })
       ])
 
-      if (categoriesRes.data) setCategories(categoriesRes.data)
-      if (projectsRes.data) setProjects(projectsRes.data)
-      if (tagsRes.data) setTags(tagsRes.data)
-      if (campaignsRes.data) setCampaigns(campaignsRes.data)
+      setCategories(categoriesRes)
+      setProjects(projectsRes)
+      setTags(tagsRes)
+      setCampaigns(campaignsRes)
     } catch (error) {
       console.error('Error loading data:', error)
     }
   }
 
-  const loadTaskTags = async (taskId) => {
-    try {
-      const { data, error } = await supabase
-        .from('task_tags')
-        .select('tag_id')
-        .eq('task_id', taskId)
-
-      if (error) throw error
-      setSelectedTags(data.map(t => t.tag_id))
-    } catch (error) {
-      console.error('Error loading task tags:', error)
-    }
-  }
-
   const loadAgendaItems = async (meetingId) => {
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('parent_meeting_id', meetingId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-      setAgendaItems(data || [])
+      const records = await pb.collection('tasks').getFullList({
+        filter: `parent_meeting_id = "${meetingId}"`,
+        sort: 'created' // created_at in supbase, created in PB
+      })
+      setAgendaItems(records)
     } catch (error) {
       console.error('Error loading agenda items:', error)
     }
@@ -226,9 +219,9 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     if (!newAgendaItem.title.trim() || !task?.id) return
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = pb.authStore.model
 
-      const { error } = await supabase.from('tasks').insert({
+      await pb.collection('tasks').create({
         user_id: user.id,
         parent_meeting_id: task.id,
         title: newAgendaItem.title,
@@ -236,10 +229,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         priority: newAgendaItem.priority,
         status: 'todo',
         type: 'task',
-        due_date: task.due_date // Inherit meeting date
+        due_date: task.due_date
       })
-
-      if (error) throw error
 
       // Reload agenda items
       await loadAgendaItems(task.id)
@@ -256,12 +247,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     const newStatus = currentStatus === 'done' ? 'todo' : 'done'
 
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus, completed_at: newStatus === 'done' ? new Date().toISOString() : null })
-        .eq('id', itemId)
-
-      if (error) throw error
+      await pb.collection('tasks').update(itemId, {
+        status: newStatus,
+        completed_at: newStatus === 'done' ? new Date().toISOString() : ""
+      })
       await loadAgendaItems(task.id)
     } catch (error) {
       console.error('Error updating agenda item:', error)
@@ -272,8 +261,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     if (!confirm('Delete this agenda item?')) return
 
     try {
-      const { error } = await supabase.from('tasks').delete().eq('id', itemId)
-      if (error) throw error
+      await pb.collection('tasks').delete(itemId)
       await loadAgendaItems(task.id)
     } catch (error) {
       console.error('Error deleting agenda item:', error)
@@ -287,7 +275,6 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       return
     }
 
-    // Validate context_id is required in Global view (when creating)
     if (!isEditing && !activeWorkspaceId && !formData.context_id) {
       toast.error('Please select a workspace before creating')
       return
@@ -296,32 +283,19 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     setLoading(true)
 
     try {
-      let taskId = task?.id
+      // Include selected tags in the payload
+      const payload = {
+        ...formData,
+        tags: selectedTags
+      }
 
       if (isEditing) {
         await updateTask.mutateAsync({
           id: task.id,
-          updates: formData
+          updates: payload
         })
       } else {
-        const newTask = await createTask.mutateAsync(formData)
-        taskId = newTask.id // Ensure backend returns the full object or ID
-      }
-
-      // Handle Tags (Delete all and re-insert for simplicity)
-      if (taskId) {
-        // 1. Delete existing tags
-        await supabase.from('task_tags').delete().eq('task_id', taskId)
-
-        // 2. Insert new tags
-        if (selectedTags.length > 0) {
-          const tagsToInsert = selectedTags.map(tagId => ({
-            task_id: taskId,
-            tag_id: tagId
-          }))
-          const { error: tagError } = await supabase.from('task_tags').insert(tagsToInsert)
-          if (tagError) console.error('Error saving tags:', tagError)
-        }
+        await createTask.mutateAsync(payload)
       }
 
       onOpenChange(false)
@@ -389,8 +363,6 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
           <TabsContent value="details" className="space-y-4">
-            {/* Task/Meeting selection is handled by the Navbar menu or derived from existing task */}
-
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Title */}
@@ -625,8 +597,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                       <SelectItem value="none">Unassigned</SelectItem>
                       {teamMembers.map((member) => (
                         <SelectItem key={member.user_id} value={member.user_id}>
-                          {/* Try to show email/name if available, else ID */}
-                          {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`} ({member.role})
+                          {/* Try to show email/name if available */}
+                          {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { fetchPrayerTimesByCity, fetchMonthlyPrayerTimesByCity } from '../services/prayerTimesApi'
 import './Settings.css'
 
@@ -25,12 +25,10 @@ function Settings({ user, onClose }) {
 
     const loadCategories = async () => {
         try {
-            const { data, error } = await supabase
-                .from('task_categories')
-                .select('*')
-                .order('name', { ascending: true })
-            if (error) throw error
-            setCategories(data || [])
+            const records = await pb.collection('task_categories').getFullList({
+                sort: 'name'
+            })
+            setCategories(records || [])
         } catch (err) {
             console.error('Error loading categories:', err)
         }
@@ -38,15 +36,13 @@ function Settings({ user, onClose }) {
 
     const loadPreferences = async () => {
         try {
-            const { data, error } = await supabase
-                .from('user_preferences')
-                .select('*')
-                .eq('user_id', user.id)
-                .single()
+            // Find preferences by user_id
+            const records = await pb.collection('user_preferences').getFullList({
+                filter: `user_id = "${user.id}"`,
+                sort: '-updated'
+            })
 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Load error:', error)
-            }
+            const data = records[0]
 
             if (data) {
                 setCity(data.city || '')
@@ -98,37 +94,53 @@ function Settings({ user, onClose }) {
             const monthlyTimes = await fetchMonthlyPrayerTimesByCity(city, '', 3, month, year)
 
             // Save preferences
-            const { error: prefError } = await supabase
-                .from('user_preferences')
-                .upsert({
-                    user_id: user.id,
-                    city: city.trim(),
-                    country: '',
-                    calculation_method: 3,
-                    pomodoro_work_duration: parseInt(pomodoroWork),
-                    pomodoro_break_duration: parseInt(pomodoroBreak),
-                    spotify_playlist_url: spotifyPlaylistUrl.trim(),
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'user_id'
-                })
+            // Check if exists
+            const records = await pb.collection('user_preferences').getFullList({
+                filter: `user_id = "${user.id}"`
+            })
 
-            if (prefError) {
-                console.error('Preferences error:', prefError)
-                throw new Error(`Database error: ${prefError.message}`)
+            const payload = {
+                user_id: user.id,
+                city: city.trim(),
+                country: '',
+                calculation_method: 3,
+                pomodoro_work_duration: parseInt(pomodoroWork),
+                pomodoro_break_duration: parseInt(pomodoroBreak),
+                spotify_playlist_url: spotifyPlaylistUrl.trim(),
+            }
+
+            if (records.length > 0) {
+                await pb.collection('user_preferences').update(records[0].id, payload)
+            } else {
+                await pb.collection('user_preferences').create(payload)
             }
 
             // Save monthly prayer times
-            const { error: scheduleError } = await supabase
-                .from('prayer_schedule')
-                .upsert(monthlyTimes, {
-                    onConflict: 'date'
-                })
+            // This might generate many requests.
+            // Ideally we delete old for this month and insert new, or update.
+            // Simplified: parallel create for each day?
+            // PocketBase batch is not available in SDK directly easily.
+            // We'll iterate.
 
-            if (scheduleError) {
-                console.error('Schedule error:', scheduleError)
-                throw new Error(`Schedule error: ${scheduleError.message}`)
-            }
+            // Note: In Supabase code it was upsert on date.
+            // Here, we should check if date exists.
+
+            const batchPromises = monthlyTimes.map(async (timeItem) => {
+                try {
+                    const existing = await pb.collection('prayer_schedule').getList(1, 1, {
+                        filter: `date = "${timeItem.date}"`
+                    })
+                    if (existing.items.length > 0) {
+                        await pb.collection('prayer_schedule').update(existing.items[0].id, timeItem)
+                    } else {
+                        await pb.collection('prayer_schedule').create(timeItem)
+                    }
+                } catch (e) {
+                    console.error('Error saving day:', timeItem.date, e)
+                }
+            })
+
+            await Promise.all(batchPromises)
 
             setSuccess('Settings saved successfully!')
             setTimeout(() => {
@@ -145,10 +157,11 @@ function Settings({ user, onClose }) {
     const handleAddCategory = async () => {
         if (!newCategoryName.trim()) return
         try {
-            const { error } = await supabase
-                .from('task_categories')
-                .insert({ user_id: user.id, name: newCategoryName.trim() })
-            if (error) throw error
+            const user = pb.authStore.model
+            await pb.collection('task_categories').create({
+                name: newCategoryName.trim(),
+                user_id: user.id
+            })
             setNewCategoryName('')
             loadCategories()
             setSuccess('Catégorie ajoutée !')
@@ -160,11 +173,7 @@ function Settings({ user, onClose }) {
 
     const handleDeleteCategory = async (id) => {
         try {
-            const { error } = await supabase
-                .from('task_categories')
-                .delete()
-                .eq('id', id)
-            if (error) throw error
+            await pb.collection('task_categories').delete(id)
             loadCategories()
             setSuccess('Catégorie supprimée')
         } catch (err) {

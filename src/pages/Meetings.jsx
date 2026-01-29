@@ -5,7 +5,6 @@ import { useContactsList } from '../hooks/useContacts'
 import { useUIStore } from '../stores/uiStore'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -26,8 +25,8 @@ import {
 import { Card } from '@/components/ui/card'
 import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { supabase } from '../lib/supabase'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import pb from '../lib/pocketbase'
 import { CampaignModal } from '../components/CampaignModal'
 import { KanbanView } from '../components/KanbanView'
 import { useUpdateTask } from '../hooks/useTasks'
@@ -63,6 +62,7 @@ export function Meetings() {
   // Fetch tags and campaigns for filters
   const [tags, setTags] = useState([])
   const [campaigns, setCampaigns] = useState([])
+  const [currentUserId, setCurrentUserId] = useState(null)
 
   useEffect(() => {
     loadFilterOptions()
@@ -74,15 +74,21 @@ export function Meetings() {
   }, [activeWorkspaceId])
 
   const loadFilterOptions = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const user = pb.authStore.model
+      setCurrentUserId(user?.id)
 
-    const [tagsRes, campaignsRes] = await Promise.all([
-      supabase.from('tags').select('id, name, color').eq('user_id', user.id).order('name'),
-      supabase.from('campaigns').select('id, name').eq('user_id', user.id).order('name')
-    ])
-
-    setTags(tagsRes.data || [])
-    setCampaigns(campaignsRes.data || [])
+      if (user) {
+        const [tagsRes, campaignsRes] = await Promise.all([
+          pb.collection('tags').getFullList({ sort: 'name' }),
+          pb.collection('campaigns').getFullList({ sort: 'name' })
+        ])
+        setTags(tagsRes)
+        setCampaigns(campaignsRes)
+      }
+    } catch (error) {
+      console.error('Error loading filters:', error)
+    }
   }
 
   const statusColors = {
@@ -123,19 +129,13 @@ export function Meetings() {
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
       const matchesType = typeFilter === 'all' || task.type === typeFilter
       const matchesTag = tagFilter === 'all' ||
-        task.task_tags?.some(tt => tt.tag?.id === tagFilter)
+        task.expand?.tags?.some(tag => tag.id === tagFilter) || task.tags?.includes(tagFilter) // Handle expand or ID array
+      // Note: For tags, PB returns array of IDs in 'tags' and array of objects in 'expand.tags'
       const matchesClient = clientFilter === 'all' ||
         task.contact_id === clientFilter
 
-      // Assignee Filter (My Tasks)
-      // We need current user ID. Assuming we fetch it or pass it. 
-      // For now, let's assume we filter by "assigned to me" if specific value 'me' is selected.
-      // But we need user ID.
-      // Let's use `supabase.auth.getUser()` in useEffect or store?
-      // Better: filter. assigneeFilter === 'me'
+      // Assignee Filter
       let matchesAssignee = true
-      // Note: we can't easily filter by 'me' without the ID synchronously here unless we store it.
-      // Assuming tasks have assigned_to UUID.
       if (assigneeFilter === 'assigned') {
         matchesAssignee = !!task.assigned_to
       } else if (assigneeFilter === 'unassigned') {
@@ -183,10 +183,10 @@ export function Meetings() {
         case 'title_asc':
           return (a.title || '').localeCompare(b.title || '')
         case 'created_asc':
-          return new Date(a.created_at) - new Date(b.created_at)
+          return new Date(a.created) - new Date(b.created)
         case 'created_desc':
         default:
-          return new Date(b.created_at) - new Date(a.created_at)
+          return new Date(b.created) - new Date(a.created)
       }
     })
   }, [tasks, searchQuery, statusFilter, priorityFilter, workspaceFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
@@ -212,8 +212,6 @@ export function Meetings() {
     setWorkspaceFilter('all')
     setCampaignFilter('all')
     setTypeFilter('all')
-    setTagFilter('all')
-    setDueDateFilter('all')
     setTagFilter('all')
     setDueDateFilter('all')
     setClientFilter('all')
@@ -600,6 +598,10 @@ export function Meetings() {
 
 // Task Row Component with polish
 function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
+  // Safe access to nested properties
+  const context = task.expand?.context_id
+  const campaign = task.expand?.campaign_id
+  const tags = task.expand?.tags || []
 
   const handleCheck = (checked) => {
     if (checked && task.status !== 'done') {
@@ -614,8 +616,8 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
         ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
       `}
       style={{
-        borderLeft: isSelected && task.context?.color
-          ? `3px solid ${task.context.color}`
+        borderLeft: isSelected && context?.color
+          ? `3px solid ${context.color}`
           : '3px solid transparent'
       }}
       onClick={onClick}
@@ -636,25 +638,25 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
             <p className={`font-medium transition-all ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
               {task.title}
             </p>
-            {task.context && (
+            {context && (
               <Badge
                 variant="outline"
                 className="text-xs transition-colors"
                 style={{
-                  backgroundColor: `${task.context.color}15`,
-                  borderColor: task.context.color,
-                  color: task.context.color
+                  backgroundColor: `${context.color}15`,
+                  borderColor: context.color,
+                  color: context.color
                 }}
               >
-                {task.context.name}
+                {context.name}
               </Badge>
             )}
-            {task.campaign && (
+            {campaign && (
               <Badge
                 variant="outline"
                 className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700 bg-gradient-to-r from-indigo-50 to-white"
               >
-                🚀 {task.campaign.name}
+                🚀 {campaign.name}
               </Badge>
             )}
             {task.contact_id && (
@@ -675,9 +677,9 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
               </div>
             )}
           </div>
-          {task.task_tags && task.task_tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
-              {task.task_tags.map(({ tag }) => tag && (
+              {tags.map((tag) => (
                 <Badge
                   key={tag.id}
                   variant="outline"

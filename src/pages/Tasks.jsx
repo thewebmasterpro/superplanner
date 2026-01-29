@@ -27,7 +27,7 @@ import { Card } from '@/components/ui/card'
 import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { CampaignModal } from '../components/CampaignModal'
 import { KanbanView } from '../components/KanbanView'
 import { useUpdateTask } from '../hooks/useTasks'
@@ -74,15 +74,19 @@ export function Tasks() {
   }, [activeWorkspaceId])
 
   const loadFilterOptions = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = pb.authStore.model
+    if (!user) return
 
-    const [tagsRes, campaignsRes] = await Promise.all([
-      supabase.from('tags').select('id, name, color').eq('user_id', user.id).order('name'),
-      supabase.from('campaigns').select('id, name').eq('user_id', user.id).order('name')
-    ])
-
-    setTags(tagsRes.data || [])
-    setCampaigns(campaignsRes.data || [])
+    try {
+      const [tagsRes, campaignsRes] = await Promise.all([
+        pb.collection('tags').getFullList({ filter: `user_id = "${user.id}"`, sort: 'name' }),
+        pb.collection('campaigns').getFullList({ filter: `user_id = "${user.id}"`, sort: 'name' })
+      ])
+      setTags(tagsRes)
+      setCampaigns(campaignsRes)
+    } catch (e) {
+      console.error("Error loading filter options", e)
+    }
   }
 
   const statusColors = {
@@ -122,20 +126,20 @@ export function Tasks() {
       const matchesCampaign = campaignFilter === 'all' ||
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
       const matchesType = typeFilter === 'all' || task.type === typeFilter
-      const matchesTag = tagFilter === 'all' ||
-        task.task_tags?.some(tt => tt.tag?.id === tagFilter)
+      // Handle task tags checking. PocketBase returns array of tag IDs in 'tags' field
+      // Or array of expanded objects if expanded.
+      // Assuming 'tags' field on task contains IDs.
+      const taskTagIds = task.tags || []
+      const matchesTag = tagFilter === 'all' || taskTagIds.includes(tagFilter) ||
+        (task.expand?.tags?.some(t => t.id === tagFilter)) ||
+        // Legacy support if task_tags used
+        (task.task_tags?.some(tt => tt.tag?.id === tagFilter))
+
       const matchesClient = clientFilter === 'all' ||
         task.contact_id === clientFilter
 
       // Assignee Filter (My Tasks)
-      // We need current user ID. Assuming we fetch it or pass it. 
-      // For now, let's assume we filter by "assigned to me" if specific value 'me' is selected.
-      // But we need user ID.
-      // Let's use `supabase.auth.getUser()` in useEffect or store?
-      // Better: filter. assigneeFilter === 'me'
       let matchesAssignee = true
-      // Note: we can't easily filter by 'me' without the ID synchronously here unless we store it.
-      // Assuming tasks have assigned_to UUID.
       if (assigneeFilter === 'assigned') {
         matchesAssignee = !!task.assigned_to
       } else if (assigneeFilter === 'unassigned') {
@@ -624,6 +628,13 @@ export function Tasks() {
 
 // Task Row Component with polish
 function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
+  // Simplify relation checking for tags
+  const taskTags = task.expand?.tags || task.task_tags?.map(tt => tt.tag) || []
+
+  // Simplify relation checking for context/campaign
+  // Assuming we expand relations in query, we use expand object or direct access if mapped
+  const context = task.expand?.context_id || task.context
+  const campaign = task.expand?.campaign_id || task.campaign
 
   return (
     <tr
@@ -631,8 +642,8 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
         ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
       `}
       style={{
-        borderLeft: (isSelected || task.status === 'done') && task.context?.color
-          ? `3px solid ${task.context.color}`
+        borderLeft: (isSelected || task.status === 'done') && context?.color
+          ? `3px solid ${context.color}`
           : '3px solid transparent'
       }}
       onClick={onClick}
@@ -662,25 +673,25 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
             <p className={`font-medium transition-all ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
               {task.title}
             </p>
-            {task.context && (
+            {context && (
               <Badge
                 variant="outline"
                 className="text-xs transition-colors"
                 style={{
-                  backgroundColor: `${task.context.color}15`,
-                  borderColor: task.context.color,
-                  color: task.context.color
+                  backgroundColor: `${context.color}15`,
+                  borderColor: context.color,
+                  color: context.color
                 }}
               >
-                {task.context.name}
+                {context.name}
               </Badge>
             )}
-            {task.campaign && (
+            {campaign && (
               <Badge
                 variant="outline"
                 className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700 bg-gradient-to-r from-indigo-50 to-white"
               >
-                🚀 {task.campaign.name}
+                🚀 {campaign.name}
               </Badge>
             )}
             {task.contact_id && (
@@ -701,9 +712,9 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
               </div>
             )}
           </div>
-          {task.task_tags && task.task_tags.length > 0 && (
+          {taskTags && taskTags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
-              {task.task_tags.map(({ tag }) => tag && (
+              {taskTags.map((tag) => tag && (
                 <Badge
                   key={tag.id}
                   variant="outline"

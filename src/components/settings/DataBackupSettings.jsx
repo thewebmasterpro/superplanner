@@ -6,8 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { useTasks } from '@/hooks/useTasks'
-import { useCreateTask } from '@/hooks/useTasks'
-import { supabase } from '@/lib/supabase'
+import pb from '@/lib/pocketbase'
 import { generateCSV, generateJSON, downloadFile } from '@/lib/exportUtils'
 import { parseCSV, validateTasksImport } from '@/lib/importUtils'
 import { Loader2, Download, Upload, FileJson, FileSpreadsheet, CheckCircle, AlertTriangle } from 'lucide-react'
@@ -15,7 +14,6 @@ import toast from 'react-hot-toast'
 
 export function DataBackupSettings() {
     const { data: tasks = [] } = useTasks()
-    const createTask = useCreateTask()
     const [loading, setLoading] = useState(false)
 
     // Export State
@@ -26,7 +24,7 @@ export function DataBackupSettings() {
         priority: true,
         description: true,
         due_date: true,
-        created_at: true,
+        created: true,
         context: true,
         campaign: true,
         project: true
@@ -41,7 +39,6 @@ export function DataBackupSettings() {
         setLoading(true)
         try {
             // 1. Prepare Data
-            // Flatten data for CSV
             const flattenedTasks = tasks.map(t => ({
                 id: t.id,
                 title: t.title,
@@ -49,12 +46,12 @@ export function DataBackupSettings() {
                 status: t.status,
                 priority: t.priority,
                 due_date: t.due_date,
-                created_at: t.created_at,
-                // Flatten relations
-                context: t.context?.name || '',
-                campaign: t.campaign?.name || '',
-                project: t.project?.name || '',
-                client: t.contact_id // MVP: just ID or lookup if we had list
+                created: t.created,
+                // Flatten relations from expansions
+                context: t.expand?.context_id?.name || '',
+                campaign: t.expand?.campaign_id?.name || '',
+                project: t.expand?.project_id?.name || '',
+                client: t.contact_id // MVP: just ID
             }))
 
             // 2. Filter Columns
@@ -124,64 +121,53 @@ export function DataBackupSettings() {
 
     const executeImport = async () => {
         if (!importData || importData.length === 0) return
-
         if (!confirm(`Import ${importData.length} tasks? This cannot be undone.`)) return
 
         setLoading(true)
-        let successCount = 0
 
         try {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = pb.authStore.model
 
             // Fetch metadata for mapping
-            const [
-                { data: contexts },
-                { data: campaigns },
-                { data: projects }
-            ] = await Promise.all([
-                supabase.from('contexts').select('id, name'),
-                supabase.from('campaigns').select('id, name'),
-                supabase.from('projects').select('id, name')
+            const [contexts, campaigns, projects] = await Promise.all([
+                pb.collection('contexts').getFullList(),
+                pb.collection('campaigns').getFullList(),
+                pb.collection('projects').getFullList()
             ])
 
-            const contextMap = new Map(contexts?.map(c => [c.name.toLowerCase(), c.id]))
-            const campaignMap = new Map(campaigns?.map(c => [c.name.toLowerCase(), c.id]))
-            const projectMap = new Map(projects?.map(p => [p.name.toLowerCase(), p.id]))
+            const contextMap = new Map(contexts.map(c => [c.name.toLowerCase(), c.id]))
+            const campaignMap = new Map(campaigns.map(c => [c.name.toLowerCase(), c.id]))
+            const projectMap = new Map(projects.map(p => [p.name.toLowerCase(), p.id]))
 
             const tasksToInsert = importData.map(t => {
-                // Resolve Relations
                 const contextId = t.context_name ? contextMap.get(t.context_name.toLowerCase()) : null
                 const campaignId = t.campaign_name ? campaignMap.get(t.campaign_name.toLowerCase()) : null
                 const projectId = t.project_name ? projectMap.get(t.project_name.toLowerCase()) : null
 
-                // Clean object for Insert
-                // We explicitely construct the object to avoid "Column not found" errors
                 return {
                     user_id: user.id,
                     title: t.title,
                     description: t.description,
                     status: t.status,
                     priority: t.priority,
-                    due_date: t.due_date,
-                    // Use resolved IDs
+                    due_date: t.due_date ? new Date(t.due_date).toISOString() : '', // PB format
                     context_id: contextId,
                     campaign_id: campaignId,
                     project_id: projectId,
-                    contact_id: t.client || null // Assuming client is ID for now
-                    // Ignore unknown fields like campaign_name, context_name
+                    contact_id: t.client || null
                 }
             })
 
-            const { error } = await supabase.from('tasks').insert(tasksToInsert)
-
-            if (error) throw error
+            // PB doesn't support bulk insert in one call via SDK, loop requests
+            // Use Promise.all for concurrency (limit concurrency if thousands)
+            // For MVP, simple Promise.all is okay for hundreds.
+            await Promise.all(tasksToInsert.map(task => pb.collection('tasks').create(task)))
 
             toast.success(`Successfully imported ${tasksToInsert.length} tasks!`)
             setImportData(null)
             setImportSummary(null)
-            // Refetch tasks? Handled by react-query invalidation if we used hook, but here we used raw insert.
-            // We should invalidate.
-            // window.location.reload() // Brute force refresh or rely on user navigating
+            // Ideally trigger refresh
+            setTimeout(() => window.location.reload(), 1500)
 
         } catch (error) {
             toast.error('Import failed: ' + error.message)

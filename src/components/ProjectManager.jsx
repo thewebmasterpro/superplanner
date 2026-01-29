@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,19 +28,19 @@ export function ProjectManager() {
     const loadData = async () => {
         try {
             await loadWorkspaces()
-            const { data, error } = await supabase
-                .from('projects')
-                .select(`
-          *,
-          contexts (
-            name,
-            color
-          )
-        `)
-                .order('name')
+            const records = await pb.collection('projects').getFullList({
+                sort: 'name',
+                expand: 'context_id'
+            })
 
-            if (error) throw error
-            setProjects(data || [])
+            // Map expanded context (workspace) to simpler structure if desired, or access via expand
+            const mappedProjects = records.map(p => ({
+                ...p,
+                // Assign expanded context to a convenient property if needed by UI
+                contexts: p.expand?.context_id
+            }))
+
+            setProjects(mappedProjects)
         } catch (error) {
             console.error('Error loading projects:', error)
         }
@@ -59,17 +59,14 @@ export function ProjectManager() {
 
         setLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            const { error } = await supabase
-                .from('projects')
-                .insert({
-                    name: newProject.name,
-                    description: newProject.description || null,
-                    context_id: newProject.context_id,
-                    user_id: user.id
-                })
+            const user = pb.authStore.model
 
-            if (error) throw error
+            await pb.collection('projects').create({
+                name: newProject.name,
+                description: newProject.description || null,
+                context_id: newProject.context_id,
+                user_id: user.id
+            })
 
             toast.success('Project added successfully!')
             setNewProject({ name: '', description: '', context_id: '' })
@@ -85,12 +82,7 @@ export function ProjectManager() {
         if (!window.confirm('Delete this project? Tasks using it will remain unaffected.')) return
 
         try {
-            const { error } = await supabase
-                .from('projects')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
+            await pb.collection('projects').delete(id)
 
             toast.success('Project deleted successfully!')
             loadData()

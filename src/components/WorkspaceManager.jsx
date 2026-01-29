@@ -12,7 +12,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog'
 import {
     DropdownMenu,
@@ -22,7 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import toast from 'react-hot-toast'
 
 const PRESET_COLORS = [
@@ -59,31 +58,42 @@ export function WorkspaceManager() {
 
     const loadAllWorkspacesWithStats = async () => {
         try {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = pb.authStore.model
             if (!user) return
 
             // Fetch all workspaces including archived
-            const { data: ctxs, error: ctxError } = await supabase
-                .from('contexts')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('name')
+            // If contexts are deleted via API/UI they might be 'hard deleted' or 'soft deleted' (status=archived).
+            // Contexts table should have user_id filter.
+            const ctxs = await pb.collection('contexts').getFullList({
+                filter: `user_id = "${user.id}"`,
+                sort: 'name'
+            })
 
-            if (ctxError) throw ctxError
             setAllWorkspaces(ctxs || [])
 
             // Fetch stats for each workspace
+            // PB doesn't support GROUP BY easily. We have to iterate or make separate requests.
+            // For MVP, we iterate. Optimization: Parallel requests.
             const stats = {}
-            for (const ctx of ctxs || []) {
-                const [tasksRes, campaignsRes] = await Promise.all([
-                    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('context_id', ctx.id),
-                    supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('context_id', ctx.id)
-                ])
-                stats[ctx.id] = {
-                    tasks: tasksRes.count || 0,
-                    campaigns: campaignsRes.count || 0
+            await Promise.all(ctxs.map(async (ctx) => {
+                try {
+                    // getList(1, 1, ...) returns totalItems
+                    const tasks = await pb.collection('tasks').getList(1, 1, {
+                        filter: `context_id = "${ctx.id}"`
+                    })
+                    const campaigns = await pb.collection('campaigns').getList(1, 1, {
+                        filter: `context_id = "${ctx.id}"`
+                    })
+
+                    stats[ctx.id] = {
+                        tasks: tasks.totalItems,
+                        campaigns: campaigns.totalItems
+                    }
+                } catch (e) {
+                    stats[ctx.id] = { tasks: 0, campaigns: 0 }
                 }
-            }
+            }))
+
             setWorkspaceStats(stats)
         } catch (error) {
             console.error('Error loading workspaces with stats:', error)

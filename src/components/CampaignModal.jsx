@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import pb from '../lib/pocketbase'
 import {
     Dialog,
     DialogContent,
@@ -41,13 +41,13 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
     useEffect(() => {
         if (open) {
-            loadWorkspaces()
+            loadWorkspaces() // Ensure workspaces are loaded
             if (campaign) {
                 setFormData({
                     name: campaign.name || '',
                     description: campaign.description || '',
-                    start_date: campaign.start_date || '',
-                    end_date: campaign.end_date || '',
+                    start_date: campaign.start_date ? new Date(campaign.start_date).toISOString().split('T')[0] : '', // Handle iso string
+                    end_date: campaign.end_date ? new Date(campaign.end_date).toISOString().split('T')[0] : '',
                     context_id: campaign.context_id || '',
                     priority: campaign.priority || 3,
                     status: campaign.status || 'draft'
@@ -59,7 +59,7 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: '',
-                    context_id: activeWorkspaceId || '',  // Auto-inherit
+                    context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? '' : (activeWorkspaceId || ''),
                     priority: 3,
                     status: 'draft'
                 })
@@ -87,27 +87,21 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
         setLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = pb.authStore.model
 
+            // Handle dates to maximize compatibility with PB
+            // PB uses ISO8601 strings. 
             const payload = {
                 ...formData,
-                context_id: formData.context_id || null, // Handle empty string
+                context_id: formData.context_id || null,
                 user_id: user.id
             }
 
-            let error
             if (isEditing) {
-                ({ error } = await supabase
-                    .from('campaigns')
-                    .update(payload)
-                    .eq('id', campaign.id))
+                await pb.collection('campaigns').update(campaign.id, payload)
             } else {
-                ({ error } = await supabase
-                    .from('campaigns')
-                    .insert(payload))
+                await pb.collection('campaigns').create(payload)
             }
-
-            if (error) throw error
 
             toast.success(isEditing ? 'Campaign updated' : 'Campaign created')
             onSuccess?.()

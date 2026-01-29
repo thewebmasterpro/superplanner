@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 
 export const useWorkspaceStore = create(
     persist(
@@ -12,18 +12,15 @@ export const useWorkspaceStore = create(
             loadWorkspaces: async () => {
                 set({ loading: true })
                 try {
-                    const { data: { user } } = await supabase.auth.getUser()
+                    const user = pb.authStore.model
                     if (!user) return
 
-                    const { data, error } = await supabase
-                        .from('contexts')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .eq('status', 'active')
-                        .order('name')
+                    const records = await pb.collection('contexts').getFullList({
+                        filter: `user_id = "${user.id}" && status = "active"`,
+                        sort: 'name'
+                    })
 
-                    if (error) throw error
-                    set({ workspaces: data || [], loading: false })
+                    set({ workspaces: records || [], loading: false })
                 } catch (error) {
                     console.error('Error loading workspaces:', error)
                     set({ loading: false })
@@ -42,19 +39,16 @@ export const useWorkspaceStore = create(
 
             createWorkspace: async (workspaceData) => {
                 try {
-                    const { data: { user } } = await supabase.auth.getUser()
+                    const user = pb.authStore.model
                     if (!user) throw new Error('Not authenticated')
 
-                    const { data, error } = await supabase
-                        .from('contexts')
-                        .insert({ ...workspaceData, user_id: user.id })
-                        .select()
-                        .single()
+                    const record = await pb.collection('contexts').create({
+                        ...workspaceData,
+                        user_id: user.id
+                    })
 
-                    if (error) throw error
-
-                    set(state => ({ workspaces: [...state.workspaces, data] }))
-                    return data
+                    set(state => ({ workspaces: [...state.workspaces, record] }))
+                    return record
                 } catch (error) {
                     console.error('Error creating workspace:', error)
                     throw error
@@ -63,19 +57,12 @@ export const useWorkspaceStore = create(
 
             updateWorkspace: async (id, updates) => {
                 try {
-                    const { data, error } = await supabase
-                        .from('contexts')
-                        .update(updates)
-                        .eq('id', id)
-                        .select()
-                        .single()
-
-                    if (error) throw error
+                    const record = await pb.collection('contexts').update(id, updates)
 
                     set(state => ({
-                        workspaces: state.workspaces.map(w => w.id === id ? data : w)
+                        workspaces: state.workspaces.map(w => w.id === id ? record : w)
                     }))
-                    return data
+                    return record
                 } catch (error) {
                     console.error('Error updating workspace:', error)
                     throw error
@@ -86,13 +73,10 @@ export const useWorkspaceStore = create(
                 try {
                     if (mode === 'soft') {
                         // Soft delete = archive
-                        await supabase
-                            .from('contexts')
-                            .update({ status: 'archived' })
-                            .eq('id', id)
+                        await pb.collection('contexts').update(id, { status: 'archived' })
                     } else {
                         // Hard delete (orphan tasks)
-                        await supabase.from('contexts').delete().eq('id', id)
+                        await pb.collection('contexts').delete(id)
                     }
 
                     set(state => ({

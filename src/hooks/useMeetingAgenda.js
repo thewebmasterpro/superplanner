@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import toast from 'react-hot-toast'
 
 /**
@@ -15,13 +15,11 @@ export function useMeetingAgenda(meetingId) {
             if (!meetingId) return []
 
             // Get all meeting items
-            const { data: items, error } = await supabase
-                .from('meeting_items')
-                .select('*')
-                .eq('meeting_id', meetingId)
-                .order('position')
+            const items = await pb.collection('meeting_items').getFullList({
+                filter: `meeting_id = "${meetingId}"`,
+                sort: 'position'
+            })
 
-            if (error) throw error
             if (!items || items.length === 0) return []
 
             // Separate by type
@@ -31,39 +29,51 @@ export function useMeetingAgenda(meetingId) {
             // Fetch task details
             let tasks = []
             if (taskIds.length > 0) {
-                const { data } = await supabase
-                    .from('tasks')
-                    .select('id, title, status, priority, due_date')
-                    .in('id', taskIds)
-                tasks = data || []
+                // Build filter OR query
+                // filter: id='id1' || id='id2'
+                const filter = taskIds.map(id => `id="${id}"`).join(' || ')
+                if (filter) {
+                    tasks = await pb.collection('tasks').getFullList({
+                        filter: filter, // Be careful with URL length limits if many items, but agenda is usually short
+                    })
+                }
             }
 
             // Fetch campaign details with progress
             let campaigns = []
             if (campaignIds.length > 0) {
-                const { data } = await supabase
-                    .from('campaigns')
-                    .select('id, name, status, end_date, priority')
-                    .in('id', campaignIds)
+                const filter = campaignIds.map(id => `id="${id}"`).join(' || ')
+                if (filter) {
+                    const campaignsData = await pb.collection('campaigns').getFullList({
+                        filter: filter
+                    })
 
-                // Calculate progress for each campaign
-                for (const campaign of data || []) {
-                    const { count: total } = await supabase
-                        .from('tasks')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('campaign_id', campaign.id)
+                    // Calculate progress for each campaign manually
+                    // Parallelize this
+                    campaigns = await Promise.all(campaignsData.map(async (campaign) => {
+                        try {
+                            const total = await pb.collection('tasks').getList(1, 1, {
+                                filter: `campaign_id = "${campaign.id}"`,
+                                fields: 'id'
+                            })
+                            const done = await pb.collection('tasks').getList(1, 1, {
+                                filter: `campaign_id = "${campaign.id}" && status = "done"`,
+                                fields: 'id'
+                            })
+                            const totalCount = total.totalItems
+                            const doneCount = done.totalItems
 
-                    const { count: done } = await supabase
-                        .from('tasks')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('campaign_id', campaign.id)
-                        .eq('status', 'done')
-
-                    campaign.progress = total > 0 ? Math.round((done / total) * 100) : 0
-                    campaign.taskCount = total
-                    campaign.doneCount = done
+                            return {
+                                ...campaign,
+                                progress: totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0,
+                                taskCount: totalCount,
+                                doneCount: doneCount
+                            }
+                        } catch (e) {
+                            return { ...campaign, progress: 0, taskCount: 0, doneCount: 0 }
+                        }
+                    }))
                 }
-                campaigns = data || []
             }
 
             // Merge with original items to maintain order
@@ -83,35 +93,32 @@ export function useMeetingAgenda(meetingId) {
     // Add item to agenda
     const addItem = useMutation({
         mutationFn: async ({ itemType, itemId }) => {
-            // Get max position
-            const { data: existing } = await supabase
-                .from('meeting_items')
-                .select('position')
-                .eq('meeting_id', meetingId)
-                .order('position', { ascending: false })
-                .limit(1)
-
-            const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0
-
-            const { data, error } = await supabase
-                .from('meeting_items')
-                .insert({
-                    meeting_id: meetingId,
-                    item_type: itemType,
-                    item_id: itemId,
-                    position: nextPosition
-                })
-                .select()
-                .single()
-
-            if (error) {
-                if (error.code === '23505') {
+            // Check if exists
+            try {
+                const exists = await pb.collection('meeting_items').getFirstListItem(`meeting_id="${meetingId}" && item_id="${itemId}"`)
+                if (exists) {
                     throw new Error('This item is already in the agenda')
                 }
-                throw error
+            } catch (e) {
+                if (e.status !== 404) throw e
             }
 
-            return data
+            // Get max position
+            const existing = await pb.collection('meeting_items').getList(1, 1, {
+                filter: `meeting_id = "${meetingId}"`,
+                sort: '-position'
+            })
+
+            const nextPosition = existing.items.length > 0 ? existing.items[0].position + 1 : 0
+
+            const record = await pb.collection('meeting_items').create({
+                meeting_id: meetingId,
+                item_type: itemType,
+                item_id: itemId,
+                position: nextPosition
+            })
+
+            return record
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['meetingAgenda', meetingId] })
@@ -125,13 +132,15 @@ export function useMeetingAgenda(meetingId) {
     // Remove item from agenda
     const removeItem = useMutation({
         mutationFn: async (itemId) => {
-            const { error } = await supabase
-                .from('meeting_items')
-                .delete()
-                .eq('meeting_id', meetingId)
-                .eq('item_id', itemId)
-
-            if (error) throw error
+            // We need record ID to delete in PB.
+            // item_id passed here is the ID of the task/campaign, NOT the meeting_item record ID.
+            // But wait, the UI calls removeItem(item.item_id). 
+            // Ideally UI should pass item.id (meeting_item id).
+            // Let's find the record first.
+            const record = await pb.collection('meeting_items').getFirstListItem(`meeting_id="${meetingId}" && item_id="${itemId}"`)
+            if (record) {
+                await pb.collection('meeting_items').delete(record.id)
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['meetingAgenda', meetingId] })
@@ -145,20 +154,25 @@ export function useMeetingAgenda(meetingId) {
     // Reorder items
     const reorderItems = useMutation({
         mutationFn: async (orderedItemIds) => {
-            const updates = orderedItemIds.map((itemId, index) => ({
-                meeting_id: meetingId,
-                item_id: itemId,
-                position: index
-            }))
+            // items are identified by item_id (task/campaign id)
+            // We need to fetch records to update them.
+            // Or cleaner: UI should pass meeting_item IDs?
+            // Assuming orderedItemIds are item_ids (refs).
+
+            // 1. Fetch all items for meeting to map item_id to record_id
+            const allItems = await pb.collection('meeting_items').getFullList({
+                filter: `meeting_id = "${meetingId}"`
+            })
+
+            const updates = orderedItemIds.map((itemId, index) => {
+                const record = allItems.find(r => r.item_id === itemId)
+                return record ? { id: record.id, position: index } : null
+            }).filter(Boolean)
 
             // Update each item's position
-            for (const update of updates) {
-                await supabase
-                    .from('meeting_items')
-                    .update({ position: update.position })
-                    .eq('meeting_id', meetingId)
-                    .eq('item_id', update.item_id)
-            }
+            await Promise.all(updates.map(u =>
+                pb.collection('meeting_items').update(u.id, { position: u.position })
+            ))
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['meetingAgenda', meetingId] })
@@ -191,7 +205,8 @@ export function formatAgendaItem(item) {
         return {
             emoji: statusEmoji[item.details.status] || '⚪',
             label: item.details.title + priorityLabel,
-            sublabel: null
+            sublabel: null,
+            urgent: item.details.priority <= 2
         }
     } else {
         const deadlineSoon = item.details.end_date &&

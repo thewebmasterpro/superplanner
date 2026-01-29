@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -14,57 +14,29 @@ export function TaskComments({ taskId }) {
     const [userId, setUserId] = useState(null)
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => {
-            setUserId(data.user?.id)
-        })
+        setUserId(pb.authStore.model?.id)
         loadComments()
 
         // Subscribe to realtime changes
-        const channel = supabase
-            .channel('public:task_comments')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'task_comments',
-                filter: `task_id=eq.${taskId}`
-            }, () => {
+        pb.collection('task_comments').subscribe('*', function (e) {
+            if (e.record.task_id === taskId) {
                 loadComments()
-            })
-            .subscribe()
+            }
+        }).catch(err => console.error("Realtime subscription error", err))
 
         return () => {
-            supabase.removeChannel(channel)
+            pb.collection('task_comments').unsubscribe('*')
         }
     }, [taskId])
 
     const loadComments = async () => {
         try {
-            // Fetch comment + user details (if possible, otherwise just ID)
-            // Since we don't have a reliable join on auth.users for creating profiles yet,
-            // we'll try to join team_members to get some info if available, or just show email if we can.
-            // Actually, standard way is just show what we have.
-            const { data, error } = await supabase
-                .from('task_comments')
-                .select(`
-            *,
-            user:user_id(email) 
-        `) // Trying to fetch email from auth.users via RLS view (if exists) or assuming user_id link
-                // If this fails due to no relation, we'll fallback to simple select
-                .eq('task_id', taskId)
-                .order('created_at', { ascending: true })
-
-            if (error) {
-                // Fallback simple fetch
-                const { data: simpleData } = await supabase
-                    .from('task_comments')
-                    .select('*')
-                    .eq('task_id', taskId)
-                    .order('created_at', { ascending: true })
-
-                setComments(simpleData || [])
-            } else {
-                setComments(data || [])
-            }
+            const records = await pb.collection('task_comments').getFullList({
+                filter: `task_id = "${taskId}"`,
+                sort: 'created',
+                expand: 'user_id'
+            })
+            setComments(records)
         } catch (error) {
             console.error('Error loading comments:', error)
         }
@@ -76,19 +48,15 @@ export function TaskComments({ taskId }) {
 
         setLoading(true)
         try {
-            const { error } = await supabase
-                .from('task_comments')
-                .insert({
-                    task_id: taskId,
-                    user_id: userId,
-                    content: newComment.trim()
-                })
-
-            if (error) throw error
+            await pb.collection('task_comments').create({
+                task_id: taskId,
+                user_id: pb.authStore.model?.id,
+                content: newComment.trim()
+            })
 
             setNewComment('')
-            // loadComments will trigger via realtime or we can call it manually
-            loadComments()
+            // Realtime will update, but we can also optimistic update or manually reload if needed.
+            // loadComments() called by realtime listener.
         } catch (error) {
             toast.error('Failed to post comment')
             console.error(error)
@@ -101,12 +69,7 @@ export function TaskComments({ taskId }) {
         if (!confirm('Delete this comment?')) return
 
         try {
-            const { error } = await supabase
-                .from('task_comments')
-                .delete()
-                .eq('id', commentId)
-
-            if (error) throw error
+            await pb.collection('task_comments').delete(commentId)
             // Realtime will update list
         } catch (error) {
             toast.error('Could not delete comment')
@@ -134,14 +97,14 @@ export function TaskComments({ taskId }) {
 
                             <div className={`flex flex-col max-w-[80%] ${comment.user_id === userId ? 'items-end' : 'items-start'}`}>
                                 <div className={`rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${comment.user_id === userId
-                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                        : 'bg-muted rounded-tl-none'
+                                    ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                    : 'bg-muted rounded-tl-none'
                                     }`}>
                                     {comment.content}
                                 </div>
                                 <div className="flex items-center gap-2 mt-1 px-1">
                                     <span className="text-[10px] text-muted-foreground">
-                                        {comment.user_id === userId ? 'You' : (comment.user?.email || 'User')} • {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                        {comment.user_id === userId ? 'You' : (comment.expand?.user_id?.email || 'User')} • {formatDistanceToNow(new Date(comment.created), { addSuffix: true })}
                                     </span>
                                     {comment.user_id === userId && (
                                         <button

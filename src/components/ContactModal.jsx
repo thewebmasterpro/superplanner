@@ -23,7 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, X, Calendar, CheckSquare, MessageSquare, Clock, Mail, Phone, MessageCircle } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ComposeEmailModal } from './ComposeEmailModal'
 
@@ -66,15 +66,12 @@ export function ContactModal({ open, onOpenChange, contact }) {
     const loadActivities = async () => {
         setLoadingActivities(true)
         try {
-            const { data: tasks, error: tError } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('contact_id', contact.id)
-                .order('created_at', { ascending: false })
-                .limit(20) // Increased limit to show emails
-
-            if (tError) throw tError
-            setActivities(tasks || [])
+            // Fetch recent tasks linked to this contact
+            const records = await pb.collection('tasks').getList(1, 20, {
+                filter: `contact_id = "${contact.id}"`,
+                sort: '-created'
+            })
+            setActivities(records.items || [])
         } catch (error) {
             console.error('Error loading activities:', error)
         } finally {
@@ -341,7 +338,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                                         {activity.type === 'meeting' ? 'Meeting' : activity.type === 'email' ? 'Email Sent' : 'Task'}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground">
-                                                        {new Date(activity.created_at).toLocaleDateString()} {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {new Date(activity.created).toLocaleDateString()} {new Date(activity.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                                 <h5 className="text-sm font-medium">{activity.title}</h5>

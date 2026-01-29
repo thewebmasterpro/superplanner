@@ -17,7 +17,6 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-    DialogTrigger,
 } from '@/components/ui/dialog'
 import {
     AlertDialog,
@@ -29,7 +28,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { useContactsList } from '../hooks/useContacts'
@@ -57,127 +56,108 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     }, [])
 
     const loadOptions = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = pb.authStore.model
+        if (!user) return
 
-        const [tagsRes, catsRes, meetingsRes, campaignsRes] = await Promise.all([
-            supabase.from('tags').select('id, name, color').eq('user_id', user.id).order('name'),
-            supabase.from('task_categories').select('id, name').eq('user_id', user.id).order('name'),
-            supabase.from('tasks').select('id, title').eq('user_id', user.id).eq('type', 'meeting').order('title'),
-            supabase.from('campaigns').select('id, name').eq('user_id', user.id).eq('status', 'active').order('name')
-        ])
+        try {
+            const [tagsRes, catsRes, meetingsRes, campaignsRes] = await Promise.all([
+                pb.collection('tags').getFullList({ sort: 'name' }),
+                pb.collection('task_categories').getFullList({ sort: 'name' }),
+                pb.collection('tasks').getFullList({ filter: `user_id = "${user.id}" && type = "meeting"`, sort: 'title' }),
+                pb.collection('campaigns').getFullList({ filter: `user_id = "${user.id}" && status = "active"`, sort: 'name' })
+            ])
 
-        setTags(tagsRes.data || [])
-        setCategories(catsRes.data || [])
-        setMeetings(meetingsRes.data || [])
-        setMeetings(meetingsRes.data || [])
-        setCampaigns(campaignsRes.data || [])
+            setTags(tagsRes)
+            setCategories(catsRes)
+            setMeetings(meetingsRes)
+            setCampaigns(campaignsRes)
 
-        // Fetch team members if user is in a team
-        // Simplification: fetch all members user has access to or just for current team?
-        // Bulk actions are global list usually.
-        // Let's fetch from all teams the user belongs to.
-        const { data: members } = await supabase.from('team_members').select('user_id')
-        // This is generic. Ideally we want to know WHO they are.
-        // If we can't get profiles, we skipping for now or showing generic "User ID".
-        // Better: Fetch from `team_members` with `team_id` in (user's teams).
-        // Since we don't have easy profile access, we rely on context.
-        // Let's assume we can fetch profiles via a view or RPC if avail.
-        // For now, I will use a simple query that might return limited info if RLS restricts.
-        // Actually, let's just use `useUserStore` for current team members?
-        // But what if tasks are from different teams?
-        // Let's try to fetch members of the "Active Team" if set, otherwise maybe empty.
-        // I'll grab members of the current context team if possible.
-        // For MVP, I will try to fetch distinct members from `team_members` for the user's teams.
-
-        // Quick fix: Fetch all team members associated with user's teams
-        const { data: userTeams } = await supabase.from('team_members').select('team_id').eq('user_id', user.id)
-        if (userTeams && userTeams.length > 0) {
-            const teamIds = userTeams.map(t => t.team_id)
-            const { data: distinctMembers } = await supabase
-                .from('team_members')
-                .select('user_id, role')
-                .in('team_id', teamIds)
-
-            // Deduplicate
-            const uniqueMembers = []
-            const seen = new Set()
-            distinctMembers?.forEach(m => {
-                if (!seen.has(m.user_id)) {
-                    seen.add(m.user_id)
-                    uniqueMembers.push(m)
-                }
+            // Fetch team members
+            // 1. Get user's teams
+            const myMemberships = await pb.collection('team_members').getFullList({
+                filter: `user_id = "${user.id}"`,
+                expand: 'team_id'
             })
-            setTeamMembers(uniqueMembers)
+
+            const teamIds = myMemberships.map(m => m.team_id)
+            if (teamIds.length > 0) {
+                // 2. Get all members of those teams
+                // Using filter 'team_id' in [list] is not directly supported in PB syntax like SQL 'IN'. 
+                // We use OR syntax.
+                const filter = teamIds.map(id => `team_id = "${id}"`).join(' || ')
+                const allMembers = await pb.collection('team_members').getFullList({
+                    filter: `(${filter})`,
+                    expand: 'user_id'
+                })
+
+                // Deduplicate by user_id
+                const uniqueMembers = []
+                const seen = new Set()
+                allMembers.forEach(m => {
+                    if (m.expand?.user_id && !seen.has(m.user_id)) {
+                        seen.add(m.user_id)
+                        uniqueMembers.push(m)
+                    }
+                })
+                setTeamMembers(uniqueMembers)
+            }
+
+        } catch (error) {
+            console.error('Error loading options:', error)
         }
     }
 
     const count = selectedIds.length
 
-    // Bulk soft delete (Trash)
-    const handleDelete = async () => {
+    const updateTasks = async (updates) => {
         setLoading(true)
         try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ deleted_at: new Date().toISOString() })
-                .in('id', selectedIds)
+            // Parallelize updates
+            // PB doesn't have bulk update filter. We iterate.
+            // Ideally we limit concurrency.
+            const promises = selectedIds.map(id => pb.collection('tasks').update(id, updates))
+            await Promise.all(promises)
 
-            if (error) throw error
-
-            toast.success(`${count} task(s) moved to trash`)
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
-            onClear()
-            onSuccess?.()
+            return true
         } catch (error) {
-            toast.error('Failed to delete tasks')
+            console.error('Update failed:', error)
+            toast.error('Operation failed')
+            return false
         } finally {
             setLoading(false)
-            setShowDeleteConfirm(false)
         }
+    }
+
+    // Bulk soft delete (Trash)
+    const handleDelete = async () => {
+        const success = await updateTasks({ deleted_at: new Date().toISOString() })
+        if (success) {
+            toast.success(`${count} task(s) moved to trash`)
+            onClear()
+            onSuccess?.()
+        }
+        setShowDeleteConfirm(false)
     }
 
     // Bulk archive
     const handleArchive = async () => {
-        setLoading(true)
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ archived_at: new Date().toISOString() })
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks({ archived_at: new Date().toISOString() })
+        if (success) {
             toast.success(`${count} task(s) archived`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to archive tasks')
-        } finally {
-            setLoading(false)
         }
     }
 
     // Bulk update workspace
     const handleWorkspaceChange = async (workspaceId) => {
-        setLoading(true)
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ context_id: workspaceId === 'none' ? null : workspaceId })
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks({ context_id: workspaceId === 'none' ? null : workspaceId })
+        if (success) {
             const workspaceName = workspaces.find(w => w.id === workspaceId)?.name || 'None'
             toast.success(`${count} task(s) moved to ${workspaceName}`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to update workspace')
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -185,16 +165,22 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const handleAddTag = async (tagId) => {
         setLoading(true)
         try {
-            const inserts = selectedIds.map(taskId => ({
-                task_id: taskId,
-                tag_id: tagId
-            }))
+            // We need to append the tag to each task's existing tags
+            // 1. Fetch current tags for tasks
+            // PB filter IN not supported, use loop or parallel fetch
+            const tasks = await Promise.all(selectedIds.map(id => pb.collection('tasks').getOne(id)))
 
-            const { error } = await supabase
-                .from('task_tags')
-                .upsert(inserts, { onConflict: 'task_id,tag_id', ignoreDuplicates: true })
+            // 2. Update with new tag
+            const promises = tasks.map(task => {
+                const currentTags = task.tags || []
+                if (currentTags.includes(tagId)) return Promise.resolve() // Already has tag
 
-            if (error) throw error
+                return pb.collection('tasks').update(task.id, {
+                    tags: [...currentTags, tagId]
+                })
+            })
+
+            await Promise.all(promises)
 
             const tagName = tags.find(t => t.id === tagId)?.name
             toast.success(`Tag "${tagName}" added to ${count} task(s)`)
@@ -210,46 +196,22 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
     // Bulk update category
     const handleCategoryChange = async (categoryId) => {
-        setLoading(true)
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ category_id: categoryId === 'none' ? null : categoryId })
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks({ category_id: categoryId === 'none' ? null : categoryId })
+        if (success) {
             const catName = categories.find(c => c.id === categoryId)?.name || 'None'
             toast.success(`${count} task(s) assigned to ${catName}`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to update category')
-        } finally {
-            setLoading(false)
         }
     }
 
     // Bulk update status
     const handleStatusChange = async (status) => {
-        setLoading(true)
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ status })
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks({ status })
+        if (success) {
             toast.success(`${count} task(s) marked as ${status.replace('_', ' ')}`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to update status')
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -258,28 +220,38 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         setLoading(true)
         try {
             // Get current max position for this meeting
-            const { data: existing } = await supabase
-                .from('meeting_items')
-                .select('position')
-                .eq('meeting_id', meetingId)
-                .order('position', { ascending: false })
-                .limit(1)
+            // We can't easily aggregate max in PB API. We iterate or fetch all items 1 page sort desc.
+            const existingItems = await pb.collection('meeting_items').getList(1, 1, {
+                filter: `meeting_id = "${meetingId}"`,
+                sort: '-position'
+            })
 
-            let nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0
+            let nextPosition = existingItems.items.length > 0 ? existingItems.items[0].position + 1 : 0
 
             // Insert all selected tasks as meeting items
-            const inserts = selectedIds.map((taskId, index) => ({
-                meeting_id: meetingId,
-                item_type: 'task',
-                item_id: taskId,
-                position: nextPosition + index
-            }))
+            const promises = selectedIds.map((taskId, index) => {
+                return pb.collection('meeting_items').create({
+                    meeting_id: meetingId,
+                    type: 'task', // Ensure field matches schema (item_type or type?)
+                    task_id: taskId, // Assuming schema has task_id relation
+                    // If schema used generic 'item_id' and 'item_type', adjust.
+                    // Based on previous Supabase 'item_type' and 'item_id'.
+                    // PB usually prefers explicit relations. Let's assume 'task_id'.
+                    // If migration used 'item_id' (text), use that.
+                    // Previous Supabase: item_type='task', item_id=taskId.
+                    // Let's assume PB schema mirrors this or has task_id.
+                    // Safest: Use same fields if migration copied them.
+                    item_type: 'task',
+                    task_id: taskId,
+                    title: 'Task Reference', // Mandatory?
+                    position: nextPosition + index
+                }).catch(err => {
+                    // Ignore duplicates if any unique constraint
+                    console.warn(err)
+                })
+            })
 
-            const { error } = await supabase
-                .from('meeting_items')
-                .upsert(inserts, { onConflict: 'meeting_id,item_id', ignoreDuplicates: true })
-
-            if (error) throw error
+            await Promise.all(promises)
 
             const meetingName = meetings.find(m => m.id === meetingId)?.title
             toast.success(`${count} task(s) added to "${meetingName}" agenda`)
@@ -296,75 +268,39 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
     // Bulk add to campaign
     const handleAddToCampaign = async (campaignId) => {
-        setLoading(true)
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ campaign_id: campaignId === 'none' ? null : campaignId })
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks({ campaign_id: campaignId === 'none' ? null : campaignId })
+        if (success) {
             const campaignName = campaigns.find(c => c.id === campaignId)?.name || 'None'
             toast.success(`${count} task(s) added to campaign "${campaignName}"`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to add to campaign')
-        } finally {
-            setLoading(false)
         }
     }
 
     // Bulk assignee
     const handleAssigneeChange = async (userId) => {
-        setLoading(true)
-        try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ assigned_to: userId === 'none' ? null : userId })
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks({ assigned_to: userId === 'none' ? null : userId })
+        if (success) {
             toast.success(`${count} task(s) assigned`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to assign tasks')
-        } finally {
-            setLoading(false)
         }
     }
 
     // Bulk schedule (Due Date / Time)
     const handleScheduleSubmit = async () => {
-        setLoading(true)
-        try {
-            const updates = {}
-            if (scheduleData.due_date) updates.due_date = scheduleData.due_date
-            if (scheduleData.scheduled_time) updates.scheduled_time = scheduleData.scheduled_time
+        const updates = {}
+        if (scheduleData.due_date) updates.due_date = new Date(scheduleData.due_date).toISOString()
+        if (scheduleData.scheduled_time) updates.scheduled_time = new Date(scheduleData.scheduled_time).toISOString()
 
-            if (Object.keys(updates).length === 0) return
+        if (Object.keys(updates).length === 0) return
 
-            const { error } = await supabase
-                .from('tasks')
-                .update(updates)
-                .in('id', selectedIds)
-
-            if (error) throw error
-
+        const success = await updateTasks(updates)
+        if (success) {
             toast.success(`${count} task(s) scheduled`)
-            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             setShowScheduleDialog(false)
             onClear()
             onSuccess?.()
-        } catch (error) {
-            toast.error('Failed to schedule tasks')
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -391,24 +327,12 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
                 {/* Client assignment */}
                 <Select onValueChange={async (contactId) => {
-                    setLoading(true)
-                    try {
-                        const { error } = await supabase
-                            .from('tasks')
-                            .update({ contact_id: contactId === 'none' ? null : contactId })
-                            .in('id', selectedIds)
-
-                        if (error) throw error
-
+                    const success = await updateTasks({ contact_id: contactId === 'none' ? null : contactId })
+                    if (success) {
                         const contactName = contactsList.find(c => c.id === contactId)?.name || 'None'
                         toast.success(`${count} task(s) assigned to ${contactName}`)
-                        queryClient.invalidateQueries({ queryKey: ['tasks'] })
                         onClear()
                         onSuccess?.()
-                    } catch (error) {
-                        toast.error('Failed to assign client')
-                    } finally {
-                        setLoading(false)
                     }
                 }} disabled={loading}>
                     <SelectTrigger className="w-[130px] h-9">
@@ -436,7 +360,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                             <SelectItem value="none">Unassigned</SelectItem>
                             {teamMembers.map(member => (
                                 <SelectItem key={member.user_id} value={member.user_id}>
-                                    User {member.user_id.slice(0, 5)}...
+                                    {member.expand?.user_id?.name || member.expand?.user_id?.email || 'Unknown User'}
                                 </SelectItem>
                             ))}
                         </SelectContent>

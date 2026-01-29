@@ -2,11 +2,11 @@ import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar, Search } fro
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { TaskModal } from '../TaskModal'
 import { CampaignModal } from '../CampaignModal'
 import { ContactModal } from '../ContactModal'
-import { supabase } from '../../lib/supabase'
+import pb from '../../lib/pocketbase'
 import { ThemeToggle } from '../ThemeToggle'
 import { GlobalSearch } from './GlobalSearch'
 import {
@@ -18,23 +18,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 export function Navbar() {
   const {
     isSidebarOpen,
     toggleSidebar,
-    setSidebarOpen,
     isTaskModalOpen,
     setTaskModalOpen,
     isCampaignModalOpen,
     setCampaignModalOpen,
     isContactModalOpen,
     setContactModalOpen,
-    searchQuery,
-    setSearchQuery
   } = useUIStore()
-  const { user } = useUserStore()
+  const { user, logout } = useUserStore()
   const [selectedTask, setSelectedTask] = useState(null)
   const currentPath = window.location.pathname || '/'
 
@@ -55,8 +51,9 @@ export function Navbar() {
     }
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
+  const handleLogout = () => {
+    pb.authStore.clear()
+    logout() // Clear local user store
     window.location.href = '/'
   }
 

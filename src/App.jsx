@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
-import { supabase } from './lib/supabase'
+import pb from './lib/pocketbase'
 import { MainLayout } from './components/layout/MainLayout'
 import { Dashboard } from './pages/Dashboard'
 import { Tasks } from './pages/Tasks'
@@ -56,32 +56,20 @@ function AppContent() {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
-        if (error) {
-          console.error('Auth error:', error)
-          setError(error.message)
-        }
-        setSession(session)
-        setUser(session?.user || null)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Failed to get session:', err)
-        setError(err.message)
-        setLoading(false)
-      })
+    if (pb.authStore.isValid) {
+      setSession(pb.authStore.token)
+      setUser(pb.authStore.model)
+    }
+    setLoading(false)
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email)
-      setSession(session)
-      setUser(session?.user || null)
+    const removeListener = pb.authStore.onChange((token, model) => {
+      console.log('Auth state changed:', token ? 'Logged In' : 'Logged Out', model?.email)
+      setSession(token)
+      setUser(model)
     })
 
-    return () => subscription.unsubscribe()
+    return () => removeListener()
   }, [setUser])
 
   if (loading) {

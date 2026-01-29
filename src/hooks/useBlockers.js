@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import toast from 'react-hot-toast'
 
 /**
@@ -14,18 +14,16 @@ export function useBlockers(taskId) {
         queryFn: async () => {
             if (!taskId) return []
 
-            const { data, error } = await supabase
-                .from('task_dependencies')
-                .select(`
-          id,
-          blocker_id,
-          created_at,
-          blocker:blocker_id(id, title, status, priority, due_date)
-        `)
-                .eq('task_id', taskId)
+            const records = await pb.collection('task_dependencies').getFullList({
+                filter: `task_id = "${taskId}"`,
+                expand: 'blocker_id'
+            })
 
-            if (error) throw error
-            return data?.map(d => ({ ...d.blocker, dependency_id: d.id })) || []
+            // Map expand.blocker_id to flat object
+            return records.map(d => ({
+                ...d.expand?.blocker_id,
+                dependency_id: d.id
+            })).filter(b => b.id) // Ensure valid task data
         },
         enabled: !!taskId
     })
@@ -36,18 +34,15 @@ export function useBlockers(taskId) {
         queryFn: async () => {
             if (!taskId) return []
 
-            const { data, error } = await supabase
-                .from('task_dependencies')
-                .select(`
-          id,
-          task_id,
-          created_at,
-          blocked_task:task_id(id, title, status, priority, due_date)
-        `)
-                .eq('blocker_id', taskId)
+            const records = await pb.collection('task_dependencies').getFullList({
+                filter: `blocker_id = "${taskId}"`,
+                expand: 'task_id'
+            })
 
-            if (error) throw error
-            return data?.map(d => ({ ...d.blocked_task, dependency_id: d.id })) || []
+            return records.map(d => ({
+                ...d.expand?.task_id,
+                dependency_id: d.id
+            })).filter(b => b.id)
         },
         enabled: !!taskId
     })
@@ -61,31 +56,32 @@ export function useBlockers(taskId) {
             }
 
             // Validation: check for simple cycle (A↔B)
-            const { data: reverseCheck } = await supabase
-                .from('task_dependencies')
-                .select('id')
-                .eq('task_id', blockerId)
-                .eq('blocker_id', taskId)
-                .single()
-
-            if (reverseCheck) {
-                throw new Error('Circular dependency detected: this would create a cycle')
+            try {
+                const reverseCheck = await pb.collection('task_dependencies').getFirstListItem(`task_id="${blockerId}" && blocker_id="${taskId}"`)
+                if (reverseCheck) {
+                    throw new Error('Circular dependency detected: this would create a cycle')
+                }
+            } catch (e) {
+                if (e.status !== 404) throw e
             }
 
-            const { data, error } = await supabase
-                .from('task_dependencies')
-                .insert({ task_id: taskId, blocker_id: blockerId })
-                .select()
-                .single()
-
-            if (error) {
-                if (error.code === '23505') {
+            // Check if exists
+            try {
+                const exists = await pb.collection('task_dependencies').getFirstListItem(`task_id="${taskId}" && blocker_id="${blockerId}"`)
+                if (exists) {
                     throw new Error('This blocker already exists')
                 }
-                throw error
+            } catch (e) {
+                if (e.status !== 404) throw e
             }
 
-            return data
+
+            const record = await pb.collection('task_dependencies').create({
+                task_id: taskId,
+                blocker_id: blockerId
+            })
+
+            return record
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['blockers', taskId] })
@@ -100,12 +96,7 @@ export function useBlockers(taskId) {
     // Remove a blocker from this task
     const removeBlocker = useMutation({
         mutationFn: async (dependencyId) => {
-            const { error } = await supabase
-                .from('task_dependencies')
-                .delete()
-                .eq('id', dependencyId)
-
-            if (error) throw error
+            await pb.collection('task_dependencies').delete(dependencyId)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['blockers', taskId] })

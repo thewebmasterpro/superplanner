@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { format } from 'date-fns'
 import { TaskModal } from '../components/TaskModal'
 
@@ -25,30 +25,19 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
         setLoading(true)
         try {
             // 1. Fetch Campaign Info
-            const { data: camp, error: campError } = await supabase
-                .from('campaigns')
-                .select(`
-            *,
-            context:contexts(name)
-        `)
-                .eq('id', campaignId)
-                .single()
+            const camp = await pb.collection('campaigns').getOne(campaignId, {
+                expand: 'context_id'
+            })
 
-            if (campError) throw campError
-            setCampaign(camp)
+            // Flatten context for easier access matching previous structure if needed, or just use expand
+            // camp.context is available via camp.expand?.context_id
 
             // 2. Fetch Tasks & Meetings
-            const { data: items, error: itemsError } = await supabase
-                .from('tasks')
-                .select(`
-            *,
-            category:task_categories(name, color),
-            task_tags(tag:tags(name, color))
-        `)
-                .eq('campaign_id', campaignId)
-                .order('due_date', { ascending: true })
-
-            if (itemsError) throw itemsError
+            const items = await pb.collection('tasks').getFullList({
+                filter: `campaign_id = "${campaignId}"`,
+                sort: 'due_date',
+                expand: 'category_id,tags'
+            })
 
             const tasksList = items.filter(i => i.type === 'task')
             const meetingsList = items.filter(i => i.type === 'meeting')
@@ -61,6 +50,23 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
             const completed = tasksList.filter(t => t.status === 'done').length
             const progress = total > 0 ? Math.round((completed / total) * 100) : 0
             setStats({ total, completed, progress })
+
+            // Map expanded data to expected format if necessary for rendering
+            // The renderer uses task.category.color. In PB: task.expand.category_id.color
+            // I'll map it to keep JSX clean
+            setCampaign({
+                ...camp,
+                context: camp.expand?.context_id
+            })
+
+            const mapItems = (list) => list.map(item => ({
+                ...item,
+                category: item.expand?.category_id,
+                tags: item.expand?.tags
+            }))
+
+            setTasks(mapItems(tasksList))
+            setMeetings(mapItems(meetingsList))
 
         } catch (error) {
             console.error('Error loading campaign details:', error)
@@ -137,9 +143,9 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                         <CardTitle className="text-sm font-medium text-muted-foreground">Timeline</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-sm font-medium">{format(new Date(campaign.start_date), 'MMM d')} - {format(new Date(campaign.end_date), 'MMM d, yyyy')}</div>
+                        <div className="text-sm font-medium">{format(new Date(campaign.start_date || Date.now()), 'MMM d')} - {format(new Date(campaign.end_date || Date.now()), 'MMM d, yyyy')}</div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            {Math.ceil((new Date(campaign.end_date) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
+                            {Math.ceil((new Date(campaign.end_date || Date.now()) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
                         </p>
                     </CardContent>
                 </Card>
@@ -162,10 +168,10 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-medium line-clamp-1">{meeting.title}</h4>
-                                            <Badge variant="outline" className="text-[10px]">{format(new Date(meeting.due_date || meeting.created_at), 'MMM d')}</Badge>
+                                            <Badge variant="outline" className="text-[10px]">{format(new Date(meeting.due_date || meeting.created || Date.now()), 'MMM d')}</Badge>
                                         </div>
                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <Clock className="w-3 h-3" />
+                                            <Clock className="w-3" />
                                             {meeting.scheduled_time ? format(new Date(meeting.scheduled_time), 'h:mm a') : 'Unscheduled'}
                                         </div>
                                     </CardContent>

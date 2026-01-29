@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { useUserStore } from '../stores/userStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,7 +24,7 @@ export function TeamSettings() {
     useEffect(() => {
         loadTeams()
         loadReceivedInvitations()
-    }, [user]) // Re-run if user changes or on mount
+    }, [])
 
     // Load members when currentTeam changes
     useEffect(() => {
@@ -35,24 +35,22 @@ export function TeamSettings() {
 
     const loadTeams = async () => {
         try {
-            const { data, error } = await supabase
-                .from('teams')
-                .select(`
-          *,
-          team_members!inner(role)
-        `)
+            const userId = pb.authStore.model?.id
+            if (!userId) return
 
-            if (error) throw error
+            // 1. Fetch teams where user is member
+            const membersData = await pb.collection('team_members').getFullList({
+                filter: `user_id = "${userId}"`,
+                expand: 'team_id'
+            })
 
-            // Transform to get role easily
-            const processedTeams = data.map(team => ({
-                ...team,
-                myRole: team.team_members[0]?.role
+            const processedTeams = membersData.map(m => ({
+                ...m.expand.team_id,
+                myRole: m.role
             }))
 
             setTeams(processedTeams)
 
-            // Auto-select first team if none selected
             if (!currentTeam && processedTeams.length > 0) {
                 setCurrentTeam(processedTeams[0])
             }
@@ -62,36 +60,38 @@ export function TeamSettings() {
     }
 
     const loadReceivedInvitations = async () => {
+        const user = pb.authStore.model
         if (!user) return
         try {
-            const { data, error } = await supabase
-                .from('team_invitations')
-                .select(`
-                    *,
-                    team:team_id(name)
-                `)
-                .ilike('email', user.email)
-                .is('accepted_at', null)
+            // Fetch invitations by email
+            const data = await pb.collection('team_invitations').getFullList({
+                filter: `email = "${user.email}" && status = "pending"`,
+                expand: 'team_id'
+            })
 
-            if (error) throw error
             setReceivedInvitations(data)
         } catch (error) {
             console.error('Error loading received invitations:', error)
         }
     }
 
-    const handleAcceptInvite = async (inviteId) => {
+    const handleAcceptInvite = async (invite, inviteId) => {
         setLoading(true)
         try {
-            const { data, error } = await supabase.rpc('accept_invitation', {
-                _invite_id: inviteId
+            const user = pb.authStore.model
+            // 1. Create team member
+            await pb.collection('team_members').create({
+                team_id: invite.team_id,
+                user_id: user.id,
+                role: 'member'
             })
 
-            if (error) throw error
+            // 2. Update/Delete invitation
+            await pb.collection('team_invitations').delete(inviteId)
 
             toast.success('Joined team successfully!')
-            loadTeams() // Refresh teams list
-            loadReceivedInvitations() // Refresh invites list
+            loadTeams()
+            loadReceivedInvitations()
         } catch (error) {
             toast.error(`Error: ${error.message}`)
             console.error(error)
@@ -103,24 +103,19 @@ export function TeamSettings() {
     const loadTeamDetails = async (teamId) => {
         try {
             // Load Members
-            const { data: membersData, error: membersError } = await supabase
-                .from('team_members')
-                .select(`
-          *,
-          user:user_id(email)
-        `)
-                .eq('team_id', teamId)
+            const membersData = await pb.collection('team_members').getFullList({
+                filter: `team_id = "${teamId}"`,
+                expand: 'user_id'
+            })
 
-            if (!membersError) setMembers(membersData)
+            setMembers(membersData)
 
             // Load Invitations (Sent BY the team)
-            const { data: invData, error: invError } = await supabase
-                .from('team_invitations')
-                .select('*')
-                .eq('team_id', teamId)
-                .is('accepted_at', null)
+            const invData = await pb.collection('team_invitations').getFullList({
+                filter: `team_id = "${teamId}" || status = "pending"`
+            })
 
-            if (!invError) setInvitations(invData)
+            setInvitations(invData)
 
         } catch (error) {
             console.error('Error details:', error)
@@ -133,26 +128,26 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
-            const { data: { user: authUser } } = await supabase.auth.getUser()
-            if (!authUser) throw new Error('Not authenticated')
+            const user = pb.authStore.model
+            if (!user) throw new Error('Not authenticated')
 
-            const { data, error } = await supabase
-                .from('teams')
-                .insert({
-                    name: createTeamName,
-                    owner_id: authUser.id
-                })
-                .select()
-                .single()
+            const team = await pb.collection('teams').create({
+                name: createTeamName,
+                owner_id: user.id
+            })
 
-            if (error) throw error
+            // Add owner as member
+            await pb.collection('team_members').create({
+                team_id: team.id,
+                user_id: user.id,
+                role: 'owner'
+            })
 
             toast.success('Team created!')
             setCreateTeamName('')
-            loadTeams() // Refresh
+            loadTeams()
         } catch (error) {
             toast.error(`Failed to create team: ${error.message}`)
-            console.error('Create team error:', error)
         } finally {
             setLoading(false)
         }
@@ -164,28 +159,20 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
-            // Use RPC to check for existing user and handle permissions
-            const { data, error } = await supabase.rpc('invite_user_to_team', {
-                _team_id: currentTeam.id,
-                _email: inviteEmail
+            // 1. Check if user exists (Optional, if we want to add directly)
+            // But usually just create invitation record
+            await pb.collection('team_invitations').create({
+                team_id: currentTeam.id,
+                email: inviteEmail.trim(),
+                status: 'pending'
             })
 
-            if (error) throw error
-
-            if (data.status === 'success') {
-                toast.success(`Invitation sent to ${inviteEmail}`)
-                if (data.user_found) {
-                    toast.success('User found! They can accept it immediately.')
-                }
-            } else {
-                toast.error(data.message || 'Could not send invitation')
-            }
-
+            toast.success(`Invitation sent to ${inviteEmail}`)
             setInviteEmail('')
             loadTeamDetails(currentTeam.id)
         } catch (error) {
+            // Handle unique constraint if user already invited?
             toast.error(`Error: ${error.message}`)
-            console.error(error)
         } finally {
             setLoading(false)
         }
@@ -242,9 +229,9 @@ export function TeamSettings() {
                                 {receivedInvitations.map(inv => (
                                     <div key={inv.id} className="flex items-center justify-between p-2 bg-background border rounded-md">
                                         <div className="text-xs">
-                                            <p className="font-medium">Invitation to join <span className="text-primary font-bold">{inv.team?.name}</span></p>
+                                            <p className="font-medium">Invitation to join <span className="text-primary font-bold">{inv.expand?.team_id?.name || 'Unknown Team'}</span></p>
                                         </div>
-                                        <Button size="sm" onClick={() => handleAcceptInvite(inv.id)} disabled={loading}>
+                                        <Button size="sm" onClick={() => handleAcceptInvite(inv, inv.id)} disabled={loading}>
                                             Accept
                                         </Button>
                                     </div>
@@ -317,9 +304,10 @@ export function TeamSettings() {
                                                     <div className="flex items-center gap-3">
                                                         <Avatar>
                                                             <AvatarFallback>U</AvatarFallback>
+                                                            {member.expand?.user_id?.avatar && <AvatarImage src={pb.files.getUrl(member.expand.user_id, member.expand.user_id.avatar)} />}
                                                         </Avatar>
                                                         <div>
-                                                            <div className="font-medium">User {member.user_id.slice(0, 8)}...</div>
+                                                            <div className="font-medium">{member.expand?.user_id?.name || member.expand?.user_id?.email || 'Unknown User'}</div>
                                                             <div className="text-xs text-muted-foreground capitalize">{member.role}</div>
                                                         </div>
                                                     </div>

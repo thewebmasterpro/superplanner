@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMeetingAgenda, formatAgendaItem } from '../hooks/useMeetingAgenda'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 
 /**
  * Component to manage the agenda of a meeting (add tasks + campaigns)
@@ -29,35 +29,29 @@ export function MeetingAgendaManager({ meetingId }) {
         const timer = setTimeout(async () => {
             setSearching(true)
             try {
-                const { data: { user } } = await supabase.auth.getUser()
+                const user = pb.authStore.model
+                if (!user) return
 
                 if (searchType === 'task') {
-                    const { data, error } = await supabase
-                        .from('tasks')
-                        .select('id, title, status, priority')
-                        .eq('user_id', user.id)
-                        .eq('type', 'task') // Exclude meetings from results
-                        .ilike('title', `%${searchQuery}%`)
-                        .limit(5)
+                    // Search tasks
+                    const records = await pb.collection('tasks').getList(1, 5, {
+                        filter: `user_id = "${user.id}" && type = "task" && title ~ "${searchQuery}"`,
+                        sort: '-created'
+                    })
 
-                    if (!error) {
-                        // Filter out already added items
-                        const existingIds = agenda.filter(a => a.type === 'task').map(a => a.item_id)
-                        setSearchResults(data?.filter(t => !existingIds.includes(t.id)) || [])
-                    }
+                    // Filter out already added items
+                    const existingIds = agenda.filter(a => a.type === 'task').map(a => a.item_id)
+                    setSearchResults(records.items.filter(t => !existingIds.includes(t.id)) || [])
                 } else {
-                    const { data, error } = await supabase
-                        .from('campaigns')
-                        .select('id, name, status, end_date')
-                        .eq('user_id', user.id)
-                        .ilike('name', `%${searchQuery}%`)
-                        .limit(5)
+                    // Search campaigns
+                    const records = await pb.collection('campaigns').getList(1, 5, {
+                        filter: `user_id = "${user.id}" && name ~ "${searchQuery}"`,
+                        sort: '-created'
+                    })
 
-                    if (!error) {
-                        // Filter out already added items
-                        const existingIds = agenda.filter(a => a.type === 'campaign').map(a => a.item_id)
-                        setSearchResults(data?.filter(c => !existingIds.includes(c.id)) || [])
-                    }
+                    // Filter out already added items
+                    const existingIds = agenda.filter(a => a.type === 'campaign').map(a => a.item_id)
+                    setSearchResults(records.items.filter(c => !existingIds.includes(c.id)) || [])
                 }
             } catch (err) {
                 console.error('Search error:', err)

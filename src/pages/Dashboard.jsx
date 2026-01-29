@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useTasks } from '../hooks/useTasks'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 import { useUserStore } from '../stores/userStore'
 import PrayerTimes from '../components/PrayerTimes'
 import PrayerCountdown from '../components/PrayerCountdown'
@@ -33,48 +33,58 @@ export function Dashboard() {
     if (!user) return
 
     // Load prayer schedule
-    supabase
-      .from('prayer_schedule')
-      .select('*')
-      .order('date', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) console.error('Error loading prayer times:', error)
-        else setPrayerSchedule(data || [])
-      })
+    const loadPrayers = async () => {
+      try {
+        const records = await pb.collection('prayer_schedule').getFullList({
+          sort: 'date'
+        })
+        setPrayerSchedule(records)
+      } catch (e) {
+        console.error("Error loading prayer times", e)
+      }
+    }
+    loadPrayers()
 
     // Load user preferences
-    supabase
-      .from('user_preferences')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data, error }) => {
-        if (error && error.code !== 'PGRST116') console.error('Error loading preferences:', error)
-        else setUserPreferences(data)
-      })
+    const loadPrefs = async () => {
+      try {
+        // Assuming 1:1 migration or key-value store. 
+        // pb.collection('user_preferences').getFirstListItem(`user_id = "${user.id}"`)
+        const record = await pb.collection('user_preferences').getFirstListItem(`user_id = "${user.id}"`)
+        setUserPreferences(record)
+      } catch (e) {
+        if (e.status !== 404) console.error('Error loading preferences:', e)
+      }
+    }
+    loadPrefs()
 
     // Load active campaigns for progress tracking
-    supabase
-      .from('campaigns')
-      .select(`
-        *,
-        context:contexts(name, color),
-        tasks(id, status)
-      `)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .limit(3)
-      .then(({ data, error }) => {
-        if (!error && data) {
-          const processed = data.map(c => ({
+    const loadCampaigns = async () => {
+      try {
+        // Fetch campaigns
+        const campaigns = await pb.collection('campaigns').getList(1, 3, {
+          filter: `user_id = "${user.id}" && status = "active"`,
+          expand: 'context_id', // Assuming context is relation
+        })
+        const campaignData = campaigns.items.map(c => {
+          // Calculate stats from tasks in memory
+          // Assuming tasks have campaign_id
+          const campaignTasks = tasks.filter(t => t.campaign_id === c.id || (t.campaign && t.campaign.id === c.id))
+          return {
             ...c,
-            totalItems: c.tasks?.length || 0,
-            completedItems: c.tasks?.filter(t => t.status === 'done').length || 0
-          }))
-          setActiveCampaigns(processed)
-        }
-      })
-  }, [user])
+            totalItems: campaignTasks.length,
+            completedItems: campaignTasks.filter(t => t.status === 'done').length,
+            context: c.expand?.context_id
+          }
+        })
+        setActiveCampaigns(campaignData)
+      } catch (e) {
+        console.error("Error loading campaigns", e)
+      }
+    }
+    loadCampaigns()
+
+  }, [user, tasks]) // Added tasks to dependency to re-calc stats if tasks change
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0]
