@@ -3,7 +3,7 @@ import pb from '../lib/pocketbase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
@@ -11,18 +11,9 @@ export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [authProviders, setAuthProviders] = useState([])
-    useEffect(() => {
-        const loadAuthMethods = async () => {
-            try {
-                const methods = await pb.collection('users').listAuthMethods()
-                setAuthProviders(methods.authProviders || [])
-            } catch (err) {
-                console.error("Failed to load auth methods", err)
-            }
-        }
-        loadAuthMethods()
-    }, [])
+
+    // Hardcoded to true to ensure button visibility in production
+    const googleEnabled = true
 
     const handleLogin = async (e) => {
         e.preventDefault()
@@ -50,16 +41,14 @@ export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
         setError('')
 
         try {
-            // 1. Create user
             const data = {
                 email,
                 password,
                 passwordConfirm: password,
-                name: email.split('@')[0], // Default name
+                name: email.split('@')[0],
             }
             await pb.collection('users').create(data)
 
-            // 2. Login automatically
             const authData = await pb.collection('users').authWithPassword(email, password)
             onLoginSuccess({
                 success: true,
@@ -68,7 +57,6 @@ export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
             })
         } catch (err) {
             console.error('Signup error:', err)
-            // Extract detailed validation errors if available
             let limitMsg = err.message || "Failed to sign up"
             if (err.data && err.data.data) {
                 const fieldErrors = Object.entries(err.data.data)
@@ -88,18 +76,14 @@ export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
             onLoginSuccess({
                 success: true,
                 user: authData.record,
-                session: authData.token // Note: PB token is in authData.token or pb.authStore.token
+                session: authData.token
             });
         } catch (err) {
             console.error("Google login error", err);
-            // More detailed error for debugging
             const msg = err?.data?.message || err?.message || "Failed to login with Google";
             setError(msg);
         }
     }
-
-    // Check if Google is enabled
-    const googleEnabled = authProviders.some(p => p.name === 'google')
 
     return (
         <div className={isModal ? "w-full" : "flex justify-center items-center min-h-[50vh] p-4"}>
@@ -116,8 +100,6 @@ export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
                             {error}
                         </div>
                     )}
-
-
 
                     <Tabs defaultValue="login" className="w-full">
                         <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -185,22 +167,18 @@ export default function LoginPocketBase({ onLoginSuccess, isModal = false }) {
                         </TabsContent>
                     </Tabs>
 
-                    {googleEnabled && (
-                        <div className="relative my-4">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                            </div>
+                    <div className="relative my-4">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
                         </div>
-                    )}
-                    {/* Only show Google button if available */}
-                    {googleEnabled && (
-                        <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin}>
-                            Google
-                        </Button>
-                    )}
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin}>
+                        Google
+                    </Button>
                 </CardContent>
             </Card>
         </div>
