@@ -23,8 +23,8 @@ export function useTasks() {
         filters.push('archived_at != ""')
       } else {
         // Default view (Global or Workspace): Not deleted, Not archived
-        filters.push('(deleted_at = "" || deleted_at = null)')
-        filters.push('(archived_at = "" || archived_at = null)')
+        filters.push('deleted_at = ""')
+        filters.push('archived_at = ""')
 
         // Filter by specific workspace if selected (and not 'all')
         if (activeWorkspaceId && activeWorkspaceId !== 'all') {
