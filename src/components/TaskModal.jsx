@@ -52,14 +52,14 @@ export function TaskModal({ open, onOpenChange, task = null }) {
 
   // Agenda Items (sub-tasks) for meetings
   const [agendaItems, setAgendaItems] = useState([])
-  const [newAgendaItem, setNewAgendaItem] = useState({ title: '', description: '', priority: 3 })
+  const [newAgendaItem, setNewAgendaItem] = useState({ title: '', description: '', priority: 'medium' })
   const [showAgendaForm, setShowAgendaForm] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     status: 'todo',
-    priority: 3,
+    priority: 'medium',
     due_date: '',
     duration: 60,
     scheduled_time: '',
@@ -113,7 +113,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       // Reset when modal closes
       setAgendaItems([])
       setShowAgendaForm(false)
-      setNewAgendaItem({ title: '', description: '', priority: 3 })
+      setNewAgendaItem({ title: '', description: '', priority: 'medium' })
       setSelectedTags([])
     }
   }, [open, task])
@@ -125,7 +125,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         title: task.title || '',
         description: task.description || '',
         status: task.status || 'todo',
-        priority: task.priority || 3,
+        priority: task.priority || 'medium',
         due_date: task.due_date || '',
         duration: task.duration || 60,
         scheduled_time: task.scheduled_time || '',
@@ -148,7 +148,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         title: '',
         description: '',
         status: 'todo',
-        priority: 3,
+        priority: 'medium',
         due_date: '',
         duration: 60,
         scheduled_time: '',
@@ -409,16 +409,14 @@ export function TaskModal({ open, onOpenChange, task = null }) {
 
                 <div className="space-y-2">
                   <Label htmlFor="priority">Priority</Label>
-                  <Select value={String(formData.priority)} onValueChange={(value) => setFormData({ ...formData, priority: parseInt(value) })}>
+                  <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Priority 1 (Low)</SelectItem>
-                      <SelectItem value="2">Priority 2</SelectItem>
-                      <SelectItem value="3">Priority 3 (Medium)</SelectItem>
-                      <SelectItem value="4">Priority 4</SelectItem>
-                      <SelectItem value="5">Priority 5 (High)</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
