@@ -99,10 +99,20 @@ export function Tasks() {
 
   const priorityColors = {
     1: 'bg-priority-1',
+    'low': 'bg-priority-1',
     2: 'bg-priority-2',
     3: 'bg-priority-3',
+    'medium': 'bg-priority-3',
     4: 'bg-priority-4',
     5: 'bg-priority-5',
+    'high': 'bg-priority-5',
+  }
+
+  const priorityOrder = {
+    'low': 1, '1': 1,
+    'medium': 3, '3': 3,
+    'high': 5, '5': 5,
+    '2': 2, '4': 4
   }
 
   // Get today and week dates for due date filter
@@ -120,7 +130,10 @@ export function Tasks() {
         task.description?.toLowerCase().includes(query) ||
         task.context?.name?.toLowerCase()?.includes(query)
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter
-      const matchesPriority = priorityFilter === 'all' || task.priority === parseInt(priorityFilter)
+
+      const taskPriority = String(task.priority).toLowerCase()
+      const matchesPriority = priorityFilter === 'all' || taskPriority === priorityFilter
+
       const matchesWorkspace = workspaceFilter === 'all' ||
         (workspaceFilter === 'none' ? !task.context_id : task.context_id === workspaceFilter)
       const matchesCampaign = campaignFilter === 'all' ||
@@ -171,11 +184,16 @@ export function Tasks() {
 
     // Sort tasks
     return result.sort((a, b) => {
+      // Helper to safely get priority number
+      const getPrio = (p) => priorityOrder[String(p).toLowerCase()] || 0
+      // Helper to safely get date (PocketBase uses 'created', Supabase used 'created_at')
+      const getDate = (model) => new Date(model.created || model.created_at || 0)
+
       switch (sortOrder) {
         case 'priority_desc': // High to Low
-          return (b.priority || 0) - (a.priority || 0)
+          return getPrio(b.priority) - getPrio(a.priority)
         case 'priority_asc': // Low to High
-          return (a.priority || 0) - (b.priority || 0)
+          return getPrio(a.priority) - getPrio(b.priority)
         case 'duedate_asc': // Soonest first
           if (!a.due_date) return 1
           if (!b.due_date) return -1
@@ -187,10 +205,10 @@ export function Tasks() {
         case 'title_asc':
           return (a.title || '').localeCompare(b.title || '')
         case 'created_asc':
-          return new Date(a.created_at) - new Date(b.created_at)
+          return getDate(a) - getDate(b)
         case 'created_desc':
         default:
-          return new Date(b.created_at) - new Date(a.created_at)
+          return getDate(b) - getDate(a)
       }
     })
   }, [tasks, searchQuery, statusFilter, priorityFilter, workspaceFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
@@ -332,11 +350,9 @@ export function Tasks() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="5">P5 (High)</SelectItem>
-              <SelectItem value="4">P4</SelectItem>
-              <SelectItem value="3">P3</SelectItem>
-              <SelectItem value="2">P2</SelectItem>
-              <SelectItem value="1">P1 (Low)</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
             </SelectContent>
           </Select>
 
@@ -760,7 +776,7 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
       {
         visibleColumns.priority && (
           <td className="px-6 py-4">
-            <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
+            <div className={`w-3 h-3 rounded-full ${priorityColors[String(task.priority).toLowerCase()] || 'bg-gray-300'} shadow-sm`} />
           </td>
         )
       }
