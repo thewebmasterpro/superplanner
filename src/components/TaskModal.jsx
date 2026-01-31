@@ -201,7 +201,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       return
     }
 
-    if (!isEditing && !activeWorkspaceId && !formData.context_id) {
+    const isSpecialView = activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive'
+    if (!isEditing && (!activeWorkspaceId || isSpecialView) && !formData.context_id) {
       toast.error('Please select a workspace before creating')
       return
     }
