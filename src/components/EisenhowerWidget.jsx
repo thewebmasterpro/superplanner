@@ -44,7 +44,19 @@ export function EisenhowerWidget({ tasks }) {
     }
 
     if (!urgentTask) {
-        return null
+        return (
+            <Card className="h-full border-dashed border-2 bg-muted/20">
+                <CardHeader className="pb-2 text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        <CardTitle className="text-base font-medium">Do It Now</CardTitle>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center h-[calc(100%-4rem)] text-muted-foreground text-sm">
+                    No urgent tasks pending
+                </CardContent>
+            </Card>
+        )
     }
 
     return (
