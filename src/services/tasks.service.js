@@ -165,7 +165,32 @@ class TasksService {
    * @param {string} id 
    */
   async permanentDelete(id) {
-    return await pb.collection('tasks').delete(id)
+    try {
+      return await pb.collection('tasks').delete(id)
+    } catch (error) {
+      console.log('Task delete failed, attempting cleanup of relations...', error)
+
+      // Cleanup related records that might prevent deletion
+      try {
+        // 1. Time Logs
+        const timeLogs = await pb.collection('task_time_logs').getFullList({ filter: `task_id="${id}"` })
+        await Promise.all(timeLogs.map(l => pb.collection('task_time_logs').delete(l.id)))
+
+        // 2. Comments
+        const comments = await pb.collection('task_comments').getFullList({ filter: `task_id="${id}"` })
+        await Promise.all(comments.map(c => pb.collection('task_comments').delete(c.id)))
+
+        // 3. Dependencies (Blockers & Blocking)
+        const deps = await pb.collection('task_dependencies').getFullList({ filter: `task_id="${id}" || blocker_id="${id}"` })
+        await Promise.all(deps.map(d => pb.collection('task_dependencies').delete(d.id)))
+
+        // Retry delete
+        return await pb.collection('tasks').delete(id)
+      } catch (cleanupError) {
+        console.error('Cleanup failed:', cleanupError)
+        throw error // Throw original error if cleanup fails
+      }
+    }
   }
 
   /**
