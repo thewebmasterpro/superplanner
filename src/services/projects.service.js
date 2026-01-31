@@ -29,7 +29,7 @@ class ProjectsService {
 
         try {
             const options = {
-                sort: '-updated',
+                sort: '-id',
                 expand: 'context_id,contact_id',
                 requestKey: null
             }
@@ -45,7 +45,7 @@ class ProjectsService {
             // Level 1: Try without expand (Common failure point for new relations)
             try {
                 const options = {
-                    sort: '-updated',
+                    sort: '-id',
                     requestKey: null
                 }
                 if (filterString) {
@@ -64,7 +64,7 @@ class ProjectsService {
                     // Only filter by user, remove sort if column missing
                     const records = await pb.collection('projects').getFullList({
                         filter: `user_id = "${user.id}"`,
-                        sort: '-created', // 'created' system field always exists
+                        sort: '-id', // 'created' system field always exists
                         requestKey: null
                     })
                     console.log('✅ Projects fetched (Level 2):', records.length)
