@@ -1,30 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import pb from '../lib/pocketbase'
+import { projectsService } from '../services/projects.service'
+import pb from '../lib/pocketbase' // Still needed for useCategories for now
 
 export const useProjects = (userId) => {
   return useQuery({
     queryKey: ['projects', userId],
-    queryFn: async () => {
-      // Assuming collection name is 'projects'
-      return await pb.collection('projects').getFullList({
-        filter: `user_id = "${userId}"`,
-        sort: '-created'
-      })
-    },
+    queryFn: () => projectsService.getAll(),
     enabled: !!userId,
   })
 }
 
-export const useCategories = (userId) => {
-  return useQuery({
-    queryKey: ['categories', userId],
-    queryFn: async () => {
-      // Assuming collection name is 'task_categories'
-      return await pb.collection('task_categories').getFullList({
-        filter: `user_id = "${userId}"`,
-        sort: 'name'
-      })
-    },
-    enabled: !!userId,
-  })
-}
+// useCategories moved to src/hooks/useCategories.js

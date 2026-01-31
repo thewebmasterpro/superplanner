@@ -29,9 +29,10 @@ export function Navbar() {
     setCampaignModalOpen,
     isContactModalOpen,
     setContactModalOpen,
+    modalTask,
+    setModalTask
   } = useUIStore()
   const { user, logout } = useUserStore()
-  const [selectedTask, setSelectedTask] = useState(null)
   const currentPath = window.location.pathname || '/'
 
   const getPageTitle = () => {
@@ -59,7 +60,7 @@ export function Navbar() {
 
   const openCreateModal = (type) => {
     if (type === 'task' || type === 'meeting') {
-      setSelectedTask({ type })
+      setModalTask({ type })
       setTaskModalOpen(true)
     } else if (type === 'campaign') {
       setCampaignModalOpen(true)
@@ -170,9 +171,9 @@ export function Navbar() {
         open={isTaskModalOpen}
         onOpenChange={(open) => {
           setTaskModalOpen(open)
-          if (!open) setSelectedTask(null)
+          if (!open) setModalTask(null)
         }}
-        task={selectedTask}
+        task={modalTask}
       />
       <CampaignModal
         open={isCampaignModalOpen}

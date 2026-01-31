@@ -11,6 +11,7 @@ import { generateCSV, generateJSON, downloadFile } from '@/lib/exportUtils'
 import { parseCSV, validateTasksImport } from '@/lib/importUtils'
 import { Loader2, Download, Upload, FileJson, FileSpreadsheet, CheckCircle, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { backupService } from '@/services/backup.service'
 
 export function DataBackupSettings() {
     const { data: tasks = [] } = useTasks()
@@ -129,11 +130,7 @@ export function DataBackupSettings() {
             const user = pb.authStore.model
 
             // Fetch metadata for mapping
-            const [contexts, campaigns, projects] = await Promise.all([
-                pb.collection('contexts').getFullList(),
-                pb.collection('campaigns').getFullList(),
-                pb.collection('projects').getFullList()
-            ])
+            const { contexts, campaigns, projects } = await backupService.getImportMetadata()
 
             const contextMap = new Map(contexts.map(c => [c.name.toLowerCase(), c.id]))
             const campaignMap = new Map(campaigns.map(c => [c.name.toLowerCase(), c.id]))
@@ -158,10 +155,8 @@ export function DataBackupSettings() {
                 }
             })
 
-            // PB doesn't support bulk insert in one call via SDK, loop requests
-            // Use Promise.all for concurrency (limit concurrency if thousands)
-            // For MVP, simple Promise.all is okay for hundreds.
-            await Promise.all(tasksToInsert.map(task => pb.collection('tasks').create(task)))
+            // Execute Import via Service
+            await backupService.importTasks(tasksToInsert)
 
             toast.success(`Successfully imported ${tasksToInsert.length} tasks!`)
             setImportData(null)

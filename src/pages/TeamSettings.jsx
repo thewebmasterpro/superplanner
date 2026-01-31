@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import pb from '../lib/pocketbase'
 import { useUserStore } from '../stores/userStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import toast from 'react-hot-toast'
 import { Users, Mail, Plus, Settings, LogOut, Check } from 'lucide-react'
+import { teamsService } from '../services/teams.service'
+import pb from '../lib/pocketbase' // Keep for pb.files.getUrl usage in AvatarImage
 
 export function TeamSettings() {
     const { user, teams, setTeams, currentTeam, setCurrentTeam } = useUserStore()
@@ -35,14 +36,7 @@ export function TeamSettings() {
 
     const loadTeams = async () => {
         try {
-            const userId = pb.authStore.model?.id
-            if (!userId) return
-
-            // 1. Fetch teams where user is member
-            const membersData = await pb.collection('team_members').getFullList({
-                filter: `user_id = "${userId}"`,
-                expand: 'team_id'
-            })
+            const membersData = await teamsService.MyMemberships()
 
             const processedTeams = membersData.map(m => ({
                 ...m.expand.team_id,
@@ -60,15 +54,9 @@ export function TeamSettings() {
     }
 
     const loadReceivedInvitations = async () => {
-        const user = pb.authStore.model
-        if (!user) return
         try {
             // Fetch invitations by email
-            const data = await pb.collection('team_invitations').getFullList({
-                filter: `email = "${user.email}" && status = "pending"`,
-                expand: 'team_id'
-            })
-
+            const data = await teamsService.getReceivedInvitations()
             setReceivedInvitations(data)
         } catch (error) {
             console.error('Error loading received invitations:', error)
@@ -78,16 +66,7 @@ export function TeamSettings() {
     const handleAcceptInvite = async (invite, inviteId) => {
         setLoading(true)
         try {
-            const user = pb.authStore.model
-            // 1. Create team member
-            await pb.collection('team_members').create({
-                team_id: invite.team_id,
-                user_id: user.id,
-                role: 'member'
-            })
-
-            // 2. Update/Delete invitation
-            await pb.collection('team_invitations').delete(inviteId)
+            await teamsService.acceptInvitation(inviteId, invite.team_id)
 
             toast.success('Joined team successfully!')
             loadTeams()
@@ -103,18 +82,11 @@ export function TeamSettings() {
     const loadTeamDetails = async (teamId) => {
         try {
             // Load Members
-            const membersData = await pb.collection('team_members').getFullList({
-                filter: `team_id = "${teamId}"`,
-                expand: 'user_id'
-            })
-
+            const membersData = await teamsService.getTeamMembers(teamId)
             setMembers(membersData)
 
             // Load Invitations (Sent BY the team)
-            const invData = await pb.collection('team_invitations').getFullList({
-                filter: `team_id = "${teamId}" || status = "pending"`
-            })
-
+            const invData = await teamsService.getTeamInvitations(teamId)
             setInvitations(invData)
 
         } catch (error) {
@@ -128,20 +100,7 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
-            const user = pb.authStore.model
-            if (!user) throw new Error('Not authenticated')
-
-            const team = await pb.collection('teams').create({
-                name: createTeamName,
-                owner_id: user.id
-            })
-
-            // Add owner as member
-            await pb.collection('team_members').create({
-                team_id: team.id,
-                user_id: user.id,
-                role: 'owner'
-            })
+            await teamsService.createTeam(createTeamName)
 
             toast.success('Team created!')
             setCreateTeamName('')
@@ -159,13 +118,7 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
-            // 1. Check if user exists (Optional, if we want to add directly)
-            // But usually just create invitation record
-            await pb.collection('team_invitations').create({
-                team_id: currentTeam.id,
-                email: inviteEmail.trim(),
-                status: 'pending'
-            })
+            await teamsService.inviteMember(currentTeam.id, inviteEmail.trim())
 
             toast.success(`Invitation sent to ${inviteEmail}`)
             setInviteEmail('')
@@ -173,6 +126,34 @@ export function TeamSettings() {
         } catch (error) {
             // Handle unique constraint if user already invited?
             toast.error(`Error: ${error.message}`)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Add missing handler for remove member
+    const handleRemoveMember = async (memberId) => {
+        if (!confirm('Are you sure you want to remove this member?')) return
+        try {
+            await teamsService.removeMember(memberId)
+            toast.success('Member removed')
+            loadTeamDetails(currentTeam.id)
+        } catch (e) {
+            toast.error('Failed to remove member')
+        }
+    }
+
+    // Also delete team handler
+    const handleDeleteTeam = async () => {
+        if (!confirm('Are you sure you want to delete this team? This cannot be undone.')) return
+        setLoading(true)
+        try {
+            await teamsService.deleteTeam(currentTeam.id)
+            toast.success('Team deleted')
+            setCurrentTeam(null)
+            loadTeams()
+        } catch (e) {
+            toast.error('Failed to delete team')
         } finally {
             setLoading(false)
         }
@@ -283,6 +264,7 @@ export function TeamSettings() {
                                                 value={inviteEmail}
                                                 onChange={e => setInviteEmail(e.target.value)}
                                                 className="max-w-md"
+
                                                 required
                                             />
                                             <Button type="submit" disabled={loading}>
@@ -312,7 +294,7 @@ export function TeamSettings() {
                                                         </div>
                                                     </div>
                                                     {currentTeam.myRole === 'owner' && member.role !== 'owner' && (
-                                                        <Button variant="ghost" size="sm" className="text-destructive">Remove</Button>
+                                                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleRemoveMember(member.id)}>Remove</Button>
                                                     )}
                                                 </div>
                                             ))}

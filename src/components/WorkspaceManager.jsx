@@ -21,7 +21,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import pb from '../lib/pocketbase'
+import { workspacesService } from '../services/workspaces.service'
+import { tasksService } from '../services/tasks.service'
+import { campaignsService } from '../services/campaigns.service'
 import toast from 'react-hot-toast'
 
 const PRESET_COLORS = [
@@ -58,36 +60,28 @@ export function WorkspaceManager() {
 
     const loadAllWorkspacesWithStats = async () => {
         try {
-            const user = pb.authStore.model
-            if (!user) return
-
             // Fetch all workspaces including archived
-            // If contexts are deleted via API/UI they might be 'hard deleted' or 'soft deleted' (status=archived).
-            // Contexts table should have user_id filter.
-            const ctxs = await pb.collection('contexts').getFullList({
-                filter: `user_id = "${user.id}"`,
-                sort: 'name'
-            })
+            // Use service
+            const ctxs = await workspacesService.getAll()
 
             setAllWorkspaces(ctxs || [])
 
             // Fetch stats for each workspace
-            // PB doesn't support GROUP BY easily. We have to iterate or make separate requests.
-            // For MVP, we iterate. Optimization: Parallel requests.
             const stats = {}
             await Promise.all(ctxs.map(async (ctx) => {
                 try {
-                    // getList(1, 1, ...) returns totalItems
-                    const tasks = await pb.collection('tasks').getList(1, 1, {
+                    // Fetch all items to count them. 
+                    // TODO: Optimization - Add getCount method to services to avoid fetching full lists
+                    const tasks = await tasksService.getAll({
                         filter: `context_id = "${ctx.id}"`
                     })
-                    const campaigns = await pb.collection('campaigns').getList(1, 1, {
+                    const campaigns = await campaignsService.getAll({
                         filter: `context_id = "${ctx.id}"`
                     })
 
                     stats[ctx.id] = {
-                        tasks: tasks.totalItems,
-                        campaigns: campaigns.totalItems
+                        tasks: tasks.length,
+                        campaigns: campaigns.length
                     }
                 } catch (e) {
                     stats[ctx.id] = { tasks: 0, campaigns: 0 }

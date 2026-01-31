@@ -37,9 +37,18 @@ export async function fetchPrayerTimesByCity(city, country = '', method = 2) {
             asr: timings.Asr,
             maghrib: timings.Maghrib,
             isha: timings.Isha,
-            date: data.data.date.gregorian.date
+            msg: 'Success',
+            date: data.data.date.gregorian.date,
+            hijri: {
+                date: data.data.date.hijri.date,
+                day: data.data.date.hijri.day,
+                month: data.data.date.hijri.month.en,
+                year: data.data.date.hijri.year,
+                weekday: data.data.date.hijri.weekday.en
+            }
         }
     } catch (error) {
+        if (error.name === 'AbortError') return null
         console.error('Error fetching prayer times:', error)
         throw error
     }
@@ -72,6 +81,7 @@ export async function fetchMonthlyPrayerTimesByCity(city, country = '', method =
             isha: day.timings.Isha.split(' ')[0]
         }))
     } catch (error) {
+        if (error.name === 'AbortError') return []
         console.error('Error fetching monthly prayer times:', error)
         throw error
     }
@@ -112,10 +122,46 @@ export async function fetchPrayerTimesByCoordinates(latitude, longitude, method 
             asr: timings.Asr,
             maghrib: timings.Maghrib,
             isha: timings.Isha,
-            date: data.data.date.gregorian.date
+            date: data.data.date.gregorian.date,
+            hijri: {
+                date: data.data.date.hijri.date,
+                day: data.data.date.hijri.day,
+                month: data.data.date.hijri.month.en,
+                year: data.data.date.hijri.year,
+                weekday: data.data.date.hijri.weekday.en
+            }
         }
     } catch (error) {
+        if (error.name === 'AbortError') return null
         console.error('Error fetching prayer times:', error)
+        throw error
+    }
+}
+
+/**
+ * Search city to get its timezone and validation
+ * @param {string} city 
+ * @param {string} country 
+ * @returns {Promise<{city: string, timezone: string, country: string}>}
+ */
+export async function searchCityTimezone(city, country = '') {
+    try {
+        const params = new URLSearchParams({ city, country, method: '2' })
+        const response = await fetch(`${ALADHAN_API_BASE}/timingsByCity?${params}`)
+
+        if (!response.ok) throw new Error('City not found')
+        const data = await response.json()
+
+        if (data.code !== 200 || !data.data) throw new Error('City not found')
+
+        return {
+            city: city.charAt(0).toUpperCase() + city.slice(1), // Simple capitalization
+            timezone: data.data.meta.timezone,
+            country: country
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') return null
+        console.error('Error searching city:', error)
         throw error
     }
 }

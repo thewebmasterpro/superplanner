@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import pb from '../lib/pocketbase'
 import { useTimerStore } from '../stores/timerStore'
+import { timeTrackingService } from '../services/timeTracking.service'
 import toast from 'react-hot-toast'
 
 export function useTimeTracking() {
@@ -9,16 +9,7 @@ export function useTimeTracking() {
 
     const startTimer = useMutation({
         mutationFn: async (taskId) => {
-            const user = pb.authStore.model
-            if (!user) throw new Error('Not authenticated')
-
-            const record = await pb.collection('task_time_logs').create({
-                task_id: taskId,
-                user_id: user.id,
-                start_time: new Date().toISOString()
-            })
-
-            return record
+            return await timeTrackingService.startTracking(taskId)
         },
         onSuccess: (data) => {
             // Update local store with the new log ID
@@ -40,16 +31,13 @@ export function useTimeTracking() {
             if (!taskTimer.activeLogId) throw new Error('No active timer log')
 
             // Fetch current log to get start_time
-            const currentLog = await pb.collection('task_time_logs').getOne(taskTimer.activeLogId)
+            const currentLog = await timeTrackingService.getLogById(taskTimer.activeLogId)
 
             const start = new Date(currentLog.start_time)
             const end = new Date()
             const duration = Math.floor((end - start) / 1000)
 
-            await pb.collection('task_time_logs').update(taskTimer.activeLogId, {
-                end_time: end.toISOString(),
-                duration_seconds: duration
-            })
+            await timeTrackingService.stopTracking(taskTimer.activeLogId, duration)
 
             return { duration }
         },

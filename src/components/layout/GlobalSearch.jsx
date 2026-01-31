@@ -2,6 +2,9 @@ import * as React from "react"
 import { Search, CheckSquare, User, FolderKanban, Command as CommandIcon, Calendar, Loader2 } from "lucide-react"
 import { useUIStore } from "../../stores/uiStore"
 import pb from "../../lib/pocketbase"
+import { tasksService } from '@/services/tasks.service'
+import { contactsService } from '@/services/contacts.service'
+import { projectsService } from '@/services/projects.service'
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
@@ -40,27 +43,22 @@ export function GlobalSearch() {
             setIsOpen(true)
 
             try {
-                const user = pb.authStore.model
+                // Use services for search
+                // Note: Services typically fetch all by default using getFullList. 
+                // For MVP global search, fetching all matching and slicing is acceptable if datasets < 1000.
+                // If services support 'limit' or 'page' options passing to getList, that's better.
+                // Assuming services expose getAll({ search: ... }).
 
-                const [tasksRes, contactsRes, projectsRes] = await Promise.all([
-                    pb.collection('tasks').getList(1, 5, {
-                        filter: `user_id = "${user.id}" && title ~ "${searchQuery}"`,
-                        sort: '-created'
-                    }),
-                    pb.collection('contacts').getList(1, 5, {
-                        filter: `user_id = "${user.id}" && (name ~ "${searchQuery}" || company ~ "${searchQuery}")`,
-                        sort: '-created'
-                    }),
-                    pb.collection('projects').getList(1, 3, {
-                        filter: `user_id = "${user.id}" && name ~ "${searchQuery}"`,
-                        sort: '-created'
-                    })
+                const [tasks, contacts, projects] = await Promise.all([
+                    tasksService.getAll({ search: searchQuery }),
+                    contactsService.getAll({ search: searchQuery }),
+                    projectsService.getAll({ search: searchQuery })
                 ])
 
                 setResults({
-                    tasks: tasksRes.items || [],
-                    contacts: contactsRes.items || [],
-                    projects: projectsRes.items || []
+                    tasks: tasks.slice(0, 5) || [],
+                    contacts: contacts.slice(0, 5) || [],
+                    projects: projects.slice(0, 3) || []
                 })
             } catch (error) {
                 console.error('Search error:', error)

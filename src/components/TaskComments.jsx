@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import pb from '../lib/pocketbase'
+import { commentsService } from '../services/comments.service'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -17,25 +18,24 @@ export function TaskComments({ taskId }) {
         setUserId(pb.authStore.model?.id)
         loadComments()
 
-        // Subscribe to realtime changes
-        pb.collection('task_comments').subscribe('*', function (e) {
-            if (e.record.task_id === taskId) {
+        let unsubscribe
+
+        const initSubscription = async () => {
+            unsubscribe = await commentsService.subscribe(taskId, () => {
                 loadComments()
-            }
-        }).catch(err => console.error("Realtime subscription error", err))
+            })
+        }
+
+        initSubscription()
 
         return () => {
-            pb.collection('task_comments').unsubscribe('*')
+            if (unsubscribe) unsubscribe()
         }
     }, [taskId])
 
     const loadComments = async () => {
         try {
-            const records = await pb.collection('task_comments').getFullList({
-                filter: `task_id = "${taskId}"`,
-                sort: 'created',
-                expand: 'user_id'
-            })
+            const records = await commentsService.getCommentsForTask(taskId)
             setComments(records)
         } catch (error) {
             console.error('Error loading comments:', error)
@@ -48,15 +48,11 @@ export function TaskComments({ taskId }) {
 
         setLoading(true)
         try {
-            await pb.collection('task_comments').create({
-                task_id: taskId,
-                user_id: pb.authStore.model?.id,
-                content: newComment.trim()
-            })
+            await commentsService.create(taskId, newComment.trim())
 
             setNewComment('')
             // Realtime will update, but we can also optimistic update or manually reload if needed.
-            // loadComments() called by realtime listener.
+            // loadComments()
         } catch (error) {
             toast.error('Failed to post comment')
             console.error(error)
@@ -69,7 +65,7 @@ export function TaskComments({ taskId }) {
         if (!confirm('Delete this comment?')) return
 
         try {
-            await pb.collection('task_comments').delete(commentId)
+            await commentsService.delete(commentId)
             // Realtime will update list
         } catch (error) {
             toast.error('Could not delete comment')

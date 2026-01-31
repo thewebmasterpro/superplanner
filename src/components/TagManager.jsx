@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import pb from '../lib/pocketbase'
+import { tagsService } from '../services/tags.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,9 +19,7 @@ export function TagManager() {
 
     const loadTags = async () => {
         try {
-            const records = await pb.collection('tags').getFullList({
-                sort: 'name'
-            })
+            const records = await tagsService.getAll()
             setTags(records || [])
         } catch (error) {
             console.error('Error loading tags:', error)
@@ -36,10 +35,10 @@ export function TagManager() {
         try {
             const user = pb.authStore.model
 
-            await pb.collection('tags').create({
+            await tagsService.create({
                 name: newTag.name,
                 color: newTag.color,
-                user_id: user.id
+                user_id: user?.id
             })
 
             toast.success('Tag created!')
@@ -56,7 +55,7 @@ export function TagManager() {
         if (!confirm('Delete this tag?')) return
 
         try {
-            await pb.collection('tags').delete(id)
+            await tagsService.delete(id)
             toast.success('Tag deleted')
             loadTags()
         } catch (error) {

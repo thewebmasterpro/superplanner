@@ -33,6 +33,8 @@ import {
 import { ContactModal, STATUS_OPTIONS } from '../components/ContactModal'
 import { PipelineBoard } from '../components/PipelineBoard'
 import { ComposeEmailModal } from '../components/ComposeEmailModal'
+import { ContactsBulkActionsBar } from '../components/ContactsBulkActionsBar'
+import { Checkbox } from '@/components/ui/checkbox'
 import toast from 'react-hot-toast'
 
 export function Contacts({ initialView = 'list' }) {
@@ -43,6 +45,7 @@ export function Contacts({ initialView = 'list' }) {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedContact, setSelectedContact] = useState(null)
     const [deleteConfirm, setDeleteConfirm] = useState(null)
+    const [selectedIds, setSelectedIds] = useState([]) // For bulk actions
     // Email Modal state for list view
     const [emailContact, setEmailContact] = useState(null)
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
@@ -52,6 +55,7 @@ export function Contacts({ initialView = 'list' }) {
         workspaceId: workspaceFilter,
         search: searchQuery
     })
+
     const { workspaces } = useWorkspaceStore()
 
     // Stats
@@ -77,7 +81,9 @@ export function Contacts({ initialView = 'list' }) {
     }
 
     const handleEdit = (contact) => {
-        setSelectedContact(contact)
+        // Always get the latest version from contacts array to avoid stale data
+        const latestContact = contacts.find(c => c.id === contact.id) || contact
+        setSelectedContact(latestContact)
         setIsModalOpen(true)
     }
 
@@ -90,6 +96,19 @@ export function Contacts({ initialView = 'list' }) {
         if (deleteConfirm) {
             deleteContact(deleteConfirm.id)
             setDeleteConfirm(null)
+        }
+    }
+
+    // Selection Logic
+    const toggleSelection = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+    }
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === contacts.length) {
+            setSelectedIds([])
+        } else {
+            setSelectedIds(contacts.map(c => c.id))
         }
     }
 
@@ -263,6 +282,13 @@ export function Contacts({ initialView = 'list' }) {
                             <table className="w-full">
                                 <thead className="bg-muted/30 border-b border-border/50 sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
                                     <tr>
+                                        <th className="px-6 py-4 w-12">
+                                            <Checkbox
+                                                checked={contacts.length > 0 && selectedIds.length === contacts.length}
+                                                onCheckedChange={toggleSelectAll}
+                                                aria-label="Select all"
+                                            />
+                                        </th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contexts</th>
@@ -274,9 +300,15 @@ export function Contacts({ initialView = 'list' }) {
                                     {contacts.map(contact => (
                                         <tr
                                             key={contact.id}
-                                            className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                                            className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${selectedIds.includes(contact.id) ? 'bg-primary/5' : ''}`}
                                             onClick={() => handleEdit(contact)}
                                         >
+                                            <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(contact.id)}
+                                                    onCheckedChange={() => toggleSelection(contact.id)}
+                                                />
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -425,6 +457,15 @@ export function Contacts({ initialView = 'list' }) {
                     // Optionally refresh list if needed
                 }}
             />
+
+            {/* Bulk Actions Bar */}
+            {selectedIds.length > 0 && (
+                <ContactsBulkActionsBar
+                    selectedIds={selectedIds}
+                    onClear={() => setSelectedIds([])}
+                    onSuccess={() => setSelectedIds([])}
+                />
+            )}
         </div>
     )
 }

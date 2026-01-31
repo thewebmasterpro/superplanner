@@ -4,36 +4,40 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import pb from '../lib/pocketbase'
+import { campaignsService } from '../services/campaigns.service'
+import { tasksService } from '../services/tasks.service'
 import { format } from 'date-fns'
-import { TaskModal } from '../components/TaskModal'
+import { useUIStore } from '../stores/uiStore'
 
-export function CampaignDetails({ campaignId, onBack, onEdit }) {
+export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
     const [campaign, setCampaign] = useState(null)
     const [loading, setLoading] = useState(true)
     const [tasks, setTasks] = useState([])
     const [meetings, setMeetings] = useState([])
     const [stats, setStats] = useState({ total: 0, completed: 0, progress: 0 })
-    const [selectedTask, setSelectedTask] = useState(null)
-    const [isTaskModalOpen, setTaskModalOpen] = useState(false)
+    // stats declared dynamically above or below
+    const { isTaskModalOpen, setTaskModalOpen, setModalTask } = useUIStore()
+
+    // Refresh when modal closes
+    useEffect(() => {
+        if (!isTaskModalOpen) {
+            loadCampaignDetails()
+        }
+    }, [isTaskModalOpen])
 
     useEffect(() => {
         loadCampaignDetails()
-    }, [campaignId])
+    }, [campaignId, lastUpdated]) // Reload when ID OR lastUpdated changes
 
     const loadCampaignDetails = async () => {
         setLoading(true)
         try {
             // 1. Fetch Campaign Info
-            const camp = await pb.collection('campaigns').getOne(campaignId, {
-                expand: 'context_id'
-            })
-
-            // Flatten context for easier access matching previous structure if needed, or just use expand
-            // camp.context is available via camp.expand?.context_id
+            const camp = await campaignsService.getOne(campaignId)
 
             // 2. Fetch Tasks & Meetings
-            const items = await pb.collection('tasks').getFullList({
+            // Note: services should handle filtering. passing filter string.
+            const items = await tasksService.getAll({
                 filter: `campaign_id = "${campaignId}"`,
                 sort: 'due_date',
                 expand: 'category_id,tags'
@@ -100,10 +104,10 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                     <Button variant="outline" onClick={() => onEdit(campaign)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit Campaign
                     </Button>
-                    <Button variant="outline" onClick={() => { setSelectedTask({ campaign_id: campaign.id, type: 'task' }); setTaskModalOpen(true) }}>
+                    <Button variant="outline" onClick={() => { setModalTask({ campaign_id: campaign.id, type: 'task' }); setTaskModalOpen(true) }}>
                         + New Task
                     </Button>
-                    <Button onClick={() => { setSelectedTask({ campaign_id: campaign.id, type: 'meeting' }); setTaskModalOpen(true) }}>
+                    <Button onClick={() => { setModalTask({ campaign_id: campaign.id, type: 'meeting' }); setTaskModalOpen(true) }}>
                         + New Meeting
                     </Button>
                 </div>
@@ -164,7 +168,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                     ) : (
                         <div className="space-y-3">
                             {meetings.map(meeting => (
-                                <Card key={meeting.id} className="cursor-pointer hover:shadow-sm transition-all" onClick={() => { setSelectedTask(meeting); setTaskModalOpen(true) }}>
+                                <Card key={meeting.id} className="cursor-pointer hover:shadow-sm transition-all" onClick={() => { setModalTask(meeting); setTaskModalOpen(true) }}>
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-medium line-clamp-1">{meeting.title}</h4>
@@ -195,7 +199,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                             {tasks.map(task => (
                                 <div key={task.id}
                                     className="flex items-center justify-between p-3 bg-card border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                                    onClick={() => { setSelectedTask(task); setTaskModalOpen(true) }}
+                                    onClick={() => { setModalTask(task); setTaskModalOpen(true) }}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={`w-3 h-3 rounded-full border ${task.status === 'done' ? 'bg-green-500 border-green-600' : 'border-muted-foreground'}`}></div>
@@ -218,14 +222,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                 </div>
             </div>
 
-            <TaskModal
-                open={isTaskModalOpen}
-                onOpenChange={(open) => {
-                    setTaskModalOpen(open)
-                    if (!open) loadCampaignDetails() // Refresh on close
-                }}
-                task={selectedTask}
-            />
+            {/* Task Modal is global */}
         </div>
     )
 }

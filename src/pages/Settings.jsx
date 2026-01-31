@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useUserStore } from '../stores/userStore'
-import pb from '../lib/pocketbase'
 import { useTelegramNotifications } from '../hooks/useTelegramNotifications'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,6 +9,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Settings as SettingsIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { DataBackupSettings } from '@/components/settings/DataBackupSettings'
+import { settingsService } from '../services/settings.service'
+
+const AVAILABLE_CITIES = [
+  { label: 'Los Angeles (PST)', value: 'America/Los_Angeles', city: 'Los Angeles' },
+  { label: 'New York (EST)', value: 'America/New_York', city: 'New York' },
+  { label: 'London (GMT)', value: 'Europe/London', city: 'London' },
+  { label: 'Paris (CET)', value: 'Europe/Paris', city: 'Paris' },
+  { label: 'Berlin (CET)', value: 'Europe/Berlin', city: 'Berlin' },
+  { label: 'Moscow (MSK)', value: 'Europe/Moscow', city: 'Moscow' },
+  { label: 'Dubai (GST)', value: 'Asia/Dubai', city: 'Dubai' },
+  { label: 'Mumbai (IST)', value: 'Asia/Kolkata', city: 'Mumbai' },
+  { label: 'Singapore (SGT)', value: 'Asia/Singapore', city: 'Singapore' },
+  { label: 'Tokyo (JST)', value: 'Asia/Tokyo', city: 'Tokyo' },
+  { label: 'Sydney (AEDT)', value: 'Australia/Sydney', city: 'Sydney' },
+]
 
 export function Settings() {
   const { preferences, setPreferences } = useUserStore()
@@ -26,38 +40,17 @@ export function Settings() {
 
   const savePreferences = async () => {
     try {
-      const user = pb.authStore.model
-      if (!user) return
-
-      const safePayload = {
-        user_id: user.id,
+      const payload = {
         telegram: preferences.telegram,
         dashboardWidgets: preferences.dashboardWidgets,
         prayerLocation: preferences.prayerLocation,
-        spotify_playlist_url: preferences.spotify_playlist_url
+        spotify_playlist_url: preferences.spotify_playlist_url,
+        world_clock_cities: preferences.world_clock_cities
       }
-
-      // Check if exists
-      try {
-        const records = await pb.collection('user_preferences').getFullList({
-          filter: `user_id = "${user.id}"`
-        })
-
-        if (records.length > 0) {
-          await pb.collection('user_preferences').update(records[0].id, safePayload)
-        } else {
-          await pb.collection('user_preferences').create(safePayload)
-        }
-        toast.success('Preferences saved successfully!')
-      } catch (e) {
-        // If error in getFullList (e.g. 404 shouldn't happen for getFullList returns empty array)
-        // But if it fails, try create? No, safer to log.
-        // Actually getFullList returns empty array if none found.
-        await pb.collection('user_preferences').create(safePayload)
-        toast.success('Preferences saved successfully!')
-      }
-
+      await settingsService.updatePreferences(payload)
+      toast.success('Preferences saved successfully!')
     } catch (e) {
+      console.error(e)
       toast.error('Failed to save: ' + e.message)
     }
   }
@@ -318,6 +311,172 @@ export function Settings() {
                   })}
                   className="h-4 w-4 rounded border-gray-300"
                 />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="eisenhower" className="text-base">Eisenhower Matrix</Label>
+                  <p className="text-xs text-muted-foreground">Show "Do It Now" urgent task widget</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="eisenhower"
+                  checked={preferences?.dashboardWidgets?.eisenhower ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      eisenhower: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="scratchpad" className="text-base">Scratchpad</Label>
+                  <p className="text-xs text-muted-foreground">Show auto-saving note widget</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="scratchpad"
+                  checked={preferences?.dashboardWidgets?.scratchpad ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      scratchpad: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="worldClock" className="text-base">World Clock</Label>
+                  <p className="text-xs text-muted-foreground">Show New York/Tokyo/London time</p>
+                </div>
+                <input
+                  type="checkbox"
+                  id="worldClock"
+                  checked={preferences?.dashboardWidgets?.worldClock ?? true}
+                  onChange={(e) => setPreferences({
+                    dashboardWidgets: {
+                      ...(preferences?.dashboardWidgets || {}),
+                      worldClock: e.target.checked
+                    }
+                  })}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </div>
+
+              {preferences?.dashboardWidgets?.worldClock !== false && (
+                <div className="ml-1 pl-4 border-l-2 border-muted grid grid-cols-1 md:grid-cols-3 gap-3 pb-2 animate-in slide-in-from-top-2">
+                  {[0, 1, 2].map(index => {
+                    const currentCity = preferences?.world_clock_cities?.[index]
+
+                    return (
+                      <div key={index} className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">City {index + 1}</Label>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <Input
+                              className="h-8 text-xs bg-background"
+                              placeholder="Type city & Enter..."
+                              defaultValue={currentCity?.city || ''}
+                              onKeyDown={async (e) => {
+                                // Fix: only trigger on initial Enter press, avoid duplicates
+                                if (e.key === 'Enter') {
+                                  const val = e.currentTarget.value
+                                  if (!val) return
+                                  e.preventDefault()
+
+                                  const toastId = toast.loading('Searching...')
+                                  try {
+                                    const { searchCityTimezone } = await import('../services/prayerTimesApi')
+                                    const result = await searchCityTimezone(val)
+
+                                    toast.dismiss(toastId)
+                                    toast.success(`Found: ${result.city}`)
+
+                                    const newCities = [...(preferences?.world_clock_cities || [])]
+                                    while (newCities.length <= index) newCities.push(null)
+
+                                    newCities[index] = {
+                                      label: result.city,
+                                      city: result.city,
+                                      value: result.timezone, // Compatibility: store timezone in value key
+                                      timezone: result.timezone,
+                                      country: result.country
+                                    }
+                                    setPreferences({ world_clock_cities: newCities })
+
+                                    // Auto-save to backend
+                                    await settingsService.updatePreferences({
+                                      ...preferences,
+                                      world_clock_cities: newCities
+                                    })
+                                    toast.success('City saved!')
+                                  } catch (err) {
+                                    toast.dismiss(toastId)
+                                    toast.error('City not found')
+                                  }
+                                }
+                              }}
+                            />
+                          </div>
+                          {currentCity?.value && (
+                            <p className="text-[10px] text-green-600 flex items-center gap-1">
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
+                              {currentCity.value}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="pt-4 border-t">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  💡 Inspiration Grid
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { id: 'inspiration_growth', label: 'Growth Hack 🚀', desc: 'Astuce Croissance' },
+                    { id: 'inspiration_bias', label: 'Biais Cognitif 🧠', desc: 'Psychologie & Vente' },
+                    { id: 'inspiration_business', label: 'Business Tip 💼', desc: 'Stratégie & Croissance' },
+                    { id: 'inspiration_body', label: 'Corps Humain 💖', desc: 'Secrets de ton corps' },
+                    { id: 'inspiration_quran', label: 'Verset du Jour 📖', desc: 'Parole sacrée' },
+                    { id: 'inspiration_challenge', label: 'Défi du Jour 🎯', desc: 'Passe à l\'action' },
+                    { id: 'inspiration_tip', label: 'Conseil Prod ⚡', desc: 'Booster productivité' },
+                    { id: 'inspiration_zen', label: 'Minute Zen 🌬️', desc: 'Respire un coup' },
+                    { id: 'inspiration_word', label: 'Mot du Jour 📚', desc: 'Enrichir vocabulaire' },
+                    { id: 'inspiration_quote', label: 'Citation 💬', desc: 'Sagesse & motivation' },
+                    { id: 'inspiration_joke', label: 'Blague 💡', desc: 'Un peu d\'humour' },
+                    { id: 'inspiration_fact', label: 'Savoir Inutile 🧠', desc: 'Culture générale' }
+                  ].map(widget => (
+                    <div key={widget.id} className="flex items-center justify-between bg-muted/30 p-3 rounded-lg">
+                      <div>
+                        <Label htmlFor={widget.id} className="text-sm font-medium">{widget.label}</Label>
+                        <p className="text-[10px] text-muted-foreground">{widget.desc}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        id={widget.id}
+                        checked={preferences?.dashboardWidgets?.[widget.id] ?? true}
+                        onChange={(e) => setPreferences({
+                          dashboardWidgets: {
+                            ...(preferences?.dashboardWidgets || {}),
+                            [widget.id]: e.target.checked
+                          }
+                        })}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

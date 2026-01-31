@@ -23,10 +23,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card } from '@/components/ui/card'
-import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import pb from '../lib/pocketbase'
+import { tagsService } from '../services/tags.service'
+import { campaignsService } from '../services/campaigns.service'
 import { CampaignModal } from '../components/CampaignModal'
 import { KanbanView } from '../components/KanbanView'
 import { useUpdateTask } from '../hooks/useTasks'
@@ -35,7 +35,7 @@ export function Meetings() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const updateTaskMutation = useUpdateTask()
-  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery } = useUIStore()
+  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery, setModalTask } = useUIStore()
   const { workspaces, activeWorkspaceId } = useWorkspaceStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -52,7 +52,6 @@ export function Meetings() {
     dueDate: true,
     priority: true
   })
-  const [selectedTask, setSelectedTask] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
   const [showFilters, setShowFilters] = useState(false)
   const [isCampaignModalOpen, setCampaignModalOpen] = useState(false)
@@ -75,17 +74,12 @@ export function Meetings() {
 
   const loadFilterOptions = async () => {
     try {
-      const user = pb.authStore.model
-      setCurrentUserId(user?.id)
-
-      if (user) {
-        const [tagsRes, campaignsRes] = await Promise.all([
-          pb.collection('tags').getFullList({ sort: 'name' }),
-          pb.collection('campaigns').getFullList({ sort: 'name' })
-        ])
-        setTags(tagsRes)
-        setCampaigns(campaignsRes)
-      }
+      const [tagsRes, campaignsRes] = await Promise.all([
+        tagsService.getAll(),
+        campaignsService.getAll()
+      ])
+      setTags(tagsRes)
+      setCampaigns(campaignsRes)
     } catch (error) {
       console.error('Error loading filters:', error)
     }
@@ -531,7 +525,7 @@ export function Meetings() {
                             setTimeout(() => setCompletingTaskId(null), 1000)
                           }}
                           onClick={() => {
-                            setSelectedTask(task)
+                            setModalTask(task)
                             setTaskModalOpen(true)
                           }}
                           isOverdue={isOverdue}
@@ -553,7 +547,7 @@ export function Meetings() {
               updateTaskMutation.mutate({ id: taskId, updates: { status: newStatus } })
             }}
             onTaskClick={(task) => {
-              setSelectedTask(task)
+              setModalTask(task)
               setTaskModalOpen(true)
             }}
           />
@@ -580,12 +574,7 @@ export function Meetings() {
         )
       }
 
-      {/* Task Modal */}
-      <TaskModal
-        open={isTaskModalOpen}
-        onOpenChange={setTaskModalOpen}
-        task={selectedTask}
-      />
+      {/* Task Modal is handled globally */}
 
       <CampaignModal
         open={isCampaignModalOpen}

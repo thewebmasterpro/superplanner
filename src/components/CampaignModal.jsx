@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import pb from '../lib/pocketbase'
+import { campaignsService } from '../services/campaigns.service'
 import {
     Dialog,
     DialogContent,
@@ -87,20 +87,17 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
         setLoading(true)
         try {
-            const user = pb.authStore.model
-
             // Handle dates to maximize compatibility with PB
             // PB uses ISO8601 strings. 
             const payload = {
                 ...formData,
                 context_id: formData.context_id || null,
-                user_id: user.id
             }
 
             if (isEditing) {
-                await pb.collection('campaigns').update(campaign.id, payload)
+                await campaignsService.update(campaign.id, payload)
             } else {
-                await pb.collection('campaigns').create(payload)
+                await campaignsService.create(payload)
             }
 
             toast.success(isEditing ? 'Campaign updated' : 'Campaign created')

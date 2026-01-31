@@ -23,7 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, X, Calendar, CheckSquare, MessageSquare, Clock, Mail, Phone, MessageCircle } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import pb from '../lib/pocketbase'
+import { tasksService } from '../services/tasks.service'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ComposeEmailModal } from './ComposeEmailModal'
 
@@ -67,11 +67,13 @@ export function ContactModal({ open, onOpenChange, contact }) {
         setLoadingActivities(true)
         try {
             // Fetch recent tasks linked to this contact
-            const records = await pb.collection('tasks').getList(1, 20, {
-                filter: `contact_id = "${contact.id}"`,
-                sort: '-created'
-            })
-            setActivities(records.items || [])
+            const allTasks = await tasksService.getAll()
+            const records = allTasks
+                .filter(t => t.contact_id === contact.id)
+                .sort((a, b) => new Date(b.created) - new Date(a.created))
+                .slice(0, 20)
+
+            setActivities(records || [])
         } catch (error) {
             console.error('Error loading activities:', error)
         } finally {
@@ -103,7 +105,8 @@ export function ContactModal({ open, onOpenChange, contact }) {
                 workspaceIds: []
             })
         }
-    }, [contact, open])
+
+    }, [contact?.id, contact?.status, open])
 
     const handleSubmit = (e) => {
         e.preventDefault()

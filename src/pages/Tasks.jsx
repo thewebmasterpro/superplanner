@@ -24,10 +24,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card } from '@/components/ui/card'
-import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import pb from '../lib/pocketbase'
+import { tagsService } from '../services/tags.service'
+import { campaignsService } from '../services/campaigns.service'
 import { CampaignModal } from '../components/CampaignModal'
 import { KanbanView } from '../components/KanbanView'
 import { useUpdateTask } from '../hooks/useTasks'
@@ -36,13 +36,13 @@ export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const updateTaskMutation = useUpdateTask()
-  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery } = useUIStore()
+  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery, setModalTask } = useUIStore()
   const { workspaces, activeWorkspaceId } = useWorkspaceStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [workspaceFilter, setWorkspaceFilter] = useState('all')
   const [campaignFilter, setCampaignFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('task')
+  const [typeFilter, setTypeFilter] = useState('task') // Changed from 'all' to 'task' to show only tasks by default
   const [tagFilter, setTagFilter] = useState('all')
   const [dueDateFilter, setDueDateFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
@@ -53,7 +53,6 @@ export function Tasks() {
     dueDate: true,
     priority: true
   })
-  const [selectedTask, setSelectedTask] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
   const [showFilters, setShowFilters] = useState(false)
   const [isCampaignModalOpen, setCampaignModalOpen] = useState(false)
@@ -74,13 +73,10 @@ export function Tasks() {
   }, [activeWorkspaceId])
 
   const loadFilterOptions = async () => {
-    const user = pb.authStore.model
-    if (!user) return
-
     try {
       const [tagsRes, campaignsRes] = await Promise.all([
-        pb.collection('tags').getFullList({ filter: `user_id = "${user.id}"`, sort: 'name' }),
-        pb.collection('campaigns').getFullList({ filter: `user_id = "${user.id}"`, sort: 'name' })
+        tagsService.getAll(),
+        campaignsService.getAll()
       ])
       setTags(tagsRes)
       setCampaigns(campaignsRes)
@@ -124,6 +120,8 @@ export function Tasks() {
   // Filter tasks
   const filteredTasks = useMemo(() => {
     const query = searchQuery.toLowerCase()
+
+
     const result = tasks.filter((task) => {
       const matchesSearch = !query ||
         task.title?.toLowerCase().includes(query) ||
@@ -138,7 +136,7 @@ export function Tasks() {
         (workspaceFilter === 'none' ? !task.context_id : task.context_id === workspaceFilter)
       const matchesCampaign = campaignFilter === 'all' ||
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
-      const matchesType = typeFilter === 'all' || task.type === typeFilter
+      const matchesType = typeFilter === 'all' || (task.type || 'task') === typeFilter
       // Handle task tags checking. PocketBase returns array of tag IDs in 'tags' field
       // Or array of expanded objects if expanded.
       // Assuming 'tags' field on task contains IDs.
@@ -219,7 +217,7 @@ export function Tasks() {
     priorityFilter !== 'all',
     workspaceFilter !== 'all',
     campaignFilter !== 'all',
-    typeFilter !== 'all',
+    typeFilter !== 'task',
     tagFilter !== 'all',
     clientFilter !== 'all',
     dueDateFilter !== 'all',
@@ -233,9 +231,7 @@ export function Tasks() {
     setPriorityFilter('all')
     setWorkspaceFilter('all')
     setCampaignFilter('all')
-    setTypeFilter('all')
-    setTagFilter('all')
-    setDueDateFilter('all')
+    setTypeFilter('task') // Fixed: Reset to 'task' instead of 'all'
     setTagFilter('all')
     setDueDateFilter('all')
     setClientFilter('all')
@@ -577,7 +573,7 @@ export function Tasks() {
                             }
                           }}
                           onClick={() => {
-                            setSelectedTask(task)
+                            setModalTask(task)
                             setTaskModalOpen(true)
                           }}
                           isOverdue={isOverdue}
@@ -599,7 +595,7 @@ export function Tasks() {
               updateTaskMutation.mutate({ id: taskId, updates: { status: newStatus } })
             }}
             onTaskClick={(task) => {
-              setSelectedTask(task)
+              setModalTask(task)
               setTaskModalOpen(true)
             }}
           />
@@ -626,12 +622,7 @@ export function Tasks() {
         )
       }
 
-      {/* Task Modal */}
-      <TaskModal
-        open={isTaskModalOpen}
-        onOpenChange={setTaskModalOpen}
-        task={selectedTask}
-      />
+      {/* Task Modal is handled globally */}
 
       <CampaignModal
         open={isCampaignModalOpen}

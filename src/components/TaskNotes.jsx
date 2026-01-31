@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import pb from '../lib/pocketbase'
+import { notesService } from '../services/notes.service'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Send } from 'lucide-react'
@@ -21,10 +21,7 @@ export function TaskNotes({ taskId }) {
     const loadNotes = async () => {
         setLoading(true)
         try {
-            const records = await pb.collection('task_notes').getFullList({
-                filter: `task_id = "${taskId}"`,
-                sort: '-created'
-            })
+            const records = await notesService.getNotesForTask(taskId)
             setNotes(records)
         } catch (error) {
             console.error('Error loading notes:', error)
@@ -40,11 +37,7 @@ export function TaskNotes({ taskId }) {
 
         setSubmitting(true)
         try {
-            await pb.collection('task_notes').create({
-                task_id: taskId,
-                user_id: pb.authStore.model?.id,
-                content: newNote.trim()
-            })
+            await notesService.create(taskId, newNote.trim())
 
             setNewNote('')
             loadNotes()

@@ -42,14 +42,40 @@ export function Calendar() {
   // Convert tasks to calendar events (including virtual occurrences and prayer times)
   const events = useMemo(() => {
     const expandedTasks = expandTasksWithVirtualOccurrences(tasks)
+    console.log('📅 Calendar: Raw tasks:', tasks.length)
+    console.log('📅 Calendar: Expanded tasks:', expandedTasks.length)
 
     const taskEvents = expandedTasks
-      .filter(task => task.scheduled_time)
+      .filter(task => {
+        // Accept if it has EITHER scheduled_time OR due_date
+        const hasDate = task.scheduled_time || task.due_date;
+        if (!hasDate) return false;
+
+        // Debug first few tasks
+        if (expandedTasks.indexOf(task) < 3) {
+          console.log(`📅 Task [${task.title}] Scheduled: ${task.scheduled_time}, Due: ${task.due_date}`)
+        }
+        return true;
+      })
       .map(task => {
-        // Strip timezone to avoid day shifts (parse as local time)
-        const timeStr = task.scheduled_time.replace(/\+00:00$/, '').replace('Z', '')
-        const start = new Date(timeStr)
-        const end = new Date(start.getTime() + (task.duration || 60) * 60000) // duration in minutes
+        let start, end, isAllDay = false;
+
+        if (task.scheduled_time) {
+          // Strip timezone to avoid day shifts (parse as local time)
+          const timeStr = task.scheduled_time.replace(/\+00:00$/, '').replace('Z', '')
+          start = new Date(timeStr)
+          end = new Date(start.getTime() + (task.duration || 60) * 60000) // duration in minutes
+        } else if (task.due_date) {
+          // Fallback to due_date as All Day event
+          // Handle potentially full ISO string "2026-01-30 10:00:00.000Z"
+          const dateOnly = task.due_date.substring(0, 10);
+          const [year, month, day] = dateOnly.split('-').map(Number);
+
+          // Month is 0-indexed in JS Date
+          start = new Date(year, month - 1, day);
+          end = new Date(year, month - 1, day, 23, 59, 59);
+          isAllDay = true;
+        }
 
         return {
           id: task.id,
@@ -57,8 +83,20 @@ export function Calendar() {
           start,
           end,
           resource: task,
+          allDay: isAllDay
         }
       })
+
+    console.log('📅 Calendar: Mapped events:', taskEvents.length)
+    if (taskEvents.length > 0) {
+      console.log('📅 First Event Debug:', {
+        title: taskEvents[0].title,
+        start: taskEvents[0].start,
+        end: taskEvents[0].end,
+        allDay: taskEvents[0].allDay,
+        isDate: taskEvents[0].start instanceof Date
+      })
+    }
 
     // Add prayer times as events
     const prayerEvents = prayerData ? getPrayerEvents(prayerData) : []

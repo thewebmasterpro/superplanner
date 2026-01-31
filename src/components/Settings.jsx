@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import pb from '../lib/pocketbase'
 import { fetchPrayerTimesByCity, fetchMonthlyPrayerTimesByCity } from '../services/prayerTimesApi'
+import { settingsService } from '../services/settings.service'
+import { categoriesService } from '../services/categories.service'
 import './Settings.css'
 
 function Settings({ user, onClose }) {
@@ -25,9 +26,7 @@ function Settings({ user, onClose }) {
 
     const loadCategories = async () => {
         try {
-            const records = await pb.collection('task_categories').getFullList({
-                sort: 'name'
-            })
+            const records = await categoriesService.getAll()
             setCategories(records || [])
         } catch (err) {
             console.error('Error loading categories:', err)
@@ -36,15 +35,9 @@ function Settings({ user, onClose }) {
 
     const loadPreferences = async () => {
         try {
-            // Find preferences by user_id
-            const records = await pb.collection('user_preferences').getFullList({
-                filter: `user_id = "${user.id}"`,
-                sort: '-updated'
-            })
+            const data = await settingsService.getPreferences()
 
-            const data = records[0]
-
-            if (data) {
+            if (data && data.id) {
                 setCity(data.city || '')
                 setPomodoroWork(data.pomodoro_work_duration || 25)
                 setPomodoroBreak(data.pomodoro_break_duration || 5)
@@ -94,13 +87,7 @@ function Settings({ user, onClose }) {
             const monthlyTimes = await fetchMonthlyPrayerTimesByCity(city, '', 3, month, year)
 
             // Save preferences
-            // Check if exists
-            const records = await pb.collection('user_preferences').getFullList({
-                filter: `user_id = "${user.id}"`
-            })
-
             const payload = {
-                user_id: user.id,
                 city: city.trim(),
                 country: '',
                 calculation_method: 3,
@@ -109,38 +96,10 @@ function Settings({ user, onClose }) {
                 spotify_playlist_url: spotifyPlaylistUrl.trim(),
             }
 
-            if (records.length > 0) {
-                await pb.collection('user_preferences').update(records[0].id, payload)
-            } else {
-                await pb.collection('user_preferences').create(payload)
-            }
+            await settingsService.updatePreferences(payload)
 
             // Save monthly prayer times
-            // This might generate many requests.
-            // Ideally we delete old for this month and insert new, or update.
-            // Simplified: parallel create for each day?
-            // PocketBase batch is not available in SDK directly easily.
-            // We'll iterate.
-
-            // Note: In Supabase code it was upsert on date.
-            // Here, we should check if date exists.
-
-            const batchPromises = monthlyTimes.map(async (timeItem) => {
-                try {
-                    const existing = await pb.collection('prayer_schedule').getList(1, 1, {
-                        filter: `date = "${timeItem.date}"`
-                    })
-                    if (existing.items.length > 0) {
-                        await pb.collection('prayer_schedule').update(existing.items[0].id, timeItem)
-                    } else {
-                        await pb.collection('prayer_schedule').create(timeItem)
-                    }
-                } catch (e) {
-                    console.error('Error saving day:', timeItem.date, e)
-                }
-            })
-
-            await Promise.all(batchPromises)
+            await settingsService.savePrayerTimes(monthlyTimes)
 
             setSuccess('Settings saved successfully!')
             setTimeout(() => {
@@ -157,10 +116,8 @@ function Settings({ user, onClose }) {
     const handleAddCategory = async () => {
         if (!newCategoryName.trim()) return
         try {
-            const user = pb.authStore.model
-            await pb.collection('task_categories').create({
-                name: newCategoryName.trim(),
-                user_id: user.id
+            await categoriesService.create({
+                name: newCategoryName.trim()
             })
             setNewCategoryName('')
             loadCategories()
@@ -173,7 +130,7 @@ function Settings({ user, onClose }) {
 
     const handleDeleteCategory = async (id) => {
         try {
-            await pb.collection('task_categories').delete(id)
+            await categoriesService.delete(id)
             loadCategories()
             setSuccess('Catégorie supprimée')
         } catch (err) {

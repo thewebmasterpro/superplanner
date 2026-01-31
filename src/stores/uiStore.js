@@ -11,6 +11,10 @@ export const useUIStore = create((set) => ({
   isContactModalOpen: false,
   setContactModalOpen: (open) => set({ isContactModalOpen: open }),
 
+  // Global Task Modal State
+  modalTask: null,
+  setModalTask: (task) => set({ modalTask: task }),
+
   // Sidebar
   isSidebarOpen: (() => {
     const saved = localStorage.getItem('superplanner-sidebar-open')

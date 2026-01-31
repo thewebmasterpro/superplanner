@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import pb from '../lib/pocketbase'
+import { categoriesService } from '../services/categories.service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,12 +18,11 @@ export function CategoryManager() {
 
     const loadCategories = async () => {
         try {
-            const records = await pb.collection('task_categories').getFullList({
-                sort: 'name'
-            })
+            const records = await categoriesService.getAll()
             setCategories(records || [])
         } catch (error) {
             console.error('Error loading categories:', error)
+            toast.error('Failed to load categories')
         }
     }
 
@@ -33,12 +32,9 @@ export function CategoryManager() {
 
         setLoading(true)
         try {
-            const user = pb.authStore.model
-
-            await pb.collection('task_categories').create({
+            await categoriesService.create({
                 name: newCategory.name,
-                color: newCategory.color,
-                user_id: user.id
+                color: newCategory.color
             })
 
             toast.success('Category added successfully!')
@@ -55,7 +51,7 @@ export function CategoryManager() {
         if (!window.confirm('Delete this category? Tasks using it will remain unaffected.')) return
 
         try {
-            await pb.collection('task_categories').delete(id)
+            await categoriesService.delete(id)
 
             toast.success('Category deleted successfully!')
             loadCategories()

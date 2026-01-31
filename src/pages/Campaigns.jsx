@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Search, Calendar as CalendarIcon, Filter, Layers, MoreVertical, Archive, Trash2, Edit2, LayoutGrid, GanttChartSquare } from 'lucide-react'
+import { format } from 'date-fns'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -12,13 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import pb from '../lib/pocketbase'
-import { format } from 'date-fns'
-import { CampaignModal } from '../components/CampaignModal'
-import { CampaignGantt } from '../components/CampaignGantt'
-import { CampaignDetails } from '../components/CampaignDetails'
-import { toast } from 'react-hot-toast'
+import { campaignsService } from '../services/campaigns.service'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { CampaignModal } from '../components/CampaignModal'
+import { CampaignDetails } from '../components/CampaignDetails'
+import { CampaignGantt } from '../components/CampaignGantt'
 
 export function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
@@ -32,55 +32,21 @@ export function Campaigns() {
   /* New state for View Mode & Selected Campaign */
   const [view, setView] = useState('list') // 'list' | 'gantt' | 'details'
   const [selectedCampaignId, setSelectedCampaignId] = useState(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     loadCampaigns()
-  }, [activeWorkspaceId]) // Reload when workspace changes
+  }, [activeWorkspaceId, statusFilter, search, refreshTrigger]) // Reload when trigger changes
 
   const loadCampaigns = async () => {
     setLoading(true)
     try {
-      const user = pb.authStore.model
-      if (!user) return
-
-      let filter = `user_id = "${user.id}"`
-
-      // Filter by workspace if not Global view
-      if (activeWorkspaceId) {
-        filter += ` && context_id = "${activeWorkspaceId}"`
-      }
-
-      const records = await pb.collection('campaigns').getFullList({
-        filter,
-        sort: '-start_date',
-        expand: 'context_id'
+      const data = await campaignsService.getAll({
+        workspaceId: activeWorkspaceId,
+        status: statusFilter,
+        search: search
       })
-
-      // Fetch counts for tasks and meetings
-      const campaignsWithCounts = await Promise.all(records.map(async (c) => {
-        try {
-          // We can use getList(1, 1) and read totalItems to get counts efficiently
-          const tasks = await pb.collection('tasks').getList(1, 1, {
-            filter: `campaign_id = "${c.id}" && type = "task"`,
-            fields: 'id'
-          })
-          const meetings = await pb.collection('tasks').getList(1, 1, {
-            filter: `campaign_id = "${c.id}" && type = "meeting"`,
-            fields: 'id'
-          })
-
-          return {
-            ...c,
-            tasks: [{ count: tasks.totalItems }],
-            meetings: [{ count: meetings.totalItems }]
-          }
-        } catch (e) {
-          return { ...c, tasks: [{ count: 0 }], meetings: [{ count: 0 }] }
-        }
-      }))
-
-      setCampaigns(campaignsWithCounts)
-
+      setCampaigns(data)
     } catch (error) {
       console.error('Error loading campaigns:', error)
       toast.error('Failed to load campaigns')
@@ -93,7 +59,7 @@ export function Campaigns() {
     if (!confirm('Are you sure you want to delete this campaign?')) return
 
     try {
-      await pb.collection('campaigns').delete(id)
+      await campaignsService.delete(id)
       toast.success('Campaign deleted')
       loadCampaigns()
       if (selectedCampaignId === id) {
@@ -101,18 +67,24 @@ export function Campaigns() {
         setSelectedCampaignId(null)
       }
     } catch (error) {
-      toast.error('Error deleting campaign')
+      console.error('Error deleting campaign:', error)
+      toast.error(error.message || 'Error deleting campaign')
     }
   }
 
   const handleArchive = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'archived' ? 'draft' : 'archived'
     try {
-      await pb.collection('campaigns').update(id, { status: newStatus })
-      toast.success(`Campaign ${newStatus === 'archived' ? 'archived' : 'restored'}`)
+      if (currentStatus === 'archived') {
+        await campaignsService.restore(id)
+        toast.success('Campaign restored')
+      } else {
+        await campaignsService.archive(id)
+        toast.success('Campaign archived')
+      }
       loadCampaigns()
     } catch (error) {
-      toast.error('Error updating status')
+      console.error('Error updating status:', error)
+      toast.error(error.message || 'Error updating status')
     }
   }
 
@@ -121,11 +93,8 @@ export function Campaigns() {
     setView('details')
   }
 
-  const filteredCampaigns = campaigns.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || c.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  // No need for client-side filtering - service already filters
+  const filteredCampaigns = campaigns
 
   // Render Details View if active
   if (view === 'details' && selectedCampaignId) {
@@ -133,6 +102,7 @@ export function Campaigns() {
       <div className="container-tight py-6">
         <CampaignDetails
           campaignId={selectedCampaignId}
+          lastUpdated={refreshTrigger} // Pass trigger to force reload details
           onBack={() => { setView('list'); setSelectedCampaignId(null); }}
           onEdit={(c) => { setEditingCampaign(c); setIsModalOpen(true); }}
         />
@@ -140,7 +110,10 @@ export function Campaigns() {
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           campaign={editingCampaign}
-          onSuccess={() => { loadCampaigns(); }} // Should ideally reload details too if open
+          onSuccess={() => {
+            setRefreshTrigger(prev => prev + 1); // Trigger reload for both list and details
+            // loadCampaigns() is triggered by useEffect on refreshTrigger change
+          }}
         />
       </div>
     )

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import pb from '../lib/pocketbase'
+import { projectsService } from '../services/projects.service'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,14 +11,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, FolderKanban, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, FolderKanban, AlertCircle, Edit2 } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useContacts } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
 
 export function ProjectManager() {
     const { workspaces, loadWorkspaces } = useWorkspaceStore()
+    const { contacts } = useContacts()
     const [projects, setProjects] = useState([])
-    const [newProject, setNewProject] = useState({ name: '', description: '', context_id: '' })
+    const [formData, setFormData] = useState({ name: '', description: '', context_id: '', contact_id: '' })
+    const [editingId, setEditingId] = useState(null)
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -28,96 +31,112 @@ export function ProjectManager() {
     const loadData = async () => {
         try {
             await loadWorkspaces()
-            const records = await pb.collection('projects').getFullList({
-                sort: 'name',
-                expand: 'context_id'
-            })
-
-            // Map expanded context (workspace) to simpler structure if desired, or access via expand
-            const mappedProjects = records.map(p => ({
-                ...p,
-                // Assign expanded context to a convenient property if needed by UI
-                contexts: p.expand?.context_id
-            }))
-
-            setProjects(mappedProjects)
+            // Fetch with status='all' to avoid filtering by 'status' field if it doesn't exist (causing 400 -> fallback -> no expand)
+            const records = await projectsService.getAll({ status: 'all' })
+            setProjects(records)
         } catch (error) {
             console.error('Error loading projects:', error)
+            toast.error('Failed to load projects')
         }
     }
 
-    const handleAddProject = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        if (!newProject.name.trim()) {
+        if (!formData.name.trim()) {
             toast.error('Project name is required')
             return
         }
-        if (!newProject.context_id) {
+        if (!formData.context_id) {
             toast.error('Workspace is mandatory for all projects')
             return
         }
 
         setLoading(true)
         try {
-            const user = pb.authStore.model
+            const payload = {
+                name: formData.name,
+                description: formData.description || null,
+                context_id: formData.context_id,
+                contact_id: formData.contact_id || null
+            }
 
-            await pb.collection('projects').create({
-                name: newProject.name,
-                description: newProject.description || null,
-                context_id: newProject.context_id,
-                user_id: user.id
-            })
+            if (editingId) {
+                await projectsService.update(editingId, payload)
+                toast.success('Project updated successfully!')
+            } else {
+                await projectsService.create(payload)
+                toast.success('Project added successfully!')
+            }
 
-            toast.success('Project added successfully!')
-            setNewProject({ name: '', description: '', context_id: '' })
+            resetForm()
             loadData()
         } catch (error) {
-            toast.error(`Failed to add project: ${error.message}`)
+            toast.error(`Failed to ${editingId ? 'update' : 'add'} project: ${error.message}`)
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleEdit = (project) => {
+        setEditingId(project.id)
+        setFormData({
+            name: project.name,
+            description: project.description || '',
+            context_id: project.context_id || '', // Use raw ID
+            contact_id: project.contact_id || ''  // Use raw ID
+        })
+        // Scroll to form (optional but nice)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const handleDeleteProject = async (id) => {
         if (!window.confirm('Delete this project? Tasks using it will remain unaffected.')) return
 
         try {
-            await pb.collection('projects').delete(id)
+            await projectsService.delete(id)
 
             toast.success('Project deleted successfully!')
             loadData()
+            if (editingId === id) resetForm()
         } catch (error) {
             toast.error(`Failed to delete project: ${error.message}`)
         }
     }
 
+    const resetForm = () => {
+        setEditingId(null)
+        setFormData({ name: '', description: '', context_id: '', contact_id: '' })
+    }
+
     return (
         <div className="space-y-4">
-            <Card>
+            <Card className={editingId ? "border-primary border-2" : ""}>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <FolderKanban className="w-5 h-5 text-primary" />
-                        Add New Project
+                        {editingId ? 'Edit Project' : 'Add New Project'}
                     </CardTitle>
-                    <CardDescription>Create a new project. Each project must be linked to a workspace.</CardDescription>
+                    <CardDescription>
+                        {editingId ? 'Update project details, workspace, and client.' : 'Create a new project. Each project must be linked to a workspace.'}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleAddProject} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="projectName">Project Name *</Label>
                                 <Input
                                     id="projectName"
-                                    value={newProject.name}
-                                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                                    placeholder="e.g., Website Redesign, Product Launch"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="e.g., Website Redesign"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="projectWorkspace">Workspace *</Label>
                                 <Select
-                                    value={newProject.context_id}
-                                    onValueChange={(value) => setNewProject({ ...newProject, context_id: value })}
+                                    value={formData.context_id}
+                                    onValueChange={(value) => setFormData({ ...formData, context_id: value })}
                                 >
                                     <SelectTrigger id="projectWorkspace">
                                         <SelectValue placeholder="Select a workspace" />
@@ -137,20 +156,46 @@ export function ProjectManager() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="projectClient">Client (Optional)</Label>
+                                <Select
+                                    value={formData.contact_id === "" || !formData.contact_id ? "none" : formData.contact_id}
+                                    onValueChange={(value) => setFormData({ ...formData, contact_id: value === "none" ? "" : value })}
+                                >
+                                    <SelectTrigger id="projectClient">
+                                        <SelectValue placeholder="Select a client" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        {contacts.map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>
+                                                {c.name} {c.company ? `(${c.company})` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="projectDesc">Description (Optional)</Label>
                             <Input
                                 id="projectDesc"
-                                value={newProject.description}
-                                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 placeholder="Brief description of the project"
                             />
                         </div>
-                        <Button type="submit" disabled={loading}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Project
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button type="submit" disabled={loading}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                {editingId ? 'Update Project' : 'Add Project'}
+                            </Button>
+                            {editingId && (
+                                <Button type="button" variant="ghost" onClick={resetForm}>
+                                    Cancel
+                                </Button>
+                            )}
+                        </div>
                     </form>
                 </CardContent>
             </Card>
@@ -167,40 +212,63 @@ export function ProjectManager() {
                                 No projects yet. Create one above!
                             </p>
                         ) : (
-                            projects.map((proj) => (
-                                <div key={proj.id} className="flex flex-col p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-lg">{proj.name}</span>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDeleteProject(proj.id)}
-                                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                    {proj.description && (
-                                        <p className="text-sm text-muted-foreground line-clamp-2">{proj.description}</p>
-                                    )}
-                                    <div className="flex items-center mt-auto">
-                                        {proj.contexts ? (
-                                            <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-full text-xs font-medium">
-                                                <div
-                                                    className="w-2 h-2 rounded-full"
-                                                    style={{ backgroundColor: proj.contexts.color }}
-                                                />
-                                                {proj.contexts.name}
+                            projects.map((proj) => {
+                                const workspace = proj.expand?.context_id || workspaces.find(w => w.id === proj.context_id)
+                                const client = proj.expand?.contact_id || contacts.find(c => c.id === proj.contact_id)
+                                return (
+                                    <div key={proj.id}
+                                        className={`flex flex-col p-4 border rounded-lg transition-colors gap-2 ${editingId === proj.id ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'}`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-lg">{proj.name}</span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleEdit(proj)}
+                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                                    title="Edit Project"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteProject(proj.id)}
+                                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                                    title="Delete Project"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
                                             </div>
-                                        ) : (
-                                            <div className="flex items-center gap-1 text-xs text-destructive font-medium">
-                                                <AlertCircle className="w-3 h-3" />
-                                                No workspace (Migration required)
-                                            </div>
+                                        </div>
+                                        {proj.description && (
+                                            <p className="text-sm text-muted-foreground line-clamp-2">{proj.description}</p>
                                         )}
+                                        <div className="flex items-center mt-auto flex-wrap gap-2">
+                                            {workspace ? (
+                                                <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-full text-xs font-medium">
+                                                    <div
+                                                        className="w-2 h-2 rounded-full"
+                                                        style={{ backgroundColor: workspace.color }}
+                                                    />
+                                                    {workspace.name}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1 text-xs text-destructive font-medium">
+                                                    <AlertCircle className="w-3 h-3" />
+                                                    No workspace
+                                                </div>
+                                            )}
+                                            {client && (
+                                                <div className="flex items-center gap-2 px-2 py-1 border rounded-full text-xs text-muted-foreground">
+                                                    {client.name}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))
+                                )
+                            })
                         )}
                     </div>
                 </CardContent>

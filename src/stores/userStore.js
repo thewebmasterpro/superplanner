@@ -27,6 +27,13 @@ export const useUserStore = create(
           spotify: true,
           stats: true,
           upcomingTasks: true,
+          eisenhower: true,
+          worldClock: true,
+          scratchpad: true,
+        },
+        dashboardLayout: {
+          topRow: ['stat-total', 'stat-inprogress', 'stat-overdue', 'stat-completed'],
+          mainGrid: ['prayer-times', 'inspiration', 'focus-tools', 'upcoming-tasks', 'eisenhower', 'world-clock', 'scratchpad', 'active-campaigns']
         },
       },
       setPreferences: (prefs) => set((state) => ({

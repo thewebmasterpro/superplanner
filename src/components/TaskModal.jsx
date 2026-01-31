@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useCreateTask, useUpdateTask, useDeleteTask, useArchiveTask } from '../hooks/useTasks'
-import pb from '../lib/pocketbase'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +30,11 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
+import { categoriesService } from '../services/categories.service'
+import { projectsService } from '../services/projects.service'
+import { tagsService } from '../services/tags.service'
+import { campaignsService } from '../services/campaigns.service'
+import { teamsService } from '../services/teams.service'
 
 export function TaskModal({ open, onOpenChange, task = null }) {
   const isEditing = !!task?.id
@@ -49,11 +53,6 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(false)
   const [campaigns, setCampaigns] = useState([])
-
-  // Agenda Items (sub-tasks) for meetings
-  const [agendaItems, setAgendaItems] = useState([])
-  const [newAgendaItem, setNewAgendaItem] = useState({ title: '', description: '', priority: 'medium' })
-  const [showAgendaForm, setShowAgendaForm] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -82,9 +81,6 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     if (open) {
       loadCategoriesAndProjects()
       if (task) {
-        if (task.type === 'meeting') {
-          loadAgendaItems(task.id)
-        }
         // Load tags from task 'tags' relation field (array of IDs)
         // If task comes from useTasks with 'expand', task.tags might be IDs or objects depending on SDK version/expansion.
         // Usually plain field access gives IDs.
@@ -94,46 +90,39 @@ export function TaskModal({ open, onOpenChange, task = null }) {
           // Fallback if using join table or not expanded properly initially
           // For now assume tasks have tags array.
           setSelectedTags([])
-          // If we really need to fetch from join table:
-          // loadTaskTags(task.id) 
         }
 
-        if (task.team_id) {
-          loadTeamMembers(task.team_id)
-        } else if (currentTeam) {
-          loadTeamMembers(currentTeam.id)
-        }
+        // Load users for assignment
+        loadTeamMembers()
       } else {
         setSelectedTags([])
-        if (currentTeam) {
-          loadTeamMembers(currentTeam.id)
-        }
+        loadTeamMembers()
       }
     } else {
       // Reset when modal closes
-      setAgendaItems([])
-      setShowAgendaForm(false)
-      setNewAgendaItem({ title: '', description: '', priority: 'medium' })
       setSelectedTags([])
     }
   }, [open, task])
 
-  // Populate form when editing
+  // Populate form when editing or reset for creation
   useEffect(() => {
-    if (task) {
+    if (task?.id) {
+      // Editing existing task - populate from task data
       setFormData({
         title: task.title || '',
         description: task.description || '',
         status: task.status || 'todo',
         priority: task.priority || 'medium',
-        due_date: task.due_date || '',
+        // Truncate ISO date to YYYY-MM-DD for date input
+        due_date: task.due_date ? task.due_date.substring(0, 10) : '',
         duration: task.duration || 60,
-        scheduled_time: task.scheduled_time || '',
+        // scheduled_time is datetime-local, needs YYYY-MM-DDTHH:mm
+        scheduled_time: task.scheduled_time ? task.scheduled_time.substring(0, 16) : '',
         category_id: task.category_id || '',
         project_id: task.project_id || '',
         blocked_reason: task.blocked_reason || '',
         recurrence: task.recurrence || '',
-        recurrence_end: task.recurrence_end || '',
+        recurrence_end: task.recurrence_end ? task.recurrence_end.substring(0, 10) : '',
         type: task.type || 'task',
         agenda: task.agenda || '',
         campaign_id: task.campaign_id || '',
@@ -143,7 +132,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         assigned_to: task.assigned_to || ''
       })
     } else {
-      // Reset form for creation
+      // Creating new task/meeting - use defaults + type from task prop if provided
       setFormData({
         title: '',
         description: '',
@@ -157,7 +146,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         blocked_reason: '',
         recurrence: '',
         recurrence_end: '',
-        type: 'task',
+        type: task?.type || 'task',
         agenda: '',
         campaign_id: '',
         context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? '' : (activeWorkspaceId || ''),
@@ -168,16 +157,15 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     }
   }, [task, activeWorkspaceId])
 
-  const loadTeamMembers = async (teamId) => {
+  const loadTeamMembers = async () => {
     try {
-      const records = await pb.collection('team_members').getFullList({
-        filter: `team_id = "${teamId}"`,
-        expand: 'user_id'
-      })
+      // Fetch users directly via service
+      const records = await teamsService.getAllUsers()
+
       // Map to structure expected
-      const members = records.map(r => ({
-        ...r,
-        auth_user: r.expand?.user_id // Assuming user_id is the relation to users
+      const members = records.map(user => ({
+        user_id: user.id,
+        auth_user: user
       }))
       setTeamMembers(members)
     } catch (error) {
@@ -188,83 +176,21 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const loadCategoriesAndProjects = async () => {
     try {
       const [categoriesRes, projectsRes, tagsRes, campaignsRes] = await Promise.all([
-        pb.collection('task_categories').getFullList({ sort: 'name' }),
-        pb.collection('projects').getFullList({ sort: 'name' }),
-        pb.collection('tags').getFullList({ sort: 'name' }),
-        pb.collection('campaigns').getFullList({ filter: 'status = "active"', sort: 'name' })
+        categoriesService.getAll(),
+        projectsService.getAll(),
+        tagsService.getAll(),
+        campaignsService.getAll()
       ])
 
-      setCategories(categoriesRes)
-      setProjects(projectsRes)
-      setTags(tagsRes)
-      setCampaigns(campaignsRes)
+      // Handle raw array or ListResult wrapper if necessary
+      // Services return array usually.
+
+      setCategories(categoriesRes || [])
+      setProjects(projectsRes || [])
+      setTags(tagsRes?.items || tagsRes || [])
+      setCampaigns(campaignsRes || [])
     } catch (error) {
       console.error('Error loading data:', error)
-    }
-  }
-
-  const loadAgendaItems = async (meetingId) => {
-    try {
-      const records = await pb.collection('tasks').getFullList({
-        filter: `parent_meeting_id = "${meetingId}"`,
-        sort: 'created' // created_at in supbase, created in PB
-      })
-      setAgendaItems(records)
-    } catch (error) {
-      console.error('Error loading agenda items:', error)
-    }
-  }
-
-  const createAgendaItem = async () => {
-    if (!newAgendaItem.title.trim() || !task?.id) return
-
-    try {
-      const user = pb.authStore.model
-
-      await pb.collection('tasks').create({
-        user_id: user.id,
-        parent_meeting_id: task.id,
-        title: newAgendaItem.title,
-        description: newAgendaItem.description || null,
-        priority: newAgendaItem.priority,
-        status: 'todo',
-        type: 'task',
-        due_date: task.due_date
-      })
-
-      // Reload agenda items
-      await loadAgendaItems(task.id)
-
-      // Reset form
-      setNewAgendaItem({ title: '', description: '', priority: 3 })
-      setShowAgendaForm(false)
-    } catch (error) {
-      console.error('Error creating agenda item:', error)
-    }
-  }
-
-  const toggleAgendaItemStatus = async (itemId, currentStatus) => {
-    const newStatus = currentStatus === 'done' ? 'todo' : 'done'
-
-    try {
-      await pb.collection('tasks').update(itemId, {
-        status: newStatus,
-        completed_at: newStatus === 'done' ? new Date().toISOString() : ""
-      })
-      await loadAgendaItems(task.id)
-    } catch (error) {
-      console.error('Error updating agenda item:', error)
-    }
-  }
-
-  const deleteAgendaItem = async (itemId) => {
-    if (!confirm('Delete this agenda item?')) return
-
-    try {
-      await pb.collection('tasks').delete(itemId)
-      await loadAgendaItems(task.id)
-    } catch (error) {
-      console.error('Error deleting agenda item:', error)
     }
   }
 

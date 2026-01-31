@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import pb from '../lib/pocketbase'
+import { blockersService } from '../services/blockers.service'
 import toast from 'react-hot-toast'
 
 /**
@@ -14,10 +14,7 @@ export function useBlockers(taskId) {
         queryFn: async () => {
             if (!taskId) return []
 
-            const records = await pb.collection('task_dependencies').getFullList({
-                filter: `task_id = "${taskId}"`,
-                expand: 'blocker_id'
-            })
+            const records = await blockersService.getBlockers(taskId)
 
             // Map expand.blocker_id to flat object
             return records.map(d => ({
@@ -34,10 +31,7 @@ export function useBlockers(taskId) {
         queryFn: async () => {
             if (!taskId) return []
 
-            const records = await pb.collection('task_dependencies').getFullList({
-                filter: `blocker_id = "${taskId}"`,
-                expand: 'task_id'
-            })
+            const records = await blockersService.getBlockedTasks(taskId)
 
             return records.map(d => ({
                 ...d.expand?.task_id,
@@ -50,38 +44,7 @@ export function useBlockers(taskId) {
     // Add a blocker to this task
     const addBlocker = useMutation({
         mutationFn: async (blockerId) => {
-            // Validation: no self-blocking
-            if (blockerId === taskId) {
-                throw new Error('A task cannot block itself')
-            }
-
-            // Validation: check for simple cycle (A↔B)
-            try {
-                const reverseCheck = await pb.collection('task_dependencies').getFirstListItem(`task_id="${blockerId}" && blocker_id="${taskId}"`)
-                if (reverseCheck) {
-                    throw new Error('Circular dependency detected: this would create a cycle')
-                }
-            } catch (e) {
-                if (e.status !== 404) throw e
-            }
-
-            // Check if exists
-            try {
-                const exists = await pb.collection('task_dependencies').getFirstListItem(`task_id="${taskId}" && blocker_id="${blockerId}"`)
-                if (exists) {
-                    throw new Error('This blocker already exists')
-                }
-            } catch (e) {
-                if (e.status !== 404) throw e
-            }
-
-
-            const record = await pb.collection('task_dependencies').create({
-                task_id: taskId,
-                blocker_id: blockerId
-            })
-
-            return record
+            return await blockersService.addBlocker(taskId, blockerId)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['blockers', taskId] })
@@ -96,7 +59,7 @@ export function useBlockers(taskId) {
     // Remove a blocker from this task
     const removeBlocker = useMutation({
         mutationFn: async (dependencyId) => {
-            await pb.collection('task_dependencies').delete(dependencyId)
+            await blockersService.removeBlocker(dependencyId)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['blockers', taskId] })

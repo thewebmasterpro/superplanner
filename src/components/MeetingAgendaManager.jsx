@@ -29,29 +29,29 @@ export function MeetingAgendaManager({ meetingId }) {
         const timer = setTimeout(async () => {
             setSearching(true)
             try {
-                const user = pb.authStore.model
-                if (!user) return
-
                 if (searchType === 'task') {
                     // Search tasks
-                    const records = await pb.collection('tasks').getList(1, 5, {
-                        filter: `user_id = "${user.id}" && type = "task" && title ~ "${searchQuery}"`,
-                        sort: '-created'
-                    })
+                    // Use service and filter locally as getAll gets everything
+                    const allTasks = await tasksService.getAll()
+                    const records = allTasks
+                        .filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => new Date(b.created) - new Date(a.created))
+                        .slice(0, 5)
 
                     // Filter out already added items
                     const existingIds = agenda.filter(a => a.type === 'task').map(a => a.item_id)
-                    setSearchResults(records.items.filter(t => !existingIds.includes(t.id)) || [])
+                    setSearchResults(records.filter(t => !existingIds.includes(t.id)))
                 } else {
                     // Search campaigns
-                    const records = await pb.collection('campaigns').getList(1, 5, {
-                        filter: `user_id = "${user.id}" && name ~ "${searchQuery}"`,
-                        sort: '-created'
-                    })
+                    const allCampaigns = await campaignsService.getAll()
+                    const records = allCampaigns
+                        .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => new Date(b.created) - new Date(a.created))
+                        .slice(0, 5)
 
                     // Filter out already added items
                     const existingIds = agenda.filter(a => a.type === 'campaign').map(a => a.item_id)
-                    setSearchResults(records.items.filter(c => !existingIds.includes(c.id)) || [])
+                    setSearchResults(records.filter(c => !existingIds.includes(c.id)))
                 }
             } catch (err) {
                 console.error('Search error:', err)

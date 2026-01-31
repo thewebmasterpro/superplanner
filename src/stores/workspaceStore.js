@@ -1,6 +1,20 @@
+/**
+ * Workspace Store (Zustand)
+ *
+ * Manages workspace/context state using Zustand.
+ * Uses workspaces service for all data operations.
+ *
+ * Benefits of this approach:
+ * - Separation of concerns: Zustand manages state, service manages data
+ * - Easy to test: service can be tested independently
+ * - Reusable: service can be used in React Query hooks or standalone scripts
+ *
+ * @module stores/workspaceStore
+ */
+
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import pb from '../lib/pocketbase'
+import { workspacesService } from '../services/workspaces.service'
 
 export const useWorkspaceStore = create(
     persist(
@@ -9,44 +23,47 @@ export const useWorkspaceStore = create(
             activeWorkspaceId: null, // null = Global view
             loading: false,
 
+            /**
+             * Load all workspaces for the current user
+             */
             loadWorkspaces: async () => {
                 set({ loading: true })
+
                 try {
-                    const user = pb.authStore.model
-                    if (!user) return
-
-                    const records = await pb.collection('workspaces').getFullList({
-                        filter: `user_id = "${user.id}" && status = "active"`,
-                        sort: 'name'
-                    })
-
-                    set({ workspaces: records || [], loading: false })
+                    const workspaces = await workspacesService.getAll()
+                    set({ workspaces, loading: false })
                 } catch (error) {
-                    console.error('Error loading workspaces:', error)
-                    set({ loading: false })
+                    console.error('❌ Error in loadWorkspaces:', error)
+                    set({ workspaces: [], loading: false })
                 }
             },
 
+            /**
+             * Set the active workspace
+             * @param {string|null} workspaceId - Workspace ID or null for global view
+             */
             setActiveWorkspace: (workspaceId) => {
                 set({ activeWorkspaceId: workspaceId })
             },
 
+            /**
+             * Get the currently active workspace object
+             * @returns {Object|null} Active workspace or null
+             */
             getActiveWorkspace: () => {
                 const { workspaces, activeWorkspaceId } = get()
                 if (!activeWorkspaceId) return null
                 return workspaces.find(w => w.id === activeWorkspaceId) || null
             },
 
+            /**
+             * Create a new workspace
+             * @param {Object} workspaceData - Workspace data (name, description, etc.)
+             * @returns {Promise<Object>} Created workspace
+             */
             createWorkspace: async (workspaceData) => {
                 try {
-                    const user = pb.authStore.model
-                    if (!user) throw new Error('Not authenticated')
-
-                    const record = await pb.collection('workspaces').create({
-                        ...workspaceData,
-                        user_id: user.id
-                    })
-
+                    const record = await workspacesService.create(workspaceData)
                     set(state => ({ workspaces: [...state.workspaces, record] }))
                     return record
                 } catch (error) {
@@ -55,10 +72,15 @@ export const useWorkspaceStore = create(
                 }
             },
 
+            /**
+             * Update an existing workspace
+             * @param {string} id - Workspace ID
+             * @param {Object} updates - Fields to update
+             * @returns {Promise<Object>} Updated workspace
+             */
             updateWorkspace: async (id, updates) => {
                 try {
-                    const record = await pb.collection('workspaces').update(id, updates)
-
+                    const record = await workspacesService.update(id, updates)
                     set(state => ({
                         workspaces: state.workspaces.map(w => w.id === id ? record : w)
                     }))
@@ -69,16 +91,16 @@ export const useWorkspaceStore = create(
                 }
             },
 
+            /**
+             * Delete a workspace (soft or hard delete)
+             * @param {string} id - Workspace ID
+             * @param {string} mode - 'soft' for archive, 'hard' for permanent delete
+             */
             deleteWorkspace: async (id, mode = 'soft') => {
                 try {
-                    if (mode === 'soft') {
-                        // Soft delete = archive
-                        await pb.collection('workspaces').update(id, { status: 'archived' })
-                    } else {
-                        // Hard delete (orphan tasks)
-                        await pb.collection('workspaces').delete(id)
-                    }
+                    await workspacesService.delete(id, mode)
 
+                    // Remove from local state
                     set(state => ({
                         workspaces: state.workspaces.filter(w => w.id !== id),
                         activeWorkspaceId: state.activeWorkspaceId === id ? null : state.activeWorkspaceId
@@ -92,7 +114,8 @@ export const useWorkspaceStore = create(
         {
             name: 'superplanner-workspace',
             partialize: (state) => ({
-                workspaces: state.workspaces
+                workspaces: state.workspaces,
+                activeWorkspaceId: state.activeWorkspaceId  // Persist active workspace
             })
         }
     )

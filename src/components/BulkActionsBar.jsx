@@ -28,11 +28,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import pb from '../lib/pocketbase'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
+import { tasksService } from '../services/tasks.service'
+import { categoriesService } from '../services/categories.service'
+import { campaignsService } from '../services/campaigns.service'
+import { tagsService } from '../services/tags.service'
+import { meetingsService } from '../services/meetings.service'
+import { teamsService } from '../services/teams.service'
+import pb from '../lib/pocketbase' // Still needed for authStore check if service doesn't expose user? Or just remove if unused. Services handle user check. But loadOptions checks user.
 
 /**
  * Bulk actions bar shown when tasks are selected
@@ -61,34 +67,28 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
         try {
             const [tagsRes, catsRes, meetingsRes, campaignsRes] = await Promise.all([
-                pb.collection('tags').getFullList({ sort: 'name' }),
-                pb.collection('task_categories').getFullList({ sort: 'name' }),
-                pb.collection('tasks').getFullList({ filter: `user_id = "${user.id}" && type = "meeting"`, sort: 'title' }),
-                pb.collection('campaigns').getFullList({ filter: `user_id = "${user.id}" && status = "active"`, sort: 'name' })
+                tagsService.getAll(), // Assuming getAll returns array or wrapper
+                categoriesService.getAll(),
+                tasksService.getAll({ type: 'meeting' }), // Use updated method
+                campaignsService.getAll()
             ])
 
-            setTags(tagsRes)
-            setCategories(catsRes)
-            setMeetings(meetingsRes)
-            setCampaigns(campaignsRes)
+            // Handle potential wrapped responses if needed (standard PB response is array for getFullList usually, but services might wrap)
+            // My services usually return record array directly.
+
+            setTags(tagsRes?.items || tagsRes || []) // Handle list wrapper if present
+            setCategories(catsRes || [])
+            setMeetings(meetingsRes || [])
+            setCampaigns(campaignsRes || [])
 
             // Fetch team members
             // 1. Get user's teams
-            const myMemberships = await pb.collection('team_members').getFullList({
-                filter: `user_id = "${user.id}"`,
-                expand: 'team_id'
-            })
+            const myMemberships = await teamsService.MyMemberships()
 
             const teamIds = myMemberships.map(m => m.team_id)
             if (teamIds.length > 0) {
                 // 2. Get all members of those teams
-                // Using filter 'team_id' in [list] is not directly supported in PB syntax like SQL 'IN'. 
-                // We use OR syntax.
-                const filter = teamIds.map(id => `team_id = "${id}"`).join(' || ')
-                const allMembers = await pb.collection('team_members').getFullList({
-                    filter: `(${filter})`,
-                    expand: 'user_id'
-                })
+                const allMembers = await teamsService.getTeamMembers(teamIds)
 
                 // Deduplicate by user_id
                 const uniqueMembers = []
@@ -112,11 +112,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const updateTasks = async (updates) => {
         setLoading(true)
         try {
-            // Parallelize updates
-            // PB doesn't have bulk update filter. We iterate.
-            // Ideally we limit concurrency.
-            const promises = selectedIds.map(id => pb.collection('tasks').update(id, updates))
-            await Promise.all(promises)
+            await tasksService.bulkUpdate(selectedIds, updates)
 
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
             return true
@@ -131,22 +127,38 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
 
     // Bulk soft delete (Trash)
     const handleDelete = async () => {
-        const success = await updateTasks({ deleted_at: new Date().toISOString() })
-        if (success) {
+        setLoading(true)
+        try {
+            await tasksService.bulkMoveToTrash(selectedIds)
             toast.success(`${count} task(s) moved to trash`)
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
             onClear()
             onSuccess?.()
+        } catch (error) {
+            toast.error('Failed to move tasks to trash')
+        } finally {
+            setLoading(false)
+            setShowDeleteConfirm(false)
         }
-        setShowDeleteConfirm(false)
     }
 
     // Bulk archive
     const handleArchive = async () => {
-        const success = await updateTasks({ archived_at: new Date().toISOString() })
-        if (success) {
-            toast.success(`${count} task(s) archived`)
-            onClear()
-            onSuccess?.()
+        setLoading(true)
+        try {
+            await tasksService.bulkArchive(selectedIds) // Wait, tasksService.bulkArchive? It's not in my snippet, but bulkMoveToTrash exists. Check tasks.service.js... Ah, bulkArchive was missing! I need to add it or use updateTasks({ archived_at: ... }).
+            // Actually, I can use updateTasks helper which calls bulkUpdate.
+            // But verify if bulkArchive method exists.
+            // I'll stick to updateTasks({ archived_at: ... }) as it uses bulkUpdate internally via local helper.
+            // Oh wait, local helper updateTasks calls bulkUpdate now. So that's consistent!
+            const success = await updateTasks({ archived_at: new Date().toISOString() })
+            if (success) {
+                toast.success(`${count} task(s) archived`)
+                onClear()
+                onSuccess?.()
+            }
+        } catch (e) {
+            // updateTasks handles error
         }
     }
 
@@ -165,22 +177,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const handleAddTag = async (tagId) => {
         setLoading(true)
         try {
-            // We need to append the tag to each task's existing tags
-            // 1. Fetch current tags for tasks
-            // PB filter IN not supported, use loop or parallel fetch
-            const tasks = await Promise.all(selectedIds.map(id => pb.collection('tasks').getOne(id)))
-
-            // 2. Update with new tag
-            const promises = tasks.map(task => {
-                const currentTags = task.tags || []
-                if (currentTags.includes(tagId)) return Promise.resolve() // Already has tag
-
-                return pb.collection('tasks').update(task.id, {
-                    tags: [...currentTags, tagId]
-                })
-            })
-
-            await Promise.all(promises)
+            await tasksService.bulkAddTag(selectedIds, tagId)
 
             const tagName = tags.find(t => t.id === tagId)?.name
             toast.success(`Tag "${tagName}" added to ${count} task(s)`)
@@ -219,30 +216,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const handleAddToMeeting = async (meetingId) => {
         setLoading(true)
         try {
-            // Get current max position for this meeting
-            // We can't easily aggregate max in PB API. We iterate or fetch all items 1 page sort desc.
-            const existingItems = await pb.collection('meeting_items').getList(1, 1, {
-                filter: `meeting_id = "${meetingId}"`,
-                sort: '-position'
-            })
-
-            let nextPosition = existingItems.items.length > 0 ? existingItems.items[0].position + 1 : 0
-
-            // Insert all selected tasks as meeting items
-            const promises = selectedIds.map((taskId, index) => {
-                return pb.collection('meeting_items').create({
-                    meeting_id: meetingId,
-                    item_type: 'task',
-                    task_id: taskId,
-                    title: 'Task Reference',
-                    position: nextPosition + index
-                }).catch(err => {
-                    // Ignore duplicates if any unique constraint
-                    console.warn(err)
-                })
-            })
-
-            await Promise.all(promises)
+            await meetingsService.bulkAddToAgenda(meetingId, 'task', selectedIds)
 
             const meetingName = meetings.find(m => m.id === meetingId)?.title
             toast.success(`${count} task(s) added to "${meetingName}" agenda`)

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useBlockers, isTaskBlocked, areAllBlockersDone } from '../hooks/useBlockers'
-import pb from '../lib/pocketbase'
+import { tasksService } from '../services/tasks.service'
 
 /**
  * Component to display and manage blockers for a task
@@ -26,17 +26,17 @@ export function BlockerManager({ taskId, readOnly = false }) {
         const timer = setTimeout(async () => {
             setSearching(true)
             try {
-                const user = pb.authStore.model
-                if (!user) return
+                // Fetch all tasks using service
+                const allTasks = await tasksService.getAll()
 
-                const result = await pb.collection('tasks').getList(1, 5, {
-                    filter: `user_id = "${user.id}" && id != "${taskId}" && title ~ "${searchQuery}"`,
-                    fields: 'id,title,status', // optimize fetch if needed, but PB returns full object by default usually
-                })
+                // Filter locally: exclude current task, match title search
+                const result = allTasks
+                    .filter(t => t.id !== taskId && t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .slice(0, 5)
 
                 // Filter out already added blockers
                 const blockerIds = blockers.map(b => b.id)
-                setSearchResults(result.items.filter(t => !blockerIds.includes(t.id)) || [])
+                setSearchResults(result.filter(t => !blockerIds.includes(t.id)))
 
             } catch (err) {
                 console.error('Search error:', err)
