@@ -143,8 +143,8 @@ class TasksService {
    */
   async restore(id) {
     return await pb.collection('tasks').update(id, {
-      deleted_at: null,
-      archived_at: null
+      deleted_at: '',
+      archived_at: ''
     })
   }
 
@@ -322,14 +322,14 @@ class TasksService {
 
     // Handle special views
     if (workspaceId === 'trash') {
-      filters.push('deleted_at != null')
+      filters.push('(deleted_at != "" && deleted_at != null)')
     } else if (workspaceId === 'archive') {
-      filters.push('deleted_at = null')
-      filters.push('archived_at != null')
+      filters.push('(deleted_at = "" || deleted_at = null)')
+      filters.push('(archived_at != "" && archived_at != null)')
     } else {
       // Default view: non-deleted, non-archived tasks
-      filters.push('deleted_at = null')
-      filters.push('archived_at = null')
+      filters.push('(deleted_at = "" || deleted_at = null)')
+      filters.push('(archived_at = "" || archived_at = null)')
 
       // Filter by workspace if specified
       if (workspaceId && workspaceId !== 'all') {
