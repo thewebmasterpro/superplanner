@@ -191,7 +191,7 @@ export function Meetings() {
     priorityFilter !== 'all',
     workspaceFilter !== 'all',
     campaignFilter !== 'all',
-    typeFilter !== 'all',
+    typeFilter !== 'meeting',
     tagFilter !== 'all',
     clientFilter !== 'all',
     dueDateFilter !== 'all',
@@ -205,7 +205,7 @@ export function Meetings() {
     setPriorityFilter('all')
     setWorkspaceFilter('all')
     setCampaignFilter('all')
-    setTypeFilter('all')
+    setTypeFilter('meeting')
     setTagFilter('all')
     setDueDateFilter('all')
     setClientFilter('all')

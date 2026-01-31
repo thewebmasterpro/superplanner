@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { TaskModal } from '../TaskModal'
 import { CampaignModal } from '../CampaignModal'
 import { ContactModal } from '../ContactModal'
+import { BugReportModal } from '../BugReportModal'
 import pb from '../../lib/pocketbase'
 import { ThemeToggle } from '../ThemeToggle'
 import { GlobalSearch } from './GlobalSearch'
@@ -138,7 +139,7 @@ export function Navbar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => window.open('https://forms.gle/placeholder', '_blank')}
+            onClick={() => useUIStore.getState().setBugModalOpen(true)}
             title="Report a bug"
             className="text-muted-foreground hover:text-destructive transition-colors"
           >
@@ -194,6 +195,7 @@ export function Navbar() {
         open={isContactModalOpen}
         onOpenChange={setContactModalOpen}
       />
+      <BugReportModal />
     </nav>
   )
 }

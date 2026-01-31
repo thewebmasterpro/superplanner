@@ -11,6 +11,9 @@ export const useUIStore = create((set) => ({
   isContactModalOpen: false,
   setContactModalOpen: (open) => set({ isContactModalOpen: open }),
 
+  isBugModalOpen: false,
+  setBugModalOpen: (open) => set({ isBugModalOpen: open }),
+
   // Global Task Modal State
   modalTask: null,
   setModalTask: (task) => set({ modalTask: task }),
