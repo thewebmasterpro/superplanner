@@ -115,7 +115,7 @@ export const useWorkspaceStore = create(
             name: 'superplanner-workspace',
             partialize: (state) => ({
                 workspaces: state.workspaces,
-                activeWorkspaceId: state.activeWorkspaceId  // Persist active workspace
+                // activeWorkspaceId: state.activeWorkspaceId  // Removed to enforce Global View on load
             })
         }
     )
