@@ -1,4 +1,4 @@
-import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar, Search } from 'lucide-react'
+import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar, Search, Bug } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
@@ -134,6 +134,16 @@ export function Navbar() {
           </DropdownMenu>
 
           <ThemeToggle />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.open('https://forms.gle/placeholder', '_blank')}
+            title="Report a bug"
+            className="text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Bug className="w-5 h-5" />
+          </Button>
 
           <Button
             variant="ghost"
