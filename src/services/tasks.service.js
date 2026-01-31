@@ -297,14 +297,14 @@ class TasksService {
 
     // Handle special views
     if (workspaceId === 'trash') {
-      // filters.push('deleted_at != ""')
+      filters.push('deleted_at != ""')
     } else if (workspaceId === 'archive') {
-      // filters.push('deleted_at = ""')
-      // filters.push('archived_at != ""')
+      filters.push('deleted_at = ""')
+      filters.push('archived_at != ""')
     } else {
       // Default view: non-deleted, non-archived tasks
-      // filters.push('deleted_at = ""')
-      // filters.push('archived_at = ""')
+      filters.push('deleted_at = ""')
+      filters.push('archived_at = ""')
 
       // Filter by workspace if specified
       if (workspaceId && workspaceId !== 'all') {
