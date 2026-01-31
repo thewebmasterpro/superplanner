@@ -44,19 +44,7 @@ export function EisenhowerWidget({ tasks }) {
     }
 
     if (!urgentTask) {
-        return (
-            <Card className="h-full bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
-                <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
-                    <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
-                        <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg text-green-900 dark:text-green-100">All Clear!</h3>
-                        <p className="text-sm text-green-700 dark:text-green-300">No urgent & important tasks right now.</p>
-                    </div>
-                </CardContent>
-            </Card>
-        )
+        return null
     }
 
     return (
