@@ -22,15 +22,7 @@ class TagsService {
         try {
             return await pb.collection('tags').getFullList({
                 sort: 'name',
-                // Assuming tags are shared or user-specific? Typically user specific or workspace specific.
-                // If specific, filter by user_id if column exists.
-                // Looking at BulkActionsBar it just does getFullList({ sort: 'name' }).
-                // Safest to assume they might be global or RLS handles it.
-                // But usually we filter by user_id for safety if the schema has it.
-                // I will add user_id filter if possible, but reading BulkActionsBar implies just sorting.
-                // I'll check BulkActionsBar again. line 64: pb.collection('tags').getFullList({ sort: 'name' }) (No filter!)
-                // Maybe tags are public or RLS filtered. 
-                // I'll stick to what was there but add try-catch.
+                requestKey: null // Disable auto-cancellation
             })
         } catch (error) {
             console.error('❌ Error fetching tags:', error)
