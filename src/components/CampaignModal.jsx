@@ -21,7 +21,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Loader2, AlertCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }) {

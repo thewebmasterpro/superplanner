@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Trash2, FolderKanban, AlertCircle } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function ProjectManager() {
     const { workspaces, loadWorkspaces } = useWorkspaceStore()

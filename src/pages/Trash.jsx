@@ -17,7 +17,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function Trash() {
     const { setActiveWorkspace } = useWorkspaceStore()

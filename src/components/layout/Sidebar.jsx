@@ -98,17 +98,17 @@ export function Sidebar() {
         )}
 
         {/* Logo */}
-        <div className="p-4 border-b border-border">
+        <div id="sidebar-logo" className="p-4 border-b border-border">
           <h2 className="text-lg font-bold text-primary">🚀 Superplanner</h2>
         </div>
 
         {/* Workspace Selector */}
-        <div className="p-3 border-b border-border bg-muted/30">
+        <div id="sidebar-workspace-selector" className="p-3 border-b border-border bg-muted/30">
           <WorkspaceSelector />
         </div>
 
         {/* Menu items */}
-        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+        <nav id="sidebar-nav" className="p-4 space-y-1 flex-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon
             const isDisabled = item.disabled
@@ -117,6 +117,7 @@ export function Sidebar() {
             return (
               <a
                 key={item.label}
+                id={`sidebar-${item.label.toLowerCase()}`}
                 href={item.href}
                 onClick={(e) => {
                   if (isDisabled) e.preventDefault()

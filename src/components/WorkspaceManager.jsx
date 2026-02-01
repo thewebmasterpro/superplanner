@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { supabase } from '../lib/supabase'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 const PRESET_COLORS = [
     '#22c55e', // Green

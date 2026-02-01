@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useTimerStore } from '../stores/timerStore'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function useTimeTracking() {
     const queryClient = useQueryClient()

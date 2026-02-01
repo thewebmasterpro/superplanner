@@ -1,6 +1,6 @@
 import { Navbar } from './Navbar'
 import { Sidebar } from './Sidebar'
-import { Toaster } from 'react-hot-toast'
+import { Toaster } from 'sonner'
 import { GlobalTimerHandler } from '../GlobalTimerHandler'
 import { useEffect } from 'react'
 import { useUIStore } from '../../stores/uiStore'
@@ -30,7 +30,14 @@ export function MainLayout({ children }) {
           {children}
         </main>
       </div>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          className: 'font-sans',
+        }}
+      />
     </div>
   )
 }

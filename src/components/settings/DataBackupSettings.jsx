@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { generateCSV, generateJSON, downloadFile } from '@/lib/exportUtils'
 import { parseCSV, validateTasksImport } from '@/lib/importUtils'
 import { Loader2, Download, Upload, FileJson, FileSpreadsheet, CheckCircle, AlertTriangle } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function DataBackupSettings() {
     const { data: tasks = [] } = useTasks()

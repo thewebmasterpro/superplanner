@@ -33,7 +33,7 @@ import { supabase } from '../lib/supabase'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { useContactsList } from '../hooks/useContacts'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 /**
  * Bulk actions bar shown when tasks are selected

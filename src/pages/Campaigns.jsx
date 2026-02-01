@@ -17,7 +17,7 @@ import { format } from 'date-fns'
 import { CampaignModal } from '../components/CampaignModal'
 import { CampaignGantt } from '../components/CampaignGantt'
 import { CampaignDetails } from '../components/CampaignDetails'
-import { toast } from 'react-hot-toast'
+import { toast } from 'sonner'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export function Campaigns() {

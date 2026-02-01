@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Send, Paperclip } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 

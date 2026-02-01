@@ -30,7 +30,7 @@ import { MeetingAgendaManager } from './MeetingAgendaManager'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function TaskModal({ open, onOpenChange, task = null }) {
   const isEditing = !!task?.id

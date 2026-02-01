@@ -2,7 +2,7 @@ import { Menu, Settings, LogOut, User, Plus, CheckSquare, Calendar, Search } fro
 import { motion } from 'framer-motion'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { TaskModal } from '../TaskModal'
 import { CampaignModal } from '../CampaignModal'
 import { ContactModal } from '../ContactModal'
@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 export function Navbar() {
   const {
@@ -48,9 +47,10 @@ export function Navbar() {
       case '/campaigns': return 'Campaigns'
       case '/team': return 'Team'
       case '/settings': return 'Settings'
-      case '/workspace': return 'Workspace'
+      case '/workspace': return 'Settings'
       case '/archive': return 'Archive'
       case '/trash': return 'Trash'
+      case '/pipeline': return 'Pipeline'
       default: return 'Superplanner'
     }
   }
@@ -72,11 +72,12 @@ export function Navbar() {
   }
 
   return (
-    <nav className="border-b border-border bg-card sticky top-0 z-50">
+    <nav id="navbar" className="border-b border-border bg-card sticky top-0 z-50">
       <div className="container-tight h-16 flex items-center justify-between">
         {/* Left - Menu toggle */}
         <div className="flex items-center gap-4">
           <Button
+            id="nav-sidebar-toggle"
             variant="ghost"
             size="icon"
             onClick={() => toggleSidebar()}
@@ -100,14 +101,15 @@ export function Navbar() {
         </div>
 
         {/* Global Search Center */}
-        <GlobalSearch />
+        <div id="nav-global-search">
+          <GlobalSearch />
+        </div>
 
         {/* Right - User menu */}
-
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm" className="hidden sm:flex gap-2 font-semibold px-4">
+              <Button id="nav-create-btn" variant="default" size="sm" className="hidden sm:flex gap-2 font-semibold px-4">
                 <Plus className="w-4 h-4" />
                 <span>New content</span>
               </Button>
@@ -135,9 +137,37 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Mobile create button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default" size="icon" className="sm:hidden">
+                <Plus className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => openCreateModal('task')}>
+                <CheckSquare className="w-4 h-4 mr-2" />
+                New Task
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openCreateModal('meeting')}>
+                <Calendar className="w-4 h-4 mr-2" />
+                New Meeting
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openCreateModal('campaign')}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Campaign
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openCreateModal('client')}>
+                <User className="w-4 h-4 mr-2" />
+                New Client
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <ThemeToggle />
 
           <Button
+            id="nav-settings-btn"
             variant="ghost"
             size="icon"
             onClick={() => window.location.href = '/settings'}
@@ -147,7 +177,7 @@ export function Navbar() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button id="nav-user-menu" variant="ghost" size="icon">
                 <User className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>

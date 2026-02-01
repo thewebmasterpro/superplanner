@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 import { Users, Mail, Plus, Settings, LogOut, Check } from 'lucide-react'
 
 export function TeamSettings() {

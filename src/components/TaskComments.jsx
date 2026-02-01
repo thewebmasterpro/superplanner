@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Loader2, Send, Trash2, User } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function TaskComments({ taskId }) {
     const [comments, setComments] = useState([])

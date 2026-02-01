@@ -33,7 +33,7 @@ import {
 import { ContactModal, STATUS_OPTIONS } from '../components/ContactModal'
 import { PipelineBoard } from '../components/PipelineBoard'
 import { ComposeEmailModal } from '../components/ComposeEmailModal'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function Contacts({ initialView = 'list' }) {
     const { searchQuery } = useUIStore()

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Send } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 export function TaskNotes({ taskId }) {
     const [notes, setNotes] = useState([])
