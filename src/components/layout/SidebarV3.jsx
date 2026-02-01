@@ -7,6 +7,8 @@ import {
     Users,
     Layers,
     Video,
+    Archive,
+    Trash2,
     Settings,
     LogOut
 } from 'lucide-react'
@@ -25,13 +27,18 @@ export default function SidebarV3() {
         { icon: Users, label: 'Contacts', path: '/contacts' },
         { icon: Layers, label: 'Campagnes', path: '/campaigns' },
         { icon: BarChart, label: 'Statistiques', path: '/stats' },
+        { icon: Archive, label: 'Archives', path: '/archive' },
+        { icon: Trash2, label: 'Corbeille', path: '/trash' },
         { icon: Settings, label: 'Paramètres', path: '/settings' },
     ]
 
     return (
         <aside className="md:col-span-3 lg:col-span-2 card bg-base-100 shadow-xl h-full min-h-[500px]">
             <div className="card-body p-4">
-                <div className="flex items-center gap-2 mb-8 px-2">
+                <div
+                    className="flex items-center gap-2 mb-8 px-2 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigate('/')}
+                >
                     <LayoutDashboard className="text-primary w-8 h-8" />
                     <span className="font-bold text-xl font-display tracking-tight">Hagen Tasks</span>
                     <span className="badge badge-primary badge-xs align-top">V3</span>
