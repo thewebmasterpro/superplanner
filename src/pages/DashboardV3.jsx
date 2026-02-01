@@ -1,13 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import DashboardLayoutV3 from '../components/layout/DashboardLayoutV3'
 import TaskListV3 from '../components/v3/TaskListV3'
+import WeeklyChart from '../components/v3/WeeklyChart'
+import { TaskModal } from '../components/TaskModal'
 import { useTasks } from '../hooks/useTasks'
-import { LayoutDashboard, CheckCircle2, TrendingUp, AlertCircle, MoreHorizontal } from 'lucide-react'
+import { LayoutDashboard, CheckCircle2, TrendingUp, AlertCircle, MoreHorizontal, BarChart3 } from 'lucide-react'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 
 export default function DashboardV3() {
     const { data: tasks, isLoading } = useTasks()
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
 
     useEffect(() => {
         // Check if user has seen tour
@@ -18,7 +21,7 @@ export default function DashboardV3() {
                 animate: true,
                 steps: [
                     { element: 'aside', popover: { title: 'Navigation', description: 'Accédez à vos outils, tâches et paramètres ici.' } },
-                    { element: '#stats-section', popover: { title: 'Vue d\'ensemble', description: 'Suivez vos métriques clés en temps réel.' } },
+                    { element: '#stats-section', popover: { title: 'Vue d\'overview', description: 'Suivez vos métriques clés en temps réel.' } },
                     { element: '#task-section', popover: { title: 'Gestion des Tâches', description: 'Gérez vos tâches efficacement avec une interface modernisée.' } }
                 ],
                 onDestroyed: () => {
@@ -50,7 +53,10 @@ export default function DashboardV3() {
                     <h1 className="text-2xl font-bold font-display">Bonjour, Anouar 👋</h1>
                     <p className="text-muted-foreground">Voici ce qui se passe aujourd'hui.</p>
                 </div>
-                <button className="btn btn-primary gap-2 shadow-lg hover:shadow-primary/20 transition-all">
+                <button
+                    onClick={() => setIsTaskModalOpen(true)}
+                    className="btn btn-primary gap-2 shadow-lg hover:shadow-primary/20 transition-all"
+                >
                     <CheckCircle2 className="w-4 h-4" />
                     Nouvelle Tâche
                 </button>
@@ -103,23 +109,45 @@ export default function DashboardV3() {
                 </div>
             </section>
 
-            {/* Tasks Section */}
-            <section id="task-section" className="card bg-base-100 shadow-xl overflow-visible">
-                <div className="card-body p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="card-title text-lg font-display">Tâches en cours</h2>
-                        <div className="flex gap-2">
-                            <button className="btn btn-sm btn-ghost">Voir tout</button>
-                            <button className="btn btn-sm btn-ghost btn-square">
-                                <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
+            {/* Main Content Grid: Chart + Tasks */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-                    {/* Task List Component */}
-                    <TaskListV3 />
-                </div>
-            </section>
+                {/* Chart Section (1/3 width on large screens) */}
+                <section className="card bg-base-100 shadow-xl xl:col-span-1">
+                    <div className="card-body p-6">
+                        <h2 className="card-title text-lg font-display mb-4 flex gap-2">
+                            <BarChart3 className="w-5 h-5 text-accent" />
+                            Productivité Hebdo
+                        </h2>
+                        {tasks ? <WeeklyChart tasks={tasks} /> : <div className="skeleton h-[250px] w-full"></div>}
+                    </div>
+                </section>
+
+                {/* Tasks Section (2/3 width on large screens) */}
+                <section id="task-section" className="card bg-base-100 shadow-xl xl:col-span-2 overflow-visible">
+                    <div className="card-body p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="card-title text-lg font-display">Tâches en cours</h2>
+                            <div className="flex gap-2">
+                                <button className="btn btn-sm btn-ghost">Voir tout</button>
+                                <button className="btn btn-sm btn-ghost btn-square">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Task List Component */}
+                        <TaskListV3 />
+                    </div>
+                </section>
+            </div>
+
+            {/* Task Creation Modal */}
+            <TaskModal
+                open={isTaskModalOpen}
+                onOpenChange={setIsTaskModalOpen}
+            />
+
         </DashboardLayoutV3>
     )
 }
