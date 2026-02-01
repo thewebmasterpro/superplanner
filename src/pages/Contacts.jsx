@@ -33,6 +33,7 @@ import {
 import { ContactModal, STATUS_OPTIONS } from '../components/ContactModal'
 import { PipelineBoard } from '../components/PipelineBoard'
 import { ComposeEmailModal } from '../components/ComposeEmailModal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 
 export function Contacts({ initialView = 'list' }) {
@@ -237,9 +238,35 @@ export function Contacts({ initialView = 'list' }) {
 
             {/* Content Area */}
             {isLoading ? (
-                <div className="flex items-center justify-center py-12 flex-1">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
+                <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl flex-1">
+                    <table className="w-full">
+                        <thead className="bg-muted/30 border-b border-border/50">
+                            <tr>
+                                <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-16" /></th>
+                                <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-12" /></th>
+                                <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-16" /></th>
+                                <th className="px-6 py-4 text-left"><Skeleton className="h-3 w-20" /></th>
+                                <th className="px-6 py-4 text-right"><Skeleton className="h-3 w-14 ml-auto" /></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/30">
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <tr key={i}>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <Skeleton className="w-10 h-10 rounded-full" />
+                                            <div className="space-y-1"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-20" /></div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                                    <td className="px-6 py-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                                    <td className="px-6 py-4 space-y-1"><Skeleton className="h-3 w-36" /><Skeleton className="h-3 w-28" /></td>
+                                    <td className="px-6 py-4"><Skeleton className="h-8 w-8 rounded ml-auto" /></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </Card>
             ) : viewMode === 'pipeline' ? (
                 <div className="flex-1 overflow-hidden min-h-0">
                     <PipelineBoard

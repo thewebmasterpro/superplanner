@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TaskModal } from '@/components/TaskModal'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -31,6 +32,7 @@ import { supabase } from '../lib/supabase'
 import { CampaignModal } from '../components/CampaignModal'
 import { KanbanView } from '../components/KanbanView'
 import { useUpdateTask } from '../hooks/useTasks'
+import { motion } from 'framer-motion'
 
 export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
@@ -522,12 +524,19 @@ export function Tasks() {
                 </thead>
                 <tbody className="divide-y divide-border/30">
                   {isLoading ? (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-muted-foreground">
-                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                        <p>Loading tasks...</p>
-                      </td>
-                    </tr>
+                    [...Array(6)].map((_, i) => (
+                      <tr key={i} className="border-b border-border/30">
+                        <td className="px-3 py-4"><Skeleton className="h-4 w-4" /></td>
+                        <td className="px-2 py-4"><Skeleton className="h-4 w-4 rounded-full" /></td>
+                        <td className="px-6 py-4 space-y-2">
+                          <Skeleton className="h-4 w-[60%]" />
+                          <Skeleton className="h-3 w-[40%]" />
+                        </td>
+                        {visibleColumns.status && <td className="px-6 py-4"><Skeleton className="h-6 w-20 rounded-full" /></td>}
+                        {visibleColumns.dueDate && <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>}
+                        {visibleColumns.priority && <td className="px-6 py-4"><Skeleton className="h-3 w-3 rounded-full" /></td>}
+                      </tr>
+                    ))
                   ) : filteredTasks.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="px-6 py-12 text-center text-muted-foreground">
@@ -626,7 +635,11 @@ export function Tasks() {
 function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
 
   return (
-    <tr
+    <motion.tr
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      layout
       className={`border-b border-border/30 transition-all duration-300 cursor-pointer group relative
         ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
       `}
@@ -753,6 +766,6 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
           </td>
         )
       }
-    </tr >
+    </motion.tr>
   )
 }

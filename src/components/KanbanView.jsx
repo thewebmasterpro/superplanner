@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User, Calendar, MoreVertical } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const COLUMNS = [
     { id: 'todo', title: 'To Do', color: 'bg-slate-500' },
@@ -149,14 +150,24 @@ function KanbanColumn({ column, tasks, onTaskClick, activeId }) {
                     strategy={verticalListSortingStrategy}
                 >
                     <div className="flex flex-col gap-3">
-                        {tasks.map((task) => (
-                            <KanbanCard
+                        <AnimatePresence mode="popLayout">
+                        {tasks.map((task, index) => (
+                            <motion.div
                                 key={task.id}
+                                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                transition={{ duration: 0.2, delay: index * 0.03 }}
+                                layout
+                            >
+                            <KanbanCard
                                 task={task}
                                 onClick={() => onTaskClick(task)}
                                 isPlaceholder={activeId === task.id}
                             />
+                            </motion.div>
                         ))}
+                        </AnimatePresence>
                         {tasks.length === 0 && !isOver && (
                             <div className="text-center py-10 text-xs text-muted-foreground/30 font-medium italic">
                                 Drop tasks here

@@ -16,6 +16,7 @@ import { useUIStore } from '../stores/uiStore'
 import { CampaignProgressBar } from '../components/CampaignProgressBar'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { Skeleton } from '../components/ui/skeleton'
+import { motion } from 'framer-motion'
 
 
 export function Dashboard() {
@@ -161,7 +162,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="container-tight py-8 section-gap animate-in fade-in">
+    <div id="dashboard-page" className="container-tight py-8 section-gap animate-in fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -179,40 +180,58 @@ export function Dashboard() {
         task={selectedTask}
       />
 
-      {/* Stats Grid */}
+      {/* Stats Grid with stagger scale-up animation */}
       {preferences?.dashboardWidgets?.stats !== false && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          id="dashboard-stats"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+          }}
+        >
           {stats.map((stat) => {
             const Icon = stat.icon
             const isUrgent = stat.label === 'Overdue' && stat.value > 0
             const isTotal = stat.label === 'Total Tasks'
 
             return (
-              <Card key={stat.label} className="glass-card card-hover group cursor-default border-border/40 relative overflow-hidden">
-                <div className={`absolute top-0 right-0 p-3 opacity-5 group-hover:scale-125 transition-transform duration-500`}>
-                  <Icon className="w-12 h-12" />
-                </div>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
-                    {stat.label}
-                  </CardTitle>
-                  <div className="relative">
-                    {(isUrgent || isTotal) && (
-                      <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isUrgent ? 'bg-red-400' : 'bg-blue-400'} opacity-75`}></span>
-                        <span className={`relative inline-flex rounded-full h-2 w-2 ${isUrgent ? 'bg-red-500' : 'bg-blue-500'}`}></span>
-                      </span>
-                    )}
-                    <Icon className={`w-4 h-4 ${stat.color} transition-transform group-hover:scale-110`} />
+              <motion.div
+                key={stat.label}
+                variants={{
+                  hidden: { opacity: 0, y: 16, scale: 0.95 },
+                  show: { opacity: 1, y: 0, scale: 1 },
+                }}
+                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+              >
+                <Card className="glass-card card-hover group cursor-default border-border/40 relative overflow-hidden">
+                  <div className={`absolute top-0 right-0 p-3 opacity-5 group-hover:scale-125 transition-transform duration-500`}>
+                    <Icon className="w-12 h-12" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
-                </CardContent>
-              </Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
+                      {stat.label}
+                    </CardTitle>
+                    <div className="relative">
+                      {(isUrgent || isTotal) && (
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isUrgent ? 'bg-red-400' : 'bg-blue-400'} opacity-75`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${isUrgent ? 'bg-red-500' : 'bg-blue-500'}`}></span>
+                        </span>
+                      )}
+                      <Icon className={`w-4 h-4 ${stat.color} transition-transform group-hover:scale-110`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* Productivity & Spiritual Widgets */}
@@ -295,9 +314,9 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Upcoming Tasks */}
+      {/* Upcoming Tasks with stagger slide-in */}
       {preferences?.dashboardWidgets?.upcomingTasks !== false && (
-        <Card className="glass-card">
+        <Card id="dashboard-upcoming" className="glass-card">
           <CardHeader>
             <CardTitle>Upcoming Tasks</CardTitle>
             <CardDescription>Your tasks for today and tomorrow</CardDescription>
@@ -313,9 +332,12 @@ export function Dashboard() {
               </div>
             ) : (
               <>
-                {upcomingTasks.map((task) => (
-                  <div
+                {upcomingTasks.map((task, index) => (
+                  <motion.div
                     key={task.id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.06, type: 'spring', stiffness: 300, damping: 24 }}
                     className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/50 transition-all duration-200 cursor-pointer hover:translate-x-1"
                     onClick={() => window.location.href = '/tasks'}
                   >
@@ -330,7 +352,7 @@ export function Dashboard() {
                     <Badge variant={task.priority >= 4 ? 'destructive' : 'secondary'} className="shadow-sm">
                       P{task.priority}
                     </Badge>
-                  </div>
+                  </motion.div>
                 ))}
                 <div className="pt-2 text-center">
                   <Button variant="outline" onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto">

@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Skeleton } from '@/components/ui/skeleton'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 import { CampaignModal } from '../components/CampaignModal'
@@ -216,7 +217,23 @@ export function Campaigns() {
       )}
 
       {loading ? (
-        <div className="text-center py-12">Loading campaigns...</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Card key={i} className="border-l-4 border-l-transparent">
+              <CardHeader className="pb-3 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-3 w-1/3" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1"><Skeleton className="h-3 w-10" /><Skeleton className="h-4 w-24" /></div>
+                  <div className="space-y-1"><Skeleton className="h-3 w-10" /><Skeleton className="h-4 w-24" /></div>
+                </div>
+                <div className="border-t pt-3"><Skeleton className="h-4 w-32" /></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : filteredCampaigns.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-muted/10">
           <Layers className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
