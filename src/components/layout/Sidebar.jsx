@@ -1,4 +1,4 @@
-import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2, Building, Video, ChevronLeft, Layout } from 'lucide-react'
+import { Home, CheckSquare, Calendar, BarChart3, Settings, X, Users, Archive, Trash2, Building, Video, ChevronLeft } from 'lucide-react'
 import { useUIStore } from '../../stores/uiStore'
 import { useUserStore } from '../../stores/userStore'
 import { Button } from '@/components/ui/button'
@@ -21,9 +21,9 @@ export function Sidebar() {
     { label: 'Dashboard', icon: Home, href: '/' },
     { label: 'Tasks', icon: CheckSquare, href: '/tasks' },
     { label: 'Meetings', icon: Video, href: '/meetings' },
+    { label: 'Calendar', icon: Calendar, href: '/calendar' },
     { label: 'Contacts', icon: Users, href: '/contacts' },
     { label: 'Pipeline', icon: BarChart3, href: '/pipeline' },
-    { label: 'Calendar', icon: Calendar, href: '/calendar' },
     {
       label: 'Campaigns',
       icon: BarChart3,
@@ -32,7 +32,6 @@ export function Sidebar() {
       badge: null
     },
     { label: 'Team', icon: Building, href: '/team' },
-    { label: 'Workspace', icon: Layout, href: '/workspace' },
     { label: 'Settings', icon: Settings, href: '/settings' },
     { label: 'Archive', icon: Archive, href: '/archive', badge: null },
     { label: 'Trash', icon: Trash2, href: '/trash', badge: null }
