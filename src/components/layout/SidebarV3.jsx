@@ -3,6 +3,8 @@ import {
     LayoutDashboard,
     CheckSquare,
     BarChart,
+    Calendar,
+    Users,
     Settings,
     LogOut
 } from 'lucide-react'
@@ -16,6 +18,8 @@ export default function SidebarV3() {
     const menuItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: CheckSquare, label: 'Mes Tâches', path: '/tasks' },
+        { icon: Calendar, label: 'Calendrier', path: '/calendar' },
+        { icon: Users, label: 'Contacts', path: '/contacts' },
         { icon: BarChart, label: 'Statistiques', path: '/stats' },
         { icon: Settings, label: 'Paramètres', path: '/settings' },
     ]
