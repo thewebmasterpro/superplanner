@@ -7,6 +7,7 @@ import {
     LogOut
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { GlobalSearch } from '../v3/GlobalSearch'
 
 export default function SidebarV3() {
     const navigate = useNavigate()
@@ -26,6 +27,10 @@ export default function SidebarV3() {
                     <LayoutDashboard className="text-primary w-8 h-8" />
                     <span className="font-bold text-xl font-display tracking-tight">Hagen Tasks</span>
                     <span className="badge badge-primary badge-xs align-top">V3</span>
+                </div>
+
+                <div className="px-2 mb-6">
+                    <GlobalSearch />
                 </div>
 
                 <ul className="menu bg-base-100 w-full p-0 gap-2">
