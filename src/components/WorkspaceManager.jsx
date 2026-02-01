@@ -142,7 +142,7 @@ export function WorkspaceManager() {
 
         let message = `Delete "${ctx.name}"?`
         if (totalItems > 0) {
-            message += `\n\n⚠️ This workspace has ${stats.tasks} tasks and ${stats.campaigns} campaigns linked. They will become orphaned (no workspace).`
+            message += `\n\n⚠️ Ce workspace contient ${stats.tasks} tâches et ${stats.campaigns} projets liés. Ils deviendront orphelins (sans workspace).`
         }
 
         if (!window.confirm(message)) return
@@ -243,7 +243,7 @@ export function WorkspaceManager() {
                                                 )}
                                                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                                                     <span><strong>{stats.tasks}</strong> tasks</span>
-                                                    <span><strong>{stats.campaigns}</strong> campaigns</span>
+                                                    <span><strong>{stats.campaigns}</strong> projets</span>
                                                 </div>
                                             </div>
                                         </div>

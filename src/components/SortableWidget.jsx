@@ -22,21 +22,24 @@ export function SortableWidget({ id, children, isEditing }) {
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="h-full">
+        <div ref={setNodeRef} style={style} className="h-full relative group">
             {isEditing && (
                 <div
                     {...attributes}
                     {...listeners}
-                    className="absolute top-2 right-2 z-50 p-1.5 bg-background/80 backdrop-blur-sm rounded-md shadow-sm border border-border/50 cursor-grab active:cursor-grabbing hover:bg-accent transition-colors"
+                    className="absolute top-2 right-2 z-[60] p-1.5 bg-primary text-primary-foreground rounded-md shadow-lg cursor-grab active:cursor-grabbing hover:scale-110 transition-all"
+                    title="Glisser pour réorganiser"
                 >
-                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    <GripVertical className="w-4 h-4" />
                 </div>
             )}
-            <div className={`h-full ${isEditing ? 'pointer-events-none select-none' : ''}`}>
+
+            <div className="h-full">
                 {children}
             </div>
+
             {isEditing && (
-                <div className="absolute inset-0 border-2 border-dashed border-primary/20 rounded-xl pointer-events-none" />
+                <div className="absolute inset-0 border-2 border-primary/40 bg-primary/5 rounded-xl pointer-events-none -z-10" />
             )}
         </div>
     );

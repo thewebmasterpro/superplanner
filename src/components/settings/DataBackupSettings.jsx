@@ -230,7 +230,7 @@ export function DataBackupSettings() {
                                                 onCheckedChange={(c) => setSelectedColumns(prev => ({ ...prev, [col]: c }))}
                                                 disabled={exportFormat === 'json'}
                                             />
-                                            <Label htmlFor={col} className="capitalize cursor-pointer">{col.replace('_', ' ')}</Label>
+                                            <Label htmlFor={col} className="capitalize cursor-pointer">{{ campaign: 'Projet', project: 'Département', title: 'Titre', status: 'Statut', priority: 'Priorité', description: 'Description', due_date: 'Échéance', created: 'Créé le', context: 'Workspace' }[col] || col.replace('_', ' ')}</Label>
                                         </div>
                                     ))}
                                 </div>

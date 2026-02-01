@@ -110,7 +110,7 @@ export function MeetingAgendaManager({ meetingId }) {
                                     <Target className="w-3 h-3" /> Task
                                 </TabsTrigger>
                                 <TabsTrigger value="campaign" className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" /> Campaign
+                                    <Calendar className="w-3 h-3" /> Projet
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
@@ -166,7 +166,7 @@ export function MeetingAgendaManager({ meetingId }) {
                 <div className="text-center py-6 border border-dashed rounded-lg">
                     <p className="text-sm text-muted-foreground">No items in agenda yet.</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Add tasks or campaigns to discuss in this meeting.
+                        Ajoutez des tâches ou projets à discuter.
                     </p>
                 </div>
             ) : (

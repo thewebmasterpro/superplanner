@@ -4,7 +4,6 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
@@ -100,12 +99,12 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                 await campaignsService.create(payload)
             }
 
-            toast.success(isEditing ? 'Campaign updated' : 'Campaign created')
+            toast.success(isEditing ? 'Projet mis à jour' : 'Projet créé')
             onSuccess?.()
             onOpenChange(false)
         } catch (error) {
             console.error('Error saving campaign:', error)
-            toast.error('Failed to save campaign')
+            toast.error('Échec de la sauvegarde du projet')
         } finally {
             setLoading(false)
         }
@@ -115,20 +114,20 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Campaign' : 'New Campaign'}</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Modifier le Projet' : 'Nouveau Projet'}</DialogTitle>
                     <DialogDescription>
-                        Create a campaign to organize your marketing efforts or projects.
+                        Créez un projet pour organiser vos initiatives.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Campaign Name *</Label>
+                        <Label htmlFor="name">Nom du Projet *</Label>
                         <Input
                             id="name"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g. Summer Sale, Website Redesign"
+                            placeholder="ex: Refonte site web, Lancement produit"
                             required
                         />
                     </div>
@@ -178,7 +177,7 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                                 )}
                             </Label>
                             {activeWorkspaceId && !isEditing ? (
-                                <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
+                                <div className="flex items-center gap-2 h-11 px-4 rounded-xl bg-base-200/30">
                                     <div
                                         className="w-3 h-3 rounded-full"
                                         style={{ backgroundColor: getActiveWorkspace()?.color || '#6366f1' }}
@@ -247,15 +246,15 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                         </Select>
                     </div>
 
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    <div className="flex items-center justify-end gap-2 pt-4 border-t border-base-200">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={loading}>
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {isEditing ? 'Save Changes' : 'Create Campaign'}
+                            {isEditing ? 'Enregistrer' : 'Créer le Projet'}
                         </Button>
-                    </DialogFooter>
+                    </div>
                 </form>
             </DialogContent>
         </Dialog>

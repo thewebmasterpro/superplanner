@@ -71,9 +71,11 @@ export function useBlockers(taskId) {
         }
     })
 
+    const EMPTY_ARRAY = []
+
     return {
-        blockers: blockersQuery.data || [],
-        blocks: blocksQuery.data || [],
+        blockers: blockersQuery.data || EMPTY_ARRAY,
+        blocks: blocksQuery.data || EMPTY_ARRAY,
         isLoadingBlockers: blockersQuery.isLoading,
         isLoadingBlocks: blocksQuery.isLoading,
         addBlocker: addBlocker.mutate,

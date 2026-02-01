@@ -20,7 +20,7 @@ class ProjectsService {
      * @param {string} options.search - Search term
      * @returns {Promise<Array>} Array of project records
      */
-    async getAll({ workspaceId = null, status = 'active', search = '' } = {}) {
+    async getAll({ workspaceId = null, status = 'all', search = '' } = {}) {
         const user = pb.authStore.model
         if (!user) return []
 
@@ -29,7 +29,7 @@ class ProjectsService {
 
         try {
             const options = {
-                sort: '-id',
+                sort: '-created',
                 expand: 'context_id,contact_id',
                 requestKey: null
             }
@@ -40,54 +40,8 @@ class ProjectsService {
 
             return await pb.collection('projects').getFullList(options)
         } catch (error) {
-            console.error('❌ Error fetching projects:', error)
-
-            // Level 1: Try without expand (Common failure point for new relations)
-            try {
-                const options = {
-                    sort: '-id',
-                    requestKey: null
-                }
-                if (filterString) {
-                    options.filter = filterString
-                }
-                console.log('⚠️ Attempting Level 1 Fallback (No Expand)...')
-                const records = await pb.collection('projects').getFullList(options)
-                console.log('✅ Projects fetched (Level 1):', records.length)
-                return records
-            } catch (fallbackError) {
-                console.error('❌ Level 1 Fallback Failed:', fallbackError)
-
-                // Level 2: Minimal Filters (Protect against schema mismatch in filters)
-                try {
-                    console.log('⚠️ Attempting Level 2 Fallback (Minimal / Schema Safe)...')
-                    // Only filter by user, remove sort if column missing
-                    const records = await pb.collection('projects').getFullList({
-                        filter: `user_id = "${user.id}"`,
-                        sort: '-id', // 'created' system field always exists
-                        requestKey: null
-                    })
-                    console.log('✅ Projects fetched (Level 2):', records.length)
-                    return records
-                } catch (level2Error) {
-                    console.error('❌ Level 2 Fallback Failed:', level2Error)
-
-                    // Level 3: Extreme Safe Mode (Raw Fetch)
-                    try {
-                        console.log('⚠️ Attempting Level 3 Fallback (Raw Fetch)...')
-                        const records = await pb.collection('projects').getFullList({
-                            requestKey: null
-                        })
-                        // Client-side filter
-                        const userProjects = records.filter(p => p.user_id === user.id)
-                        console.log('✅ Projects fetched (Level 3):', userProjects.length)
-                        return userProjects
-                    } catch (finalError) {
-                        console.error('❌ Critical failure fetching projects:', finalError)
-                        return []
-                    }
-                }
-            }
+            console.error('Error fetching projects:', error)
+            return []
         }
     }
 

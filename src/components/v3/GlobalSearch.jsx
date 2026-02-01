@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Command } from 'lucide-react'
 import { aiService } from '../../services/ai.service'
-import { useMoveToTrash } from '../../hooks/useTasks'
 import { useNavigate } from 'react-router-dom'
+import { useUIStore } from '../../stores/uiStore'
 
 export function GlobalSearch() {
     const [open, setOpen] = useState(false)
@@ -11,6 +11,7 @@ export function GlobalSearch() {
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
+    const { setModalTask, setTaskModalOpen } = useUIStore()
 
     useEffect(() => {
         const down = (e) => {
@@ -44,13 +45,12 @@ export function GlobalSearch() {
         return () => clearTimeout(debounce)
     }, [query])
 
-    const handleSelect = (taskId) => {
+    const handleSelect = (task) => {
         setOpen(false)
-        // Navigate or open modal?
-        // For now, maybe just console log or simple alert, or navigate if we had a detailed view
-        // Ideally we'd open TaskModal in edit mode via URL param or context
-        console.log("Selected task", taskId)
-        // navigate(`/tasks/${taskId}`) // If we had routing
+        setQuery('')
+        setModalTask(task)
+        setTaskModalOpen(true)
+        navigate('/tasks')
     }
 
     return (
@@ -59,7 +59,7 @@ export function GlobalSearch() {
                 onClick={() => setOpen(true)}
                 className="btn btn-ghost gap-2 font-normal text-muted-foreground hidden md:flex"
             >
-                <span className="text-sm">Recherche IA...</span>
+                <span className="text-sm">Rechercher...</span>
                 <kbd className="kbd kbd-sm font-mono text-[10px] bg-muted">⌘K</kbd>
             </button>
 
@@ -85,13 +85,12 @@ export function GlobalSearch() {
                     <div className="max-h-[300px] overflow-y-auto">
                         {results.length > 0 ? (
                             <ul className="menu w-full p-2">
-                                <li className="menu-title text-xs uppercase opacity-50">Résultats Semantic AI</li>
+                                <li className="menu-title text-xs uppercase opacity-50">Résultats</li>
                                 {results.map(task => (
                                     <li key={task.id}>
-                                        <a onClick={() => handleSelect(task.id)} className="flex flex-col items-start gap-1 py-3 group">
+                                        <a onClick={() => handleSelect(task)} className="flex flex-col items-start gap-1 py-3 group">
                                             <div className="flex justify-between w-full">
                                                 <span className="font-semibold group-hover:text-primary transition-colors">{task.title}</span>
-                                                {task.score && <span className="badge badge-xs badge-ghost">{(task.score * 100).toFixed(0)}%</span>}
                                             </div>
                                             {task.description && <span className="text-xs opacity-60 line-clamp-1">{task.description}</span>}
                                         </a>
@@ -108,8 +107,8 @@ export function GlobalSearch() {
 
                         {!query && (
                             <div className="p-8 text-center text-xs text-muted-foreground">
-                                <p>Utilisez l'IA pour retrouver vos tâches par le sens.</p>
-                                <p className="mt-2">Essayez "Urgent", "Design", "Marketing"...</p>
+                                <p>Recherchez vos tâches par titre ou description.</p>
+                                <p className="mt-2">Essayez "Rapport", "Design", "Marketing"...</p>
                             </div>
                         )}
                     </div>

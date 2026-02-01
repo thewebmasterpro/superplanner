@@ -179,8 +179,6 @@ class TasksService {
     try {
       return await pb.collection('tasks').delete(id)
     } catch (error) {
-      console.log('Task delete failed, attempting cleanup of relations...', error)
-
       // Cleanup related records that might prevent deletion
       try {
         // 1. Time Logs
@@ -421,7 +419,6 @@ class TasksService {
 
       // Check if next date exceeds recurrence_end
       if (task.recurrence_end && nextDate > new Date(task.recurrence_end)) {
-        console.log('⏹️ Recurrence ended')
         return null
       }
 
@@ -458,8 +455,6 @@ class TasksService {
       }
 
       const nextTaskRecord = await pb.collection('tasks').create(newTask)
-      console.log('✅ Next occurrence created:', nextTaskRecord.id)
-
       return nextTaskRecord
     } catch (error) {
       console.error('❌ Recurrence handling error:', error)

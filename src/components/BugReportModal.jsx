@@ -22,6 +22,7 @@ import { Loader2, Bug } from 'lucide-react'
 import { useUIStore } from '../stores/uiStore'
 import { useCreateTask } from '../hooks/useTasks'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import pb from '../lib/pocketbase'
 import toast from 'react-hot-toast'
 
 export function BugReportModal() {
@@ -61,13 +62,30 @@ export function BugReportModal() {
             // If activeWorkspaceId is 'trash' or 'archive', we shouldn't create there.
             // We'll let the user know if they need to switch context, or just default to null/empty string if allowed.
 
+            // Find or create a 'BUG' tag
+            let bugTagId = null
+            try {
+                const existing = await pb.collection('tags').getFullList({
+                    filter: 'name = "BUG"',
+                    requestKey: null
+                })
+                if (existing.length > 0) {
+                    bugTagId = existing[0].id
+                } else {
+                    const created = await pb.collection('tags').create({ name: 'BUG', color: '#ef4444' })
+                    bugTagId = created.id
+                }
+            } catch (e) {
+                console.warn('Could not resolve BUG tag:', e)
+            }
+
             await createTask.mutateAsync({
                 title: bugTitle,
                 description: bugDescription,
                 status: 'todo',
                 priority: formData.severity === 'critical' ? 'high' : (formData.severity === 'high' ? 'high' : 'medium'),
                 type: 'task',
-                tags: [], // We ideally want a tag ID for 'BUG', but simply putting it in title is safer for now without looking up tags.
+                tags: bugTagId ? [bugTagId] : [],
                 context_id: (activeWorkspaceId && activeWorkspaceId !== 'all' && activeWorkspaceId !== 'trash') ? activeWorkspaceId : undefined
             })
 

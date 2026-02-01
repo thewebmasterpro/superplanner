@@ -23,32 +23,34 @@ function PrayerTimes() {
             // 1. Try to fetch from DB
             try {
                 const records = await pb.collection('prayer_schedule').getList(1, 1, {
-                    filter: `date ~ "${today}"`
+                    filter: `date ~ "${today}"`,
+                    requestKey: 'prayer-times-dashboard'
                 })
                 if (records.items.length > 0) {
                     data = records.items[0]
                 }
             } catch (dbError) {
-                console.warn('DB Fetch failed or empty, falling back to API', dbError)
+                // Ignore collection missing errors or aborts
+                if (dbError.status !== 404 && !dbError.isAbort) {
+                    console.warn('DB Fetch failed, falling back to API', dbError.message)
+                }
             }
 
             // 2. Fallback to API if no data in DB
             if (!data) {
-                console.log('Fetching prayer times from API...')
-                const prefs = await settingsService.getPreferences()
-
-                // Parse prayerLocation JSON if it exists
-                let city = 'Paris'
-                let country = 'France'
-
-                if (prefs.prayerLocation) {
-                    // It might be an object already if PB SDK handles JSON fields
-                    const loc = typeof prefs.prayerLocation === 'string' ? JSON.parse(prefs.prayerLocation) : prefs.prayerLocation
-                    if (loc.city) city = loc.city
-                    if (loc.country) country = loc.country
-                }
-
                 try {
+                    const prefs = await settingsService.getPreferences()
+
+                    // Parse prayerLocation JSON if it exists
+                    let city = 'Paris'
+                    let country = 'France'
+
+                    if (prefs?.prayerLocation) {
+                        const loc = typeof prefs.prayerLocation === 'string' ? JSON.parse(prefs.prayerLocation) : prefs.prayerLocation
+                        if (loc.city) city = loc.city
+                        if (loc.country) country = loc.country
+                    }
+
                     const apiData = await fetchPrayerTimesByCity(city, country)
                     data = apiData
 
@@ -59,21 +61,16 @@ function PrayerTimes() {
                             user_id: pb.authStore.model?.id,
                             ...apiData
                         }
-                        // Use existing service method if available or direct create
-                        try {
-                            await pb.collection('prayer_schedule').create(payload)
-                        } catch (createError) {
-                            // If create fails (e.g. duplicate or missing collection), ignore
-                            if (createError.status !== 404) {
-                                console.warn('Cache creation failed', createError)
-                            }
-                        }
+                        // Check if collection exists before creating
+                        await pb.collection('prayer_schedule').create(payload)
                     } catch (saveError) {
-                        console.warn('Failed to cache prayer times:', saveError)
+                        // Silent fail for cache
                     }
                 } catch (apiError) {
-                    console.error('API Fetch failed:', apiError)
-                    setError('Impossible de charger les horaires')
+                    if (!apiError.isAbort) {
+                        console.error('API Fetch failed:', apiError)
+                        setError('Impossible de charger les horaires')
+                    }
                     return
                 }
             }

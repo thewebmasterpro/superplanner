@@ -236,7 +236,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         const success = await updateTasks({ campaign_id: campaignId === 'none' ? null : campaignId })
         if (success) {
             const campaignName = campaigns.find(c => c.id === campaignId)?.name || 'None'
-            toast.success(`${count} task(s) added to campaign "${campaignName}"`)
+            toast.success(`${count} tâche(s) ajoutée(s) au projet "${campaignName}"`)
             onClear()
             onSuccess?.()
         }
@@ -362,7 +362,7 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
                     <Select onValueChange={handleAddToCampaign} disabled={loading}>
                         <SelectTrigger className="w-[130px] h-9">
                             <Rocket className="w-4 h-4 mr-1" />
-                            <SelectValue placeholder="Campaign" />
+                            <SelectValue placeholder="Projet" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="none">None</SelectItem>

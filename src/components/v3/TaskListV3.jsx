@@ -1,4 +1,4 @@
-import { useTasks, useUpdateTask, useMoveToTrash } from '../../hooks/useTasks'
+import { useTasks, useUpdateTask, useMoveToTrash } from '@/hooks/useTasks'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { AlertCircle, CheckCircle2, MoreHorizontal, Trash2 } from 'lucide-react'
@@ -21,7 +21,10 @@ export default function TaskListV3() {
     const activeTasks = tasks?.filter(t => t.status !== 'done' && t.status !== 'cancelled') || []
 
     // Check priority logic: assuming '5' or 'urgent' is high
-    const isHighPriority = (p) => p === '5' || p === 'urgent' || p === 'high'
+    const isHighPriority = (p) => {
+        const pStr = String(p).toLowerCase()
+        return pStr === '5' || pStr === 'urgent' || pStr === 'high' || pStr === '4'
+    }
 
     const handleToggleComplete = (task) => {
         updateTask.mutate({
@@ -87,8 +90,8 @@ export default function TaskListV3() {
                                 <label>
                                     <input
                                         type="checkbox"
-                                        className="checkbox checkbox-primary checkbox-sm"
-                                        checked={false}
+                                        className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                        checked={task.status === 'done'}
                                         onChange={() => handleToggleComplete(task)}
                                     />
                                 </label>
@@ -115,7 +118,7 @@ export default function TaskListV3() {
                             </td>
                             <td className="text-right">
                                 <button
-                                    className="btn btn-ghost btn-xs text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="btn btn-error btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={() => handleDelete(task.id)}
                                 >
                                     <Trash2 className="w-4 h-4" />

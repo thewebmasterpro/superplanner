@@ -36,18 +36,18 @@ export function ProjectManager() {
             setProjects(records)
         } catch (error) {
             console.error('Error loading projects:', error)
-            toast.error('Failed to load projects')
+            toast.error('Échec du chargement des départements')
         }
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!formData.name.trim()) {
-            toast.error('Project name is required')
+            toast.error('Le nom du département est requis')
             return
         }
         if (!formData.context_id) {
-            toast.error('Workspace is mandatory for all projects')
+            toast.error('Le workspace est obligatoire pour chaque département')
             return
         }
 
@@ -62,16 +62,16 @@ export function ProjectManager() {
 
             if (editingId) {
                 await projectsService.update(editingId, payload)
-                toast.success('Project updated successfully!')
+                toast.success('Département mis à jour !')
             } else {
                 await projectsService.create(payload)
-                toast.success('Project added successfully!')
+                toast.success('Département ajouté !')
             }
 
             resetForm()
             loadData()
         } catch (error) {
-            toast.error(`Failed to ${editingId ? 'update' : 'add'} project: ${error.message}`)
+            toast.error(`Échec de ${editingId ? 'la mise à jour' : "l'ajout"} du département : ${error.message}`)
         } finally {
             setLoading(false)
         }
@@ -90,16 +90,16 @@ export function ProjectManager() {
     }
 
     const handleDeleteProject = async (id) => {
-        if (!window.confirm('Delete this project? Tasks using it will remain unaffected.')) return
+        if (!window.confirm('Supprimer ce département ? Les tâches associées ne seront pas affectées.')) return
 
         try {
             await projectsService.delete(id)
 
-            toast.success('Project deleted successfully!')
+            toast.success('Département supprimé !')
             loadData()
             if (editingId === id) resetForm()
         } catch (error) {
-            toast.error(`Failed to delete project: ${error.message}`)
+            toast.error(`Échec de la suppression du département : ${error.message}`)
         }
     }
 
@@ -114,22 +114,22 @@ export function ProjectManager() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <FolderKanban className="w-5 h-5 text-primary" />
-                        {editingId ? 'Edit Project' : 'Add New Project'}
+                        {editingId ? 'Modifier le Département' : 'Nouveau Département'}
                     </CardTitle>
                     <CardDescription>
-                        {editingId ? 'Update project details, workspace, and client.' : 'Create a new project. Each project must be linked to a workspace.'}
+                        {editingId ? 'Modifiez les détails, le workspace et le client.' : 'Créez un nouveau département. Chaque département doit être lié à un workspace.'}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="projectName">Project Name *</Label>
+                                <Label htmlFor="projectName">Nom du Département *</Label>
                                 <Input
                                     id="projectName"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g., Website Redesign"
+                                    placeholder="ex: Marketing, Développement"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -139,7 +139,7 @@ export function ProjectManager() {
                                     onValueChange={(value) => setFormData({ ...formData, context_id: value })}
                                 >
                                     <SelectTrigger id="projectWorkspace">
-                                        <SelectValue placeholder="Select a workspace" />
+                                        <SelectValue placeholder="Sélectionner un workspace" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {workspaces.map((w) => (
@@ -157,16 +157,16 @@ export function ProjectManager() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="projectClient">Client (Optional)</Label>
+                                <Label htmlFor="projectClient">Client (Optionnel)</Label>
                                 <Select
                                     value={formData.contact_id === "" || !formData.contact_id ? "none" : formData.contact_id}
                                     onValueChange={(value) => setFormData({ ...formData, contact_id: value === "none" ? "" : value })}
                                 >
                                     <SelectTrigger id="projectClient">
-                                        <SelectValue placeholder="Select a client" />
+                                        <SelectValue placeholder="Sélectionner un client" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="none">None</SelectItem>
+                                        <SelectItem value="none">Aucun</SelectItem>
                                         {contacts.map((c) => (
                                             <SelectItem key={c.id} value={c.id}>
                                                 {c.name} {c.company ? `(${c.company})` : ''}
@@ -177,22 +177,22 @@ export function ProjectManager() {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="projectDesc">Description (Optional)</Label>
+                            <Label htmlFor="projectDesc">Description (Optionnel)</Label>
                             <Input
                                 id="projectDesc"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Brief description of the project"
+                                placeholder="Brève description du département"
                             />
                         </div>
                         <div className="flex gap-2">
                             <Button type="submit" disabled={loading}>
                                 <Plus className="w-4 h-4 mr-2" />
-                                {editingId ? 'Update Project' : 'Add Project'}
+                                {editingId ? 'Modifier' : 'Ajouter'}
                             </Button>
                             {editingId && (
                                 <Button type="button" variant="ghost" onClick={resetForm}>
-                                    Cancel
+                                    Annuler
                                 </Button>
                             )}
                         </div>
@@ -202,14 +202,14 @@ export function ProjectManager() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Your Projects</CardTitle>
-                    <CardDescription>{projects.length} projects configured</CardDescription>
+                    <CardTitle>Vos Départements</CardTitle>
+                    <CardDescription>{projects.length} départements configurés</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {projects.length === 0 ? (
                             <p className="text-sm text-muted-foreground col-span-full py-8 text-center border-dashed border rounded-lg">
-                                No projects yet. Create one above!
+                                Aucun département. Créez-en un ci-dessus !
                             </p>
                         ) : (
                             projects.map((proj) => {
@@ -227,7 +227,7 @@ export function ProjectManager() {
                                                     size="sm"
                                                     onClick={() => handleEdit(proj)}
                                                     className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                                    title="Edit Project"
+                                                    title="Modifier le département"
                                                 >
                                                     <Edit2 className="w-4 h-4" />
                                                 </Button>
@@ -236,7 +236,7 @@ export function ProjectManager() {
                                                     size="sm"
                                                     onClick={() => handleDeleteProject(proj.id)}
                                                     className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                                    title="Delete Project"
+                                                    title="Supprimer le département"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
@@ -257,7 +257,7 @@ export function ProjectManager() {
                                             ) : (
                                                 <div className="flex items-center gap-1 text-xs text-destructive font-medium">
                                                     <AlertCircle className="w-3 h-3" />
-                                                    No workspace
+                                                    Aucun workspace
                                                 </div>
                                             )}
                                             {client && (

@@ -14,11 +14,13 @@ export const useUserStore = create(
         distriwebHours: { start: 9, end: 17 },
         thewebmasterHours: { start: 7.5, end: 15.5 },
         enableCampaigns: true,
-        prayerLocation: { city: '', country: '' }, // Prayer times location
+        prayerLocation: { city: '', country: '' },
+        spotify_playlist_url: '',
+        world_clock_cities: [],
         telegram: {
           chatId: '',
           enabled: false,
-          advanceMinutes: 30, // Notification X minutes before deadline/meeting
+          advanceMinutes: 30,
         },
         dashboardWidgets: {
           prayerTimes: true,
@@ -30,19 +32,35 @@ export const useUserStore = create(
           eisenhower: true,
           worldClock: true,
           scratchpad: true,
+          inspiration_quote: true,
+          inspiration_fact: true,
+          inspiration_joke: true,
         },
-        dashboardLayout: {
-          topRow: ['stat-total', 'stat-inprogress', 'stat-overdue', 'stat-completed'],
-          mainGrid: ['prayer-times', 'inspiration', 'focus-tools', 'upcoming-tasks', 'eisenhower', 'world-clock', 'scratchpad', 'active-campaigns']
-        },
+        dashboardLayoutV3: {
+          mainGrid: ['prayerTimes', 'quranVerse', 'focusTools', 'worldClock', 'scratchpad', 'eisenhower', 'activeCampaigns']
+        }
       },
       setPreferences: (prefs) => set((state) => ({
         preferences: { ...state.preferences, ...prefs }
       })),
 
-      // Theme
-      theme: 'light', // 'light', 'dark'
-      setTheme: (theme) => set({ theme }),
+      loadPreferences: async () => {
+        try {
+          const { settingsService } = await import('../services/settings.service')
+          const prefs = await settingsService.getPreferences()
+          if (prefs && Object.keys(prefs).length > 0) {
+            set((state) => ({
+              preferences: {
+                ...state.preferences,
+                ...prefs
+              }
+            }))
+          }
+        } catch (e) {
+          console.error('Failed to load preferences from server', e)
+        }
+      },
+
       // Teams
       teams: [],
       currentTeam: null,
@@ -56,8 +74,7 @@ export const useUserStore = create(
       name: 'user-storage', // LocalStorage key
       partialize: (state) => ({
         preferences: state.preferences,
-        theme: state.theme,
-        currentTeam: state.currentTeam // Persist selected team
+        currentTeam: state.currentTeam
       }),
     }
   )

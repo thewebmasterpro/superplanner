@@ -1,65 +1,40 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns, User, CheckSquare, Video } from 'lucide-react'
-import { useTasks } from '../hooks/useTasks'
-import { useContactsList } from '../hooks/useContacts'
-import { useUIStore } from '../stores/uiStore'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Card } from '@/components/ui/card'
+import { Plus, Search, Loader2, Filter, X, CheckSquare, LayoutGrid, List as ListIcon, AlertCircle, Clock, AlertTriangle } from 'lucide-react'
+import { useTasks, useUpdateTask } from '@/hooks/useTasks'
+import { useContactsList } from '@/hooks/useContacts'
+import { useUIStore } from '@/stores/uiStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { tagsService } from '@/services/tags.service'
+import { campaignsService } from '@/services/campaigns.service'
+import { CampaignModal } from '@/components/CampaignModal'
+import { TaskModal } from '@/components/TaskModal'
+import { KanbanView } from '@/components/KanbanView'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { tagsService } from '../services/tags.service'
-import { campaignsService } from '../services/campaigns.service'
-import { CampaignModal } from '../components/CampaignModal'
-import { KanbanView } from '../components/KanbanView'
-import { useUpdateTask } from '../hooks/useTasks'
+import { format } from 'date-fns'
 
 export function Tasks() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const updateTaskMutation = useUpdateTask()
-  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery, setModalTask } = useUIStore()
+  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery, setModalTask, modalTask } = useUIStore()
   const { workspaces, activeWorkspaceId } = useWorkspaceStore()
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [workspaceFilter, setWorkspaceFilter] = useState('all')
   const [campaignFilter, setCampaignFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('task') // Changed from 'all' to 'task' to show only tasks by default
+  const [typeFilter, setTypeFilter] = useState('task')
   const [tagFilter, setTagFilter] = useState('all')
   const [dueDateFilter, setDueDateFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [sortOrder, setSortOrder] = useState('created_desc')
-  const [visibleColumns, setVisibleColumns] = useState({
-    status: true,
-    dueDate: true,
-    priority: true
-  })
   const [selectedIds, setSelectedIds] = useState([])
   const [showFilters, setShowFilters] = useState(false)
   const [isCampaignModalOpen, setCampaignModalOpen] = useState(false)
-  const [viewMode, setViewMode] = useState('table') // 'table' or 'kanban'
-  const [completingTaskId, setCompletingTaskId] = useState(null)
+  const [viewMode, setViewMode] = useState('table')
 
-  // Fetch tags and campaigns for filters
+
   const [tags, setTags] = useState([])
   const [campaigns, setCampaigns] = useState([])
 
@@ -67,7 +42,6 @@ export function Tasks() {
     loadFilterOptions()
   }, [])
 
-  // Reset workspace filter when active workspace changes
   useEffect(() => {
     setWorkspaceFilter('all')
   }, [activeWorkspaceId])
@@ -81,75 +55,35 @@ export function Tasks() {
       setTags(tagsRes)
       setCampaigns(campaignsRes)
     } catch (e) {
-      console.error("Error loading filter options", e)
+      console.error("Error loading filters", e)
     }
   }
 
-  const statusColors = {
-    todo: 'bg-status-todo/20 text-status-todo border-status-todo/30',
-    in_progress: 'bg-status-in_progress/20 text-status-in_progress border-status-in_progress/30',
-    blocked: 'bg-status-blocked/20 text-status-blocked border-status-blocked/30',
-    done: 'bg-status-done/20 text-status-done border-status-done/30',
-    cancelled: 'bg-status-cancelled/20 text-status-cancelled border-status-cancelled/30',
-  }
-
-  const priorityColors = {
-    1: 'bg-priority-1',
-    'low': 'bg-priority-1',
-    2: 'bg-priority-2',
-    3: 'bg-priority-3',
-    'medium': 'bg-priority-3',
-    4: 'bg-priority-4',
-    5: 'bg-priority-5',
-    'high': 'bg-priority-5',
-  }
-
-  const priorityOrder = {
-    'low': 1, '1': 1,
-    'medium': 3, '3': 3,
-    'high': 5, '5': 5,
-    '2': 2, '4': 4
-  }
-
-  // Get today and week dates for due date filter
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const endOfWeek = new Date(today)
   endOfWeek.setDate(today.getDate() + 7)
 
-  // Filter tasks
   const filteredTasks = useMemo(() => {
     const query = searchQuery.toLowerCase()
-
-
     const result = tasks.filter((task) => {
       const matchesSearch = !query ||
         task.title?.toLowerCase().includes(query) ||
         task.description?.toLowerCase().includes(query) ||
-        task.context?.name?.toLowerCase()?.includes(query)
+        task.expand?.context_id?.name?.toLowerCase()?.includes(query)
+
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter
-
-      const taskPriority = String(task.priority).toLowerCase()
-      const matchesPriority = priorityFilter === 'all' || taskPriority === priorityFilter
-
+      const matchesPriority = priorityFilter === 'all' || String(task.priority).toLowerCase() === priorityFilter
       const matchesWorkspace = workspaceFilter === 'all' ||
         (workspaceFilter === 'none' ? !task.context_id : task.context_id === workspaceFilter)
       const matchesCampaign = campaignFilter === 'all' ||
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
       const matchesType = typeFilter === 'all' || (task.type || 'task') === typeFilter
-      // Handle task tags checking. PocketBase returns array of tag IDs in 'tags' field
-      // Or array of expanded objects if expanded.
-      // Assuming 'tags' field on task contains IDs.
-      const taskTagIds = task.tags || []
-      const matchesTag = tagFilter === 'all' || taskTagIds.includes(tagFilter) ||
-        (task.expand?.tags?.some(t => t.id === tagFilter)) ||
-        // Legacy support if task_tags used
-        (task.task_tags?.some(tt => tt.tag?.id === tagFilter))
+      const matchesTag = tagFilter === 'all' ||
+        task.expand?.tags?.some(tag => tag.id === tagFilter) || task.tags?.includes(tagFilter)
 
-      const matchesClient = clientFilter === 'all' ||
-        task.contact_id === clientFilter
+      const matchesClient = clientFilter === 'all' || task.contact_id === clientFilter
 
-      // Assignee Filter (My Tasks)
       let matchesAssignee = true
       if (assigneeFilter === 'assigned') {
         matchesAssignee = !!task.assigned_to
@@ -157,7 +91,6 @@ export function Tasks() {
         matchesAssignee = !task.assigned_to
       }
 
-      // Due date filter
       let matchesDueDate = true
       if (dueDateFilter !== 'all' && task.due_date) {
         const dueDate = new Date(task.due_date)
@@ -180,38 +113,39 @@ export function Tasks() {
         matchesCampaign && matchesType && matchesTag && matchesDueDate && matchesClient && matchesAssignee
     })
 
-    // Sort tasks
     return result.sort((a, b) => {
-      // Helper to safely get priority number
-      const getPrio = (p) => priorityOrder[String(p).toLowerCase()] || 0
-      // Helper to safely get date (PocketBase uses 'created', Supabase used 'created_at')
-      const getDate = (model) => new Date(model.created || model.created_at || 0)
+      const getPrio = (p) => {
+        const pStr = String(p).toLowerCase()
+        if (pStr === 'high' || pStr === '5') return 5
+        if (pStr === 'medium' || pStr === '3') return 3
+        if (pStr === 'low' || pStr === '1') return 1
+        return parseInt(p) || 0
+      }
 
       switch (sortOrder) {
-        case 'priority_desc': // High to Low
+        case 'priority_desc':
           return getPrio(b.priority) - getPrio(a.priority)
-        case 'priority_asc': // Low to High
+        case 'priority_asc':
           return getPrio(a.priority) - getPrio(b.priority)
-        case 'duedate_asc': // Soonest first
+        case 'duedate_asc':
           if (!a.due_date) return 1
           if (!b.due_date) return -1
           return new Date(a.due_date) - new Date(b.due_date)
-        case 'duedate_desc': // Furthest first
+        case 'duedate_desc':
           if (!a.due_date) return 1
           if (!b.due_date) return -1
           return new Date(b.due_date) - new Date(a.due_date)
         case 'title_asc':
           return (a.title || '').localeCompare(b.title || '')
         case 'created_asc':
-          return getDate(a) - getDate(b)
+          return new Date(a.created) - new Date(b.created)
         case 'created_desc':
         default:
-          return getDate(b) - getDate(a)
+          return new Date(b.created) - new Date(a.created)
       }
     })
   }, [tasks, searchQuery, statusFilter, priorityFilter, workspaceFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
 
-  // Count active filters
   const activeFilterCount = [
     statusFilter !== 'all',
     priorityFilter !== 'all',
@@ -224,21 +158,19 @@ export function Tasks() {
     assigneeFilter !== 'all',
   ].filter(Boolean).length
 
-  // Clear all filters
   const clearAllFilters = () => {
     setSearchQuery('')
     setStatusFilter('all')
     setPriorityFilter('all')
     setWorkspaceFilter('all')
     setCampaignFilter('all')
-    setTypeFilter('task') // Fixed: Reset to 'task' instead of 'all'
+    setTypeFilter('task')
     setTagFilter('all')
     setDueDateFilter('all')
     setClientFilter('all')
     setAssigneeFilter('all')
   }
 
-  // Selection handlers
   const toggleSelect = (taskId, e) => {
     e?.stopPropagation?.()
     setSelectedIds(prev =>
@@ -256,339 +188,186 @@ export function Tasks() {
     }
   }
 
-  const clearSelection = () => setSelectedIds([])
-
   const isAllSelected = filteredTasks.length > 0 && selectedIds.length === filteredTasks.length
-  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < filteredTasks.length
 
   return (
-    <div className="container-tight py-8 section-gap context-transition animate-in fade-in">
+    <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-extrabold tracking-tight font-display flex items-center gap-2">
-            <CheckSquare className="w-8 h-8" style={activeWorkspaceId && workspaces.find(w => w.id === activeWorkspaceId) ? { color: workspaces.find(w => w.id === activeWorkspaceId).color } : { color: 'var(--primary)' }} />
-            Tasks
-          </h1>
-          <p className="text-muted-foreground font-medium">Manage your tasks and projects</p>
-        </div>
-        <div className="flex gap-2">
-          <div className="bg-muted p-1 rounded-lg flex mr-2">
-            <Button
-              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-              size="sm"
+        <h1 className="text-3xl font-bold font-display">Mes Tâches</h1>
+        <div className="flex items-center gap-3">
+          <div data-tour="tasks-view-toggle" className="flex items-center gap-1">
+            <button
+              className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${viewMode === 'table' ? 'btn-active' : ''}`}
               onClick={() => setViewMode('table')}
-              className="h-8 px-3"
+              title="Vue Liste"
             >
-              List
-            </Button>
-            <Button
-              variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-              size="sm"
+              <ListIcon className="w-4 h-4" />
+            </button>
+            <button
+              className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${viewMode === 'kanban' ? 'btn-active' : ''}`}
               onClick={() => setViewMode('kanban')}
-              className="h-8 px-3"
+              title="Vue Tableau"
             >
-              Board
-            </Button>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
           </div>
-          <div className="flex gap-2">
-            {/* Centralized creation handled by Navbar */}
-          </div>
+          <button data-tour="tasks-create" onClick={() => { setModalTask({ type: 'task' }); setTaskModalOpen(true); }} className="btn gap-2 shadow-none transition-transform hover:scale-105 active:scale-95">
+            <Plus className="w-5 h-5" />
+            Nouvelle Tâche
+          </button>
         </div>
       </div>
 
-      {/* Filter Toggle */}
-      <div className="flex items-center justify-end mb-4 gap-2">
-        {(activeFilterCount > 0 || searchQuery) && (
-          <Button variant="ghost" onClick={clearAllFilters} size="sm">
-            <X className="w-4 h-4 mr-1" />
-            Clear Filters
-          </Button>
-        )}
-        <Button
-          variant={showFilters ? "secondary" : "outline"}
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="relative"
-        >
-          <Filter className="w-4 h-4 mr-2" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-              {activeFilterCount}
-            </Badge>
-          )}
-        </Button>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger-fast">
+        {[
+          {
+            label: 'Actives',
+            value: filteredTasks.filter(t => t.status !== 'done').length,
+            icon: <CheckSquare className="w-5 h-5" />,
+            color: 'text-primary',
+          },
+          {
+            label: 'Haute Priorité',
+            value: filteredTasks.filter(t => { const p = String(t.priority).toLowerCase(); return p === 'high' || p === '5' || p === '4' }).length,
+            icon: <AlertCircle className="w-5 h-5" />,
+            color: 'text-error',
+          },
+          {
+            label: "Aujourd'hui",
+            value: filteredTasks.filter(t => t.due_date && new Date(t.due_date).toDateString() === new Date().toDateString()).length,
+            icon: <Clock className="w-5 h-5" />,
+            color: 'text-info',
+          },
+          {
+            label: 'En Retard',
+            value: filteredTasks.filter(t => t.due_date && new Date(t.due_date) < today && t.status !== 'done').length,
+            icon: <AlertTriangle className="w-5 h-5" />,
+            color: 'text-warning',
+          },
+        ].map((stat) => (
+          <div key={stat.label} className="stats shadow bg-base-100 border border-base-300">
+            <div className="stat">
+              <div className={`stat-figure ${stat.color}`}>{stat.icon}</div>
+              <div className="stat-title">{stat.label}</div>
+              <div className={`stat-value ${stat.color} font-display`}>{stat.value}</div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Expanded Filters */}
+      {/* Action Bar */}
+      <div data-tour="tasks-search" className="flex flex-wrap gap-2 items-center animate-slide-up delay-100">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+          <input
+            type="text"
+            placeholder="Rechercher une tâche..."
+            className="input input-bordered input-sm w-full pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <select
+          className="select select-bordered select-sm font-bold text-xs"
+          value={sortOrder}
+          onChange={e => setSortOrder(e.target.value)}
+        >
+          <option value="created_desc">Plus récent</option>
+          <option value="created_asc">Plus ancien</option>
+          <option value="priority_desc">Priorité haute</option>
+          <option value="priority_asc">Priorité basse</option>
+          <option value="duedate_asc">Échéance proche</option>
+          <option value="title_asc">Titre (A-Z)</option>
+        </select>
+
+        <button
+          data-tour="tasks-filters"
+          className={`btn btn-sm gap-2 ${showFilters ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="w-4 h-4" />
+          Filtres
+          {activeFilterCount > 0 && <span className="badge badge-sm badge-primary">{activeFilterCount}</span>}
+        </button>
+
+        {(activeFilterCount > 0 || searchQuery) && (
+          <button className="btn btn-error btn-ghost btn-sm" onClick={clearAllFilters}>
+            <X className="w-4 h-4" />
+            Effacer
+          </button>
+        )}
+      </div>
+
+      {/* Expanded Filters Panel */}
       {showFilters && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-4 pt-4 border-t">
-          {/* Status */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="p-4 bg-base-200/50 rounded-2xl border border-base-300 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Statut</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              <option value="todo">À faire</option>
+              <option value="in_progress">En cours</option>
+              <option value="blocked">Bloqué</option>
+              <option value="done">Terminé</option>
+              <option value="cancelled">Annulé</option>
+            </select>
+          </div>
 
-          {/* Priority */}
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Priorité</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+              <option value="all">Toutes</option>
+              <option value="high">Haute</option>
+              <option value="medium">Moyenne</option>
+              <option value="low">Basse</option>
+            </select>
+          </div>
 
-          {/* Workspace */}
-          <Select value={workspaceFilter} onValueChange={setWorkspaceFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Workspaces</SelectItem>
-              <SelectItem value="none">No Workspace</SelectItem>
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Workspace</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              <option value="none">Sans</option>
               {workspaces.map(w => (
-                <SelectItem key={w.id} value={w.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color }} />
-                    {w.name}
-                  </div>
-                </SelectItem>
+                <option key={w.id} value={w.id}>{w.name}</option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+          </div>
 
-          {/* Campaign */}
-          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Campaign" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Campaign</SelectItem>
-              <SelectItem value="none">No Campaign</SelectItem>
-              {campaigns.map(camp => (
-                <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Échéance</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={dueDateFilter} onChange={e => setDueDateFilter(e.target.value)}>
+              <option value="all">Toutes</option>
+              <option value="overdue">En retard</option>
+              <option value="today">Aujourd'hui</option>
+              <option value="week">Cette semaine</option>
+              <option value="no_date">Sans date</option>
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Client</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              {contactsList.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </SelectContent>
-          </Select>
-
-          {/* Type filter removed */}
-
-          {/* Tag */}
-          <Select value={tagFilter} onValueChange={setTagFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tag" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tags</SelectItem>
-              {tags.map(tag => (
-                <SelectItem key={tag.id} value={tag.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                    {tag.name}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Due Date */}
-          <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Due Date" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Dates</SelectItem>
-              <SelectItem value="overdue">🔴 Overdue</SelectItem>
-              <SelectItem value="today">📅 Today</SelectItem>
-              <SelectItem value="week">📆 This Week</SelectItem>
-              <SelectItem value="no_date">No Date</SelectItem>
-            </SelectContent>
-          </Select>
-          {/* Client (New) */}
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {contactsList.map(contact => (
-                <SelectItem key={contact.id} value={contact.id}>
-                  {contact.name} {contact.company && `(${contact.company})`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Assignee Filter */}
-          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Assignee" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tasks</SelectItem>
-              <SelectItem value="assigned">👷 Assigned</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Sorting (New) */}
-          <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger className="border-dashed">
-              <ArrowUpDown className="w-4 h-4 mr-2 opacity-50" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="created_desc">Newest Created</SelectItem>
-              <SelectItem value="created_asc">Oldest Created</SelectItem>
-              <SelectItem value="priority_desc">Highest Priority</SelectItem>
-              <SelectItem value="priority_asc">Lowest Priority</SelectItem>
-              <SelectItem value="duedate_asc">Due Soonest</SelectItem>
-              <SelectItem value="duedate_desc">Due Latest</SelectItem>
-              <SelectItem value="title_asc">Title (A-Z)</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Column Visibility (New) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-dashed">
-                <Columns className="w-4 h-4 mr-2 opacity-50" />
-                Columns
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.status}
-                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, status: checked }))}
-              >
-                Status
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.dueDate}
-                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, dueDate: checked }))}
-              >
-                Due Date
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.priority}
-                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, priority: checked }))}
-              >
-                Priority
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </select>
+          </div>
         </div>
       )}
 
-      {/* Selection count */}
-      {
-        selectedIds.length > 0 && viewMode === 'table' && (
-          <div className="flex items-center gap-2 px-1">
-            <Badge variant="secondary" className="px-3 py-1">
-              {selectedIds.length} tasks selected
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={clearSelection} className="h-8">
-              Clear Selection
-            </Button>
-          </div>
-        )
-      }
-
-      {/* Content: Table or Kanban */}
-      {
-        viewMode === 'table' ? (
-          <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/30 border-b border-border/50">
-                  <tr>
-                    <th className="px-3 py-3 text-left w-8">
-                      <Checkbox
-                        checked={isAllSelected}
-                        ref={el => el && (el.indeterminate = isSomeSelected)}
-                        onCheckedChange={toggleSelectAll}
-                        aria-label="Select all"
-                        className="border-border/50"
-                      />
-                    </th>
-                    <th className="px-2 py-3 text-left w-10 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Done
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
-                    {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
-                    {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Due Date</th>}
-                    {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Priority</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-muted-foreground">
-                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                        <p>Loading tasks...</p>
-                      </td>
-                    </tr>
-                  ) : filteredTasks.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-muted-foreground">
-                        {tasks.length === 0
-                          ? 'No tasks yet. Create one to get started!'
-                          : 'No tasks match your filters.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredTasks.map((task) => {
-                      const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
-
-                      return (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          isSelected={selectedIds.includes(task.id)}
-                          isCompleting={completingTaskId === task.id}
-                          onSelect={() => toggleSelect(task.id)}
-                          onComplete={async (checked) => {
-                            setCompletingTaskId(task.id)
-                            const newStatus = checked ? 'done' : 'todo'
-                            try {
-                              await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: newStatus } })
-                            } finally {
-                              setCompletingTaskId(null)
-                            }
-                          }}
-                          onClick={() => {
-                            setModalTask(task)
-                            setTaskModalOpen(true)
-                          }}
-                          isOverdue={isOverdue}
-                          statusColors={statusColors}
-                          priorityColors={priorityColors}
-                          visibleColumns={visibleColumns}
-                        />
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        ) : (
+      {/* Content Area */}
+      {isLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-primary opacity-50" />
+          <p className="mt-4 text-muted-foreground font-medium">Chargement des tâches...</p>
+        </div>
+      ) : viewMode === 'kanban' ? (
+        <div className="flex-1 min-h-0">
           <KanbanView
             tasks={filteredTasks}
             onStatusChange={(taskId, newStatus) => {
@@ -599,178 +378,187 @@ export function Tasks() {
               setTaskModalOpen(true)
             }}
           />
-        )
-      }
+        </div>
+      ) : (
+        <div data-tour="tasks-table" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+          <div className="card-body p-0 overflow-auto">
+            {filteredTasks.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
+                <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
+                  <CheckSquare className="w-10 h-10 opacity-20" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Aucune tâche trouvée</h3>
+                <p className="text-muted-foreground max-w-xs mb-6">
+                  {tasks.length === 0
+                    ? "Commencez par créer votre première tâche pour organiser votre travail."
+                    : "Aucune tâche ne correspond à vos filtres actuels."}
+                </p>
+              </div>
+            ) : (
+              <table className="table table-sm table-pin-rows">
+                <thead className="bg-base-200">
+                  <tr>
+                    <th className="w-12">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                        checked={isAllSelected}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th>Tâche</th>
+                    <th className="w-28 text-right">Échéance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      isSelected={selectedIds.includes(task.id)}
+                      onSelect={() => toggleSelect(task.id)}
+                      onClick={() => {
+                        setModalTask(task)
+                        setTaskModalOpen(true)
+                      }}
+                      isOverdue={task.due_date && new Date(task.due_date) < today && task.status !== 'done'}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Results count */}
-      {
-        filteredTasks.length > 0 && (
-          <p className="text-sm text-muted-foreground text-center">
-            Showing {filteredTasks.length} of {tasks.length} tasks
-          </p>
-        )
-      }
+      {/* Results Info */}
+      {filteredTasks.length > 0 && (
+        <div className="text-center py-2 opacity-50 text-[10px] font-black uppercase tracking-widest">
+          Affichage de {filteredTasks.length} sur {tasks.length} tâches
+        </div>
+      )}
 
       {/* Bulk Actions Bar */}
-      {
-        selectedIds.length > 0 && (
-          <BulkActionsBar
-            selectedIds={selectedIds}
-            onClear={clearSelection}
-            onSuccess={clearSelection}
-          />
-        )
-      }
-
-      {/* Task Modal is handled globally */}
+      {selectedIds.length > 0 && (
+        <BulkActionsBar
+          selectedIds={selectedIds}
+          onClear={() => setSelectedIds([])}
+          onSuccess={() => setSelectedIds([])}
+        />
+      )}
 
       <CampaignModal
         open={isCampaignModalOpen}
         onOpenChange={setCampaignModalOpen}
-        onSuccess={loadFilterOptions} // Reload campaigns for filter
+        onSuccess={loadFilterOptions}
       />
-    </div >
+
+      <TaskModal
+        open={isTaskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        task={modalTask}
+      />
+    </div>
   )
 }
 
-// Task Row Component with polish
-function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
-  // Simplify relation checking for tags
-  const taskTags = task.expand?.tags || task.task_tags?.map(tt => tt.tag) || []
+function TaskRow({ task, isSelected, onSelect, onClick, isOverdue }) {
+  const context = task.expand?.context_id
+  const campaign = task.expand?.campaign_id
+  const tags = task.expand?.tags || []
 
-  // Simplify relation checking for context/campaign
-  // Assuming we expand relations in query, we use expand object or direct access if mapped
-  const context = task.expand?.context_id || task.context
-  const campaign = task.expand?.campaign_id || task.campaign
+  const priorityBorders = {
+    1: 'border-l-blue-400',
+    'low': 'border-l-blue-400',
+    2: 'border-l-green-400',
+    3: 'border-l-yellow-400',
+    'medium': 'border-l-yellow-400',
+    4: 'border-l-orange-400',
+    5: 'border-l-red-500',
+    'high': 'border-l-red-500',
+  }
+
+  const statusDots = {
+    todo: 'bg-base-300',
+    in_progress: 'bg-info',
+    blocked: 'bg-warning',
+    done: 'bg-success',
+    cancelled: 'bg-error',
+  }
+
+  const borderClass = priorityBorders[String(task.priority).toLowerCase()] || 'border-l-base-300'
+
+  const formatDueDate = (dateStr) => {
+    if (!dateStr) return null
+    const date = new Date(dateStr)
+    const now = new Date()
+    const todayStr = now.toDateString()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    if (date.toDateString() === todayStr) return "Aujourd'hui"
+    if (date.toDateString() === tomorrow.toDateString()) return 'Demain'
+    return format(date, 'dd MMM')
+  }
 
   return (
     <tr
-      className={`border-b border-border/30 transition-all duration-300 cursor-pointer group relative
-        ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
-      `}
-      style={{
-        borderLeft: (isSelected || task.status === 'done') && context?.color
-          ? `3px solid ${context.color}`
-          : '3px solid transparent'
-      }}
+      className={`cursor-pointer group transition-colors hover:bg-base-200/50 border-l-4 ${borderClass} ${isSelected ? 'bg-base-200/30' : ''}`}
       onClick={onClick}
     >
-      <td className="px-3 py-4 w-8">
-        <Checkbox
+      <td onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
           checked={isSelected}
-          onCheckedChange={onSelect}
-          onClick={(e) => e.stopPropagation()}
-          className="opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100 transition-opacity"
+          onChange={onSelect}
         />
       </td>
-      <td className="px-2 py-4 w-10">
-        <div className="relative flex items-center justify-center">
-          <Checkbox
-            checked={task.status === 'done'}
-            onCheckedChange={onComplete}
-            onClick={(e) => e.stopPropagation()}
-            className={`transition-all duration-300 rounded-full ${isCompleting ? 'animate-complete scale-125' : ''}`}
-          />
-        </div>
-      </td>
-      <td className="px-6 py-4">
-        <div>
-          <div className="flex items-center gap-2">
-            {task.type === 'meeting' && <span className="text-xl">📅</span>}
-            <p className={`font-medium transition-all ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+      <td>
+        <div className="flex flex-col gap-0.5 py-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDots[task.status] || 'bg-base-300'}`} />
+            <span className={`font-bold text-sm ${task.status === 'done' ? 'line-through opacity-60' : 'text-base-content'}`}>
               {task.title}
-            </p>
+            </span>
             {context && (
-              <Badge
-                variant="outline"
-                className="text-xs transition-colors"
-                style={{
-                  backgroundColor: `${context.color}15`,
-                  borderColor: context.color,
-                  color: context.color
-                }}
+              <span
+                className="badge badge-xs border-none font-bold text-[10px]"
+                style={{ backgroundColor: `${context.color}35`, color: context.color }}
               >
                 {context.name}
-              </Badge>
+              </span>
             )}
             {campaign && (
-              <Badge
-                variant="outline"
-                className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700 bg-gradient-to-r from-indigo-50 to-white"
-              >
-                🚀 {campaign.name}
-              </Badge>
-            )}
-            {task.contact_id && (
-              <Badge
-                variant="outline"
-                className="text-xs border-blue-200 bg-blue-50 text-blue-700"
-              >
-                👤 Client
-              </Badge>
-            )}
-            {task.assigned_to && (
-              <div className="ml-1" title="Assigned">
-                <Avatar className="h-5 w-5">
-                  <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
-                    <User className="h-3 w-3" />
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              <span className="badge badge-xs font-bold text-[10px] border-indigo-400/40 text-indigo-600 bg-indigo-500/10">
+                {campaign.name}
+              </span>
             )}
           </div>
-          {taskTags && taskTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {taskTags.map((tag) => tag && (
-                <Badge
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 ml-5">
+              {tags.map(tag => (
+                <span
                   key={tag.id}
-                  variant="outline"
-                  className="text-[10px] px-1 py-0 h-5 border-none"
-                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                  className="text-[9px] font-bold uppercase tracking-tight"
+                  style={{ color: tag.color }}
                 >
-                  {tag.name}
-                </Badge>
+                  #{tag.name}
+                </span>
               ))}
             </div>
           )}
-          {task.description && (
-            <p className="text-sm text-muted-foreground line-clamp-1 mt-1 group-hover:text-foreground/80 transition-colors">
-              {task.description}
-            </p>
-          )}
         </div>
       </td>
-
-      {
-        visibleColumns.status && (
-          <td className="px-6 py-4">
-            <Badge className={`${statusColors[task.status]} transition-all duration-300 shadow-sm border border-border/20 group-hover:scale-105 group-hover:shadow-md`}>
-              {task.status?.replace('_', ' ')}
-            </Badge>
-          </td>
-        )
-      }
-
-      {
-        visibleColumns.dueDate && (
-          <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-            {task.due_date ? (
-              <span className="flex items-center gap-1">
-                {isOverdue && '🔴'}
-                {new Date(task.due_date).toLocaleDateString()}
-              </span>
-            ) : '-'}
-          </td>
-        )
-      }
-
-      {
-        visibleColumns.priority && (
-          <td className="px-6 py-4">
-            <div className={`w-3 h-3 rounded-full ${priorityColors[String(task.priority).toLowerCase()] || 'bg-gray-300'} shadow-sm`} />
-          </td>
-        )
-      }
-    </tr >
+      <td className="text-right">
+        {task.due_date ? (
+          <span className={`text-xs font-bold ${isOverdue ? 'text-error' : 'opacity-50'}`}>
+            {formatDueDate(task.due_date)}
+          </span>
+        ) : (
+          <span className="text-xs opacity-20">—</span>
+        )}
+      </td>
+    </tr>
   )
 }

@@ -1,42 +1,24 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Loader2, Filter, X, ArrowUpDown, Columns, User, Video } from 'lucide-react'
-import { useTasks } from '../hooks/useTasks'
-import { useContactsList } from '../hooks/useContacts'
-import { useUIStore } from '../stores/uiStore'
-import { useWorkspaceStore } from '../stores/workspaceStore'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Card } from '@/components/ui/card'
+import { Plus, Search, Loader2, Filter, X, Video, MoreHorizontal, LayoutGrid, List as ListIcon } from 'lucide-react'
+import { useTasks, useUpdateTask } from '@/hooks/useTasks'
+import { useContactsList } from '@/hooks/useContacts'
+import { useUIStore } from '@/stores/uiStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { tagsService } from '@/services/tags.service'
+import { campaignsService } from '@/services/campaigns.service'
+import { CampaignModal } from '@/components/CampaignModal'
+import { TaskModal } from '@/components/TaskModal'
+import { KanbanView } from '@/components/KanbanView'
 import { BulkActionsBar } from '@/components/BulkActionsBar'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { tagsService } from '../services/tags.service'
-import { campaignsService } from '../services/campaigns.service'
-import { CampaignModal } from '../components/CampaignModal'
-import { KanbanView } from '../components/KanbanView'
-import { useUpdateTask } from '../hooks/useTasks'
+import { format } from 'date-fns'
 
 export function Meetings() {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: contactsList = [] } = useContactsList()
   const updateTaskMutation = useUpdateTask()
-  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery, setModalTask } = useUIStore()
+  const { isTaskModalOpen, setTaskModalOpen, searchQuery, setSearchQuery, setModalTask, modalTask } = useUIStore()
   const { workspaces, activeWorkspaceId } = useWorkspaceStore()
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [workspaceFilter, setWorkspaceFilter] = useState('all')
@@ -47,27 +29,19 @@ export function Meetings() {
   const [clientFilter, setClientFilter] = useState('all')
   const [assigneeFilter, setAssigneeFilter] = useState('all')
   const [sortOrder, setSortOrder] = useState('created_desc')
-  const [visibleColumns, setVisibleColumns] = useState({
-    status: true,
-    dueDate: true,
-    priority: true
-  })
   const [selectedIds, setSelectedIds] = useState([])
   const [showFilters, setShowFilters] = useState(false)
   const [isCampaignModalOpen, setCampaignModalOpen] = useState(false)
-  const [viewMode, setViewMode] = useState('table') // 'table' or 'kanban'
+  const [viewMode, setViewMode] = useState('table')
   const [completingTaskId, setCompletingTaskId] = useState(null)
 
-  // Fetch tags and campaigns for filters
   const [tags, setTags] = useState([])
   const [campaigns, setCampaigns] = useState([])
-  const [currentUserId, setCurrentUserId] = useState(null)
 
   useEffect(() => {
     loadFilterOptions()
   }, [])
 
-  // Reset workspace filter when active workspace changes
   useEffect(() => {
     setWorkspaceFilter('all')
   }, [activeWorkspaceId])
@@ -80,55 +54,36 @@ export function Meetings() {
       ])
       setTags(tagsRes)
       setCampaigns(campaignsRes)
-    } catch (error) {
-      console.error('Error loading filters:', error)
+    } catch (e) {
+      console.error("Error loading filters", e)
     }
   }
 
-  const statusColors = {
-    todo: 'bg-status-todo/20 text-status-todo border-status-todo/30',
-    in_progress: 'bg-status-in_progress/20 text-status-in_progress border-status-in_progress/30',
-    blocked: 'bg-status-blocked/20 text-status-blocked border-status-blocked/30',
-    done: 'bg-status-done/20 text-status-done border-status-done/30',
-    cancelled: 'bg-status-cancelled/20 text-status-cancelled border-status-cancelled/30',
-  }
-
-  const priorityColors = {
-    1: 'bg-priority-1',
-    2: 'bg-priority-2',
-    3: 'bg-priority-3',
-    4: 'bg-priority-4',
-    5: 'bg-priority-5',
-  }
-
-  // Get today and week dates for due date filter
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const endOfWeek = new Date(today)
   endOfWeek.setDate(today.getDate() + 7)
 
-  // Filter tasks
   const filteredTasks = useMemo(() => {
     const query = searchQuery.toLowerCase()
     const result = tasks.filter((task) => {
       const matchesSearch = !query ||
         task.title?.toLowerCase().includes(query) ||
         task.description?.toLowerCase().includes(query) ||
-        task.context?.name?.toLowerCase()?.includes(query)
+        task.expand?.context_id?.name?.toLowerCase()?.includes(query)
+
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter
-      const matchesPriority = priorityFilter === 'all' || task.priority === parseInt(priorityFilter)
+      const matchesPriority = priorityFilter === 'all' || String(task.priority).toLowerCase() === priorityFilter
       const matchesWorkspace = workspaceFilter === 'all' ||
         (workspaceFilter === 'none' ? !task.context_id : task.context_id === workspaceFilter)
       const matchesCampaign = campaignFilter === 'all' ||
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
-      const matchesType = typeFilter === 'all' || task.type === typeFilter
+      const matchesType = typeFilter === 'all' || (task.type || 'task') === typeFilter
       const matchesTag = tagFilter === 'all' ||
-        task.expand?.tags?.some(tag => tag.id === tagFilter) || task.tags?.includes(tagFilter) // Handle expand or ID array
-      // Note: For tags, PB returns array of IDs in 'tags' and array of objects in 'expand.tags'
-      const matchesClient = clientFilter === 'all' ||
-        task.contact_id === clientFilter
+        task.expand?.tags?.some(tag => tag.id === tagFilter) || task.tags?.includes(tagFilter)
 
-      // Assignee Filter
+      const matchesClient = clientFilter === 'all' || task.contact_id === clientFilter
+
       let matchesAssignee = true
       if (assigneeFilter === 'assigned') {
         matchesAssignee = !!task.assigned_to
@@ -136,7 +91,6 @@ export function Meetings() {
         matchesAssignee = !task.assigned_to
       }
 
-      // Due date filter
       let matchesDueDate = true
       if (dueDateFilter !== 'all' && task.due_date) {
         const dueDate = new Date(task.due_date)
@@ -159,18 +113,25 @@ export function Meetings() {
         matchesCampaign && matchesType && matchesTag && matchesDueDate && matchesClient && matchesAssignee
     })
 
-    // Sort tasks
     return result.sort((a, b) => {
+      const getPrio = (p) => {
+        const pStr = String(p).toLowerCase()
+        if (pStr === 'high' || pStr === '5') return 5
+        if (pStr === 'medium' || pStr === '3') return 3
+        if (pStr === 'low' || pStr === '1') return 1
+        return parseInt(p) || 0
+      }
+
       switch (sortOrder) {
-        case 'priority_desc': // High to Low
-          return (b.priority || 0) - (a.priority || 0)
-        case 'priority_asc': // Low to High
-          return (a.priority || 0) - (b.priority || 0)
-        case 'duedate_asc': // Soonest first
+        case 'priority_desc':
+          return getPrio(b.priority) - getPrio(a.priority)
+        case 'priority_asc':
+          return getPrio(a.priority) - getPrio(b.priority)
+        case 'duedate_asc':
           if (!a.due_date) return 1
           if (!b.due_date) return -1
           return new Date(a.due_date) - new Date(b.due_date)
-        case 'duedate_desc': // Furthest first
+        case 'duedate_desc':
           if (!a.due_date) return 1
           if (!b.due_date) return -1
           return new Date(b.due_date) - new Date(a.due_date)
@@ -185,7 +146,6 @@ export function Meetings() {
     })
   }, [tasks, searchQuery, statusFilter, priorityFilter, workspaceFilter, campaignFilter, typeFilter, tagFilter, dueDateFilter, clientFilter, assigneeFilter, sortOrder])
 
-  // Count active filters
   const activeFilterCount = [
     statusFilter !== 'all',
     priorityFilter !== 'all',
@@ -198,7 +158,6 @@ export function Meetings() {
     assigneeFilter !== 'all',
   ].filter(Boolean).length
 
-  // Clear all filters
   const clearAllFilters = () => {
     setSearchQuery('')
     setStatusFilter('all')
@@ -212,7 +171,6 @@ export function Meetings() {
     setAssigneeFilter('all')
   }
 
-  // Selection handlers
   const toggleSelect = (taskId, e) => {
     e?.stopPropagation?.()
     setSelectedIds(prev =>
@@ -230,317 +188,189 @@ export function Meetings() {
     }
   }
 
-  const clearSelection = () => setSelectedIds([])
-
   const isAllSelected = filteredTasks.length > 0 && selectedIds.length === filteredTasks.length
-  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < filteredTasks.length
 
   return (
-    <div className="container-tight py-8 section-gap context-transition animate-in fade-in">
+    <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-extrabold tracking-tight font-display flex items-center gap-2">
-            <Video className="w-8 h-8" style={activeWorkspaceId && workspaces.find(w => w.id === activeWorkspaceId) ? { color: workspaces.find(w => w.id === activeWorkspaceId).color } : { color: 'var(--primary)' }} />
-            Meetings
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
+            <Video className="w-8 h-8" />
+            Réunions
           </h1>
-          <p className="text-muted-foreground font-medium">Manage your scheduled meetings and agendas</p>
+          <p className="text-muted-foreground font-medium">Gérez vos rendez-vous et appels professionnels.</p>
         </div>
-        <div className="flex gap-2">
-          {/* Centralized creation handled by Navbar */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${viewMode === 'table' ? 'btn-active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Vue Liste"
+            >
+              <ListIcon className="w-4 h-4" />
+            </button>
+            <button
+              className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${viewMode === 'kanban' ? 'btn-active' : ''}`}
+              onClick={() => setViewMode('kanban')}
+              title="Vue Tableau"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+          <button data-tour="meetings-create" onClick={() => { setModalTask({ type: 'meeting' }); setTaskModalOpen(true); }} className="btn gap-2 shadow-none transition-transform hover:scale-105 active:scale-95">
+            <Plus className="w-5 h-5" />
+            Nouvelle Réunion
+          </button>
         </div>
       </div>
 
-      {/* Filter Toggle */}
-      <div className="flex items-center justify-end mb-4 gap-2">
-        {(activeFilterCount > 0 || searchQuery) && (
-          <Button variant="ghost" onClick={clearAllFilters} size="sm">
-            <X className="w-4 h-4 mr-1" />
-            Clear Filters
-          </Button>
-        )}
-        <Button
-          variant={showFilters ? "secondary" : "outline"}
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="relative"
-        >
-          <Filter className="w-4 h-4 mr-2" />
-          Filters
-          {activeFilterCount > 0 && (
-            <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-              {activeFilterCount}
-            </Badge>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center animate-stagger-fast">
+        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">À venir</div>
+            <div className="stat-value text-2xl text-primary">{filteredTasks.length}</div>
+          </div>
+        </div>
+        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Prioritaires</div>
+            <div className="stat-value text-2xl text-error">
+              {filteredTasks.filter(t => {
+                const p = String(t.priority).toLowerCase()
+                return p === 'high' || p === '5' || p === '4'
+              }).length}
+            </div>
+          </div>
+        </div>
+        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Aujourd'hui</div>
+            <div className="stat-value text-2xl text-info">
+              {filteredTasks.filter(t => t.due_date && new Date(t.due_date).toDateString() === new Date().toDateString()).length}
+            </div>
+          </div>
+        </div>
+        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Complétées</div>
+            <div className="stat-value text-2xl text-success">{tasks.filter(t => t.type === 'meeting' && t.status === 'done').length}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Action Bar */}
+      <div data-tour="meetings-search" className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-base-100 p-3 rounded-2xl border border-base-300 shadow-sm">
+        <div className="flex flex-wrap gap-2 items-center flex-1 w-full">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
+            <input
+              type="text"
+              placeholder="Rechercher une réunion..."
+              className="input input-sm input-ghost w-full pl-9 focus:bg-base-200"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <button
+            className={`btn btn-sm gap-2 ${showFilters ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="w-4 h-4" />
+            Filtres
+            {activeFilterCount > 0 && <span className="badge badge-sm badge-ghost">{activeFilterCount}</span>}
+          </button>
+
+          {(activeFilterCount > 0 || searchQuery) && (
+            <button className="btn btn-error btn-ghost btn-sm" onClick={clearAllFilters}>
+              <X className="w-4 h-4" />
+              Effacer
+            </button>
           )}
-        </Button>
+        </div>
       </div>
 
-      {/* Expanded Filters */}
+      {/* Expanded Filters Panel */}
       {showFilters && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mt-4 pt-4 border-t">
-          {/* Status */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="p-4 bg-base-200/50 rounded-2xl border border-base-300 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Statut</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              <option value="todo">À venir</option>
+              <option value="in_progress">En cours</option>
+              <option value="blocked">Reporté</option>
+              <option value="done">Terminé</option>
+              <option value="cancelled">Annulé</option>
+            </select>
+          </div>
 
-          {/* Priority */}
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="5">P5 (High)</SelectItem>
-              <SelectItem value="4">P4</SelectItem>
-              <SelectItem value="3">P3</SelectItem>
-              <SelectItem value="2">P2</SelectItem>
-              <SelectItem value="1">P1 (Low)</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Priorité</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+              <option value="all">Toutes</option>
+              <option value="high">Haute</option>
+              <option value="medium">Moyenne</option>
+              <option value="low">Basse</option>
+            </select>
+          </div>
 
-          {/* Workspace */}
-          <Select value={workspaceFilter} onValueChange={setWorkspaceFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Workspaces</SelectItem>
-              <SelectItem value="none">No Workspace</SelectItem>
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Workspace</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              <option value="none">Sans</option>
               {workspaces.map(w => (
-                <SelectItem key={w.id} value={w.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color }} />
-                    {w.name}
-                  </div>
-                </SelectItem>
+                <option key={w.id} value={w.id}>{w.name}</option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+          </div>
 
-          {/* Campaign */}
-          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Campaign" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Campaign</SelectItem>
-              <SelectItem value="none">No Campaign</SelectItem>
-              {campaigns.map(camp => (
-                <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Échéance</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={dueDateFilter} onChange={e => setDueDateFilter(e.target.value)}>
+              <option value="all">Toutes</option>
+              <option value="overdue">En retard</option>
+              <option value="today">Aujourd'hui</option>
+              <option value="week">Cette semaine</option>
+              <option value="no_date">Sans date</option>
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Tri</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+              <option value="created_desc">Plus récent</option>
+              <option value="created_asc">Plus ancien</option>
+              <option value="priority_desc">Priorité haute</option>
+              <option value="priority_asc">Priorité basse</option>
+              <option value="duedate_asc">Échéance proche</option>
+              <option value="title_asc">Titre (A-Z)</option>
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Client</span></label>
+            <select className="select select-bordered select-sm font-bold text-xs" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
+              <option value="all">Tous</option>
+              {contactsList.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </SelectContent>
-          </Select>
-
-          {/* Type Filter Removed */}
-
-          {/* Tag */}
-          <Select value={tagFilter} onValueChange={setTagFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tag" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tags</SelectItem>
-              {tags.map(tag => (
-                <SelectItem key={tag.id} value={tag.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
-                    {tag.name}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Due Date */}
-          <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Due Date" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Dates</SelectItem>
-              <SelectItem value="overdue">🔴 Overdue</SelectItem>
-              <SelectItem value="today">📅 Today</SelectItem>
-              <SelectItem value="week">📆 This Week</SelectItem>
-              <SelectItem value="no_date">No Date</SelectItem>
-            </SelectContent>
-          </Select>
-          {/* Client (New) */}
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {contactsList.map(contact => (
-                <SelectItem key={contact.id} value={contact.id}>
-                  {contact.name} {contact.company && `(${contact.company})`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Assignee Filter */}
-          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Assignee" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tasks</SelectItem>
-              <SelectItem value="assigned">👷 Assigned</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Sorting (New) */}
-          <Select value={sortOrder} onValueChange={setSortOrder}>
-            <SelectTrigger className="border-dashed">
-              <ArrowUpDown className="w-4 h-4 mr-2 opacity-50" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="created_desc">Newest Created</SelectItem>
-              <SelectItem value="created_asc">Oldest Created</SelectItem>
-              <SelectItem value="priority_desc">Highest Priority</SelectItem>
-              <SelectItem value="priority_asc">Lowest Priority</SelectItem>
-              <SelectItem value="duedate_asc">Due Soonest</SelectItem>
-              <SelectItem value="duedate_desc">Due Latest</SelectItem>
-              <SelectItem value="title_asc">Title (A-Z)</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Column Visibility (New) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-dashed">
-                <Columns className="w-4 h-4 mr-2 opacity-50" />
-                Columns
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.status}
-                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, status: checked }))}
-              >
-                Status
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.dueDate}
-                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, dueDate: checked }))}
-              >
-                Due Date
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.priority}
-                onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, priority: checked }))}
-              >
-                Priority
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </select>
+          </div>
         </div>
       )}
 
-      {/* Selection count */}
-      {
-        selectedIds.length > 0 && viewMode === 'table' && (
-          <div className="flex items-center gap-2 px-1">
-            <Badge variant="secondary" className="px-3 py-1">
-              {selectedIds.length} meetings selected
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={clearSelection} className="h-8">
-              Clear Selection
-            </Button>
-          </div>
-        )
-      }
-
-      {/* Content: Table or Kanban */}
-      {
-        viewMode === 'table' ? (
-          <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/30 border-b border-border/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left w-10">
-                      <Checkbox
-                        checked={isAllSelected}
-                        ref={el => el && (el.indeterminate = isSomeSelected)}
-                        onCheckedChange={toggleSelectAll}
-                        aria-label="Select all"
-                        className="border-border/50"
-                      />
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Title</th>
-                    {visibleColumns.status && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>}
-                    {visibleColumns.dueDate && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Due Date</th>}
-                    {visibleColumns.priority && <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Priority</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                        <p>Loading meetings...</p>
-                      </td>
-                    </tr>
-                  ) : filteredTasks.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-muted-foreground">
-                        {tasks.length === 0
-                          ? 'No meetings yet. Create one to get started!'
-                          : 'No meetings match your filters.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredTasks.map((task) => {
-                      const isOverdue = task.due_date && new Date(task.due_date) < today && task.status !== 'done'
-
-                      return (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          isSelected={selectedIds.includes(task.id)}
-                          isCompleting={completingTaskId === task.id}
-                          onSelect={(e) => {
-                            e?.stopPropagation()
-                            toggleSelect(task.id)
-                          }}
-                          onComplete={async () => {
-                            setCompletingTaskId(task.id)
-                            await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
-                            setTimeout(() => setCompletingTaskId(null), 1000)
-                          }}
-                          onClick={() => {
-                            setModalTask(task)
-                            setTaskModalOpen(true)
-                          }}
-                          isOverdue={isOverdue}
-                          statusColors={statusColors}
-                          priorityColors={priorityColors}
-                          visibleColumns={visibleColumns}
-                        />
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        ) : (
+      {/* Content Area */}
+      {isLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-primary opacity-50" />
+          <p className="mt-4 text-muted-foreground font-medium">Chargement des réunions...</p>
+        </div>
+      ) : viewMode === 'kanban' ? (
+        <div className="flex-1 min-h-0">
           <KanbanView
             tasks={filteredTasks}
             onStatusChange={(taskId, newStatus) => {
@@ -551,173 +381,192 @@ export function Meetings() {
               setTaskModalOpen(true)
             }}
           />
-        )
-      }
+        </div>
+      ) : (
+        <div data-tour="meetings-list" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+          <div className="card-body p-0 overflow-auto">
+            {filteredTasks.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
+                <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
+                  <Video className="w-10 h-10 opacity-20" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">Aucune réunion trouvée</h3>
+                <p className="text-muted-foreground max-w-xs mb-6">
+                  {tasks.filter(t => t.type === 'meeting').length === 0
+                    ? "Planifiez votre première réunion pour commencer à organiser votre temps."
+                    : "Aucune réunion ne correspond à vos filtres actuels."}
+                </p>
+              </div>
+            ) : (
+              <table className="table table-zebra table-pin-rows">
+                <thead className="bg-base-200">
+                  <tr>
+                    <th className="w-12">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                        checked={isAllSelected}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th>Réunion</th>
+                    <th>Statut</th>
+                    <th>Échéance</th>
+                    <th>Priorité</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      isSelected={selectedIds.includes(task.id)}
+                      isCompleting={completingTaskId === task.id}
+                      onSelect={() => toggleSelect(task.id)}
+                      onComplete={async () => {
+                        setCompletingTaskId(task.id)
+                        await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
+                        setTimeout(() => setCompletingTaskId(null), 1000)
+                      }}
+                      onClick={() => {
+                        setModalTask(task)
+                        setTaskModalOpen(true)
+                      }}
+                      isOverdue={task.due_date && new Date(task.due_date) < today && task.status !== 'done'}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Results count */}
-      {
-        filteredTasks.length > 0 && (
-          <p className="text-sm text-muted-foreground text-center">
-            Showing {filteredTasks.length} of {tasks.length} tasks
-          </p>
-        )
-      }
+      {/* Results Info */}
+      {filteredTasks.length > 0 && (
+        <div className="text-center py-2 opacity-50 text-[10px] font-black uppercase tracking-widest">
+          Affichage de {filteredTasks.length} sur {tasks.filter(t => t.type === 'meeting').length} réunions
+        </div>
+      )}
 
       {/* Bulk Actions Bar */}
-      {
-        selectedIds.length > 0 && (
-          <BulkActionsBar
-            selectedIds={selectedIds}
-            onClear={clearSelection}
-            onSuccess={clearSelection}
-          />
-        )
-      }
-
-      {/* Task Modal is handled globally */}
+      {selectedIds.length > 0 && (
+        <BulkActionsBar
+          selectedIds={selectedIds}
+          onClear={() => setSelectedIds([])}
+          onSuccess={() => setSelectedIds([])}
+        />
+      )}
 
       <CampaignModal
         open={isCampaignModalOpen}
         onOpenChange={setCampaignModalOpen}
         onSuccess={loadFilterOptions}
       />
-    </div >
+
+      <TaskModal
+        open={isTaskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        task={modalTask}
+      />
+    </div>
   )
 }
 
-// Task Row Component with polish
-function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, statusColors, priorityColors, visibleColumns }) {
-  // Safe access to nested properties
+function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue }) {
   const context = task.expand?.context_id
   const campaign = task.expand?.campaign_id
   const tags = task.expand?.tags || []
 
-  const handleCheck = (checked) => {
-    if (checked && task.status !== 'done') {
-      onComplete()
-    }
-    onSelect()
+  const priorityColors = {
+    1: 'bg-blue-500',
+    'low': 'bg-blue-500',
+    2: 'bg-green-500',
+    3: 'bg-yellow-500',
+    'medium': 'bg-yellow-500',
+    4: 'bg-orange-500',
+    5: 'bg-red-500',
+    'high': 'bg-red-500',
+  }
+
+  const statusBadges = {
+    todo: 'badge-ghost',
+    in_progress: 'badge-info',
+    blocked: 'badge-warning',
+    done: 'badge-success',
+    cancelled: 'badge-error',
   }
 
   return (
     <tr
-      className={`border-b border-border/30 transition-all duration-300 cursor-pointer group relative
-        ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/40'}
-      `}
-      style={{
-        borderLeft: isSelected && context?.color
-          ? `3px solid ${context.color}`
-          : '3px solid transparent'
-      }}
+      className={`hover cursor-pointer group transition-all ${isSelected ? 'active' : ''}`}
       onClick={onClick}
     >
-      <td className="px-4 py-4 w-[50px]">
-        <div className="relative flex items-center justify-center">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={handleCheck}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+      <td onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+          checked={isSelected}
+          onChange={onSelect}
+        />
       </td>
-      <td className="px-6 py-4">
-        <div>
-          <div className="flex items-center gap-2">
-            {task.type === 'meeting' && <span className="text-xl">📅</span>}
-            <p className={`font-medium transition-all ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+      <td>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xl">📅</span>
+            <span className={`font-bold ${task.status === 'done' ? 'line-through opacity-50' : ''}`}>
               {task.title}
-            </p>
+            </span>
             {context && (
-              <Badge
-                variant="outline"
-                className="text-xs transition-colors"
-                style={{
-                  backgroundColor: `${context.color}15`,
-                  borderColor: context.color,
-                  color: context.color
-                }}
+              <span
+                className="badge badge-sm border-none font-bold text-[10px]"
+                style={{ backgroundColor: `${context.color}20`, color: context.color }}
               >
                 {context.name}
-              </Badge>
+              </span>
             )}
             {campaign && (
-              <Badge
-                variant="outline"
-                className="text-xs border-indigo-200 bg-indigo-50 text-indigo-700 bg-gradient-to-r from-indigo-50 to-white"
-              >
+              <span className="badge badge-sm badge-outline border-indigo-500/30 text-indigo-500 font-bold text-[10px]">
                 🚀 {campaign.name}
-              </Badge>
-            )}
-            {task.contact_id && (
-              <Badge
-                variant="outline"
-                className="text-xs border-blue-200 bg-blue-50 text-blue-700"
-              >
-                👤 Client
-              </Badge>
-            )}
-            {task.assigned_to && (
-              <div className="ml-1" title="Assigned">
-                <Avatar className="h-5 w-5">
-                  <AvatarFallback className="text-[10px] bg-primary/20 text-primary">
-                    <User className="h-3 w-3" />
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+              </span>
             )}
           </div>
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {tags.map((tag) => (
-                <Badge
-                  key={tag.id}
-                  variant="outline"
-                  className="text-[10px] px-1 py-0 h-5 border-none"
-                  style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                >
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          )}
+
+          <div className="flex flex-wrap gap-1">
+            {tags.map(tag => (
+              <span
+                key={tag.id}
+                className="badge badge-outline border-none text-[8px] h-4 font-black uppercase tracking-tighter"
+                style={{ backgroundColor: `${tag.color}15`, color: tag.color }}
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+
           {task.description && (
-            <p className="text-sm text-muted-foreground line-clamp-1 mt-1 group-hover:text-foreground/80 transition-colors">
+            <p className="text-xs text-muted-foreground line-clamp-1 opacity-70 group-hover:opacity-100 font-medium">
               {task.description}
             </p>
           )}
         </div>
       </td>
-
-      {
-        visibleColumns.status && (
-          <td className="px-6 py-4">
-            <Badge className={`${statusColors[task.status]} transition-all duration-300 shadow-sm border border-border/20 group-hover:scale-105 group-hover:shadow-md`}>
-              {task.status?.replace('_', ' ')}
-            </Badge>
-          </td>
-        )
-      }
-
-      {
-        visibleColumns.dueDate && (
-          <td className={`px-6 py-4 text-sm transition-colors ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-            {task.due_date ? (
-              <span className="flex items-center gap-1">
-                {isOverdue && '🔴'}
-                {new Date(task.due_date).toLocaleDateString()}
-              </span>
-            ) : '-'}
-          </td>
-        )
-      }
-
-      {
-        visibleColumns.priority && (
-          <td className="px-6 py-4">
-            <div className={`w-3 h-3 rounded-full ${priorityColors[task.priority] || 'bg-gray-300'} shadow-sm`} />
-          </td>
-        )
-      }
-    </tr >
+      <td>
+        <span className={`badge badge-sm border-none font-bold capitalize ${statusBadges[task.status] || 'badge-ghost'}`}>
+          {task.status?.replace('_', ' ')}
+        </span>
+      </td>
+      <td>
+        <div className={`text-xs font-bold ${isOverdue ? 'text-error animate-pulse' : 'opacity-60'}`}>
+          {task.due_date ? format(new Date(task.due_date), 'dd/MM/yyyy') : '-'}
+        </div>
+      </td>
+      <td>
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${priorityColors[String(task.priority).toLowerCase()] || 'bg-base-300'} shadow-sm`} />
+          <span className="text-[10px] font-bold opacity-50 uppercase">P{task.priority || 0}</span>
+        </div>
+      </td>
+    </tr>
   )
 }

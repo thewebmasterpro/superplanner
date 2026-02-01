@@ -141,123 +141,118 @@ export function Contacts({ initialView = 'list' }) {
     }
 
     return (
-        <div className="container-tight py-8 section-gap h-[calc(100vh-4rem)] flex flex-col">
+        <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex items-center justify-between shrink-0 mb-6">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-extrabold tracking-tight font-display flex items-center gap-2">
-                        <User className="w-8 h-8 text-primary" />
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
+                        <User className="w-8 h-8" />
                         Contacts
                     </h1>
-                    <p className="text-muted-foreground font-medium">Manage your clients and prospects</p>
+                    <p className="text-muted-foreground">Gérez vos clients, prospects et partenaires.</p>
                 </div>
-                <div className="flex gap-2 bg-muted/50 p-1 rounded-lg">
-                    <Button
-                        variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setViewMode('list')}
-                        className="h-8"
-                    >
-                        <List className="w-4 h-4 mr-2" />
-                        List
-                    </Button>
-                    <Button
-                        variant={viewMode === 'pipeline' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        onClick={() => setViewMode('pipeline')}
-                        className="h-8"
-                    >
-                        <Columns className="w-4 h-4 mr-2" />
-                        Pipeline
-                    </Button>
+                <div className="flex items-center gap-3">
+                    <div data-tour="contacts-view-toggle" className="flex items-center gap-1">
+                        <button
+                            className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${viewMode === 'list' ? 'btn-active' : ''}`}
+                            onClick={() => setViewMode('list')}
+                        >
+                            <List className="w-4 h-4" />
+                        </button>
+                        <button
+                            className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${viewMode === 'pipeline' ? 'btn-active' : ''}`}
+                            onClick={() => setViewMode('pipeline')}
+                        >
+                            <Columns className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <button data-tour="contacts-create" onClick={handleNew} className="btn gap-2 shadow-none transition-transform hover:scale-105 active:scale-95">
+                        <Plus className="w-5 h-5" />
+                        Nouveau Contact
+                    </button>
                 </div>
             </div>
 
-            {/* Stats Cards - Only visible in List view or if wanted in both */}
+            {/* Stats */}
             {viewMode === 'list' && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 shrink-0 mb-6">
-                    <Card className="glass-card card-hover border-border/40">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold tracking-tight">{stats.all}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="glass-card card-hover border-border/40">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Clients</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold tracking-tight text-green-600">{stats.clients}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="glass-card card-hover border-border/40">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prospects</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold tracking-tight text-blue-600">{stats.prospects}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="glass-card card-hover border-border/40 relative overflow-hidden">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">In Pipeline</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold tracking-tight text-purple-600">{stats.pipeline}</p>
-                            {stats.pipeline > 0 && (
-                                <div className="absolute top-2 right-2 flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger-fast">
+                    <div className="stats shadow bg-base-100 border border-base-300">
+                        <div className="stat">
+                            <div className="stat-title text-xs font-bold uppercase opacity-50">Total</div>
+                            <div className="stat-value text-2xl tracking-tight">{stats.all}</div>
+                        </div>
+                    </div>
+                    <div className="stats shadow bg-base-100 border border-base-300">
+                        <div className="stat">
+                            <div className="stat-title text-xs font-bold uppercase opacity-50 text-success">Clients</div>
+                            <div className="stat-value text-success text-2xl tracking-tight">{stats.clients}</div>
+                        </div>
+                    </div>
+                    <div className="stats shadow bg-base-100 border border-base-300">
+                        <div className="stat">
+                            <div className="stat-title text-xs font-bold uppercase opacity-50 text-info">Prospects</div>
+                            <div className="stat-value text-info text-2xl tracking-tight">{stats.prospects}</div>
+                        </div>
+                    </div>
+                    <div className="stats shadow bg-base-100 border border-base-300">
+                        <div className="stat overflow-visible">
+                            <div className="stat-title text-xs font-bold uppercase opacity-50 text-warning">En Pipeline</div>
+                            <div className="stat-value text-warning text-2xl tracking-tight flex items-center gap-2">
+                                {stats.pipeline}
+                                {stats.pipeline > 0 && <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                </span>}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
             {/* Filters */}
-            <Card className="p-4 mb-6 shrink-0">
-                <div className="flex items-center gap-4 flex-wrap justify-end">
-
-                    {viewMode === 'list' && (
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-[160px]">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                {STATUS_OPTIONS.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-
-                    <Select value={workspaceFilter} onValueChange={setWorkspaceFilter}>
-                        <SelectTrigger className="w-[160px]">
-                            <SelectValue placeholder="Workspace" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Workspaces</SelectItem>
-                            {workspaces.map(w => (
-                                <SelectItem key={w.id} value={w.id}>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color }} />
-                                        {w.name}
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+            <div data-tour="contacts-search" className="flex flex-wrap gap-2 items-center bg-base-100 p-3 rounded-2xl shadow-sm border border-base-300">
+                <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
+                    <input
+                        type="text"
+                        placeholder="Rechercher un contact..."
+                        className="input input-sm input-ghost w-full pl-9 focus:bg-base-200"
+                        value={searchQuery}
+                        onChange={(e) => useUIStore.setState({ searchQuery: e.target.value })}
+                    />
                 </div>
-            </Card>
+                {viewMode === 'list' && (
+                    <>
+                        <div className="divider divider-horizontal m-0 py-2"></div>
+                        <select
+                            className="select select-sm select-ghost font-bold text-xs"
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value)}
+                        >
+                            <option value="all">Tous les statuts</option>
+                            {STATUS_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </>
+                )}
+                <div className="divider divider-horizontal m-0 py-2"></div>
+                <select
+                    className="select select-sm select-ghost font-bold text-xs"
+                    value={workspaceFilter}
+                    onChange={e => setWorkspaceFilter(e.target.value)}
+                >
+                    <option value="all">Tous les workspaces</option>
+                    {workspaces.map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                </select>
+            </div>
 
             {/* Content Area */}
             {isLoading ? (
-                <div className="flex items-center justify-center py-12 flex-1">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <div className="flex items-center justify-center py-20 flex-1">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary opacity-50" />
                 </div>
             ) : viewMode === 'pipeline' ? (
                 <div className="flex-1 overflow-hidden min-h-0">
@@ -270,147 +265,136 @@ export function Contacts({ initialView = 'list' }) {
                     />
                 </div>
             ) : (
-                <Card className="glass-panel overflow-hidden border-border/40 shadow-xl rounded-xl flex-1 flex flex-col min-h-0">
-                    <div className="overflow-x-auto overflow-y-auto flex-1">
+                <div data-tour="contacts-table" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+                    <div className="card-body p-0 overflow-auto">
                         {contacts.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">
-                                <User className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                <p>No contacts found</p>
-                                <Button variant="link" onClick={handleNew}>Create your first contact</Button>
+                            <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
+                                <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
+                                    <User className="w-10 h-10 opacity-20" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">Aucun contact trouvé</h3>
+                                <p className="text-muted-foreground max-w-xs mb-6">Gérez vos clients, prospects et partenaires plus efficacement.</p>
+                                <button className="btn btn-primary btn-sm" onClick={handleNew}>Créer votre premier contact</button>
                             </div>
                         ) : (
-                            <table className="w-full">
-                                <thead className="bg-muted/30 border-b border-border/50 sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+                            <table className="table table-zebra table-pin-rows">
+                                <thead className="bg-base-200">
                                     <tr>
-                                        <th className="px-6 py-4 w-12">
-                                            <Checkbox
+                                        <th className="w-12">
+                                            <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
                                                 checked={contacts.length > 0 && selectedIds.length === contacts.length}
-                                                onCheckedChange={toggleSelectAll}
-                                                aria-label="Select all"
+                                                onChange={toggleSelectAll}
                                             />
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contexts</th>
-                                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Info</th>
-                                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>
+                                        <th>Contact</th>
+                                        <th>Statut</th>
+                                        <th>Workspaces</th>
+                                        <th>Coordonnées</th>
+                                        <th className="text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border/30">
+                                <tbody>
                                     {contacts.map(contact => (
                                         <tr
                                             key={contact.id}
-                                            className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${selectedIds.includes(contact.id) ? 'bg-primary/5' : ''}`}
+                                            className={`hover cursor-pointer group ${selectedIds.includes(contact.id) ? 'active' : ''}`}
                                             onClick={() => handleEdit(contact)}
                                         >
-                                            <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                                                <Checkbox
+                                            <td onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
                                                     checked={selectedIds.includes(contact.id)}
-                                                    onCheckedChange={() => toggleSelection(contact.id)}
+                                                    onChange={() => toggleSelection(contact.id)}
                                                 />
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                        {contact.type === 'company' ? (
-                                                            <Building2 className="w-5 h-5 text-primary" />
-                                                        ) : (
-                                                            <User className="w-5 h-5 text-primary" />
-                                                        )}
+                                                    <div className="avatar placeholder">
+                                                        <div className="bg-primary/10 text-primary rounded-2xl w-10 h-10">
+                                                            {contact.type === 'company' ? (
+                                                                <Building2 className="w-5 h-5" />
+                                                            ) : (
+                                                                <span className="text-sm font-bold">{contact.name?.charAt(0)}</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <p className="font-medium">{contact.name}</p>
-                                                        {contact.company && (
-                                                            <p className="text-sm text-muted-foreground">{contact.company}</p>
-                                                        )}
+                                                        <div className="font-bold">{contact.name}</div>
+                                                        <div className="text-[10px] uppercase opacity-50 font-black tracking-widest">{contact.company}</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 {getStatusBadge(contact.status)}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <div className="flex flex-wrap gap-1">
                                                     {contact.contact_contexts?.map(cc => cc.context && (
-                                                        <Badge
+                                                        <span
                                                             key={cc.context.id}
-                                                            variant="outline"
-                                                            className="text-xs"
+                                                            className="badge badge-outline border-none text-[10px] h-5 font-bold"
                                                             style={{
-                                                                backgroundColor: `${cc.context.color}15`,
-                                                                borderColor: cc.context.color,
+                                                                backgroundColor: `${cc.context.color}20`,
                                                                 color: cc.context.color
                                                             }}
                                                         >
                                                             {cc.context.name}
-                                                        </Badge>
+                                                        </span>
                                                     ))}
-                                                    {(!contact.contact_contexts || contact.contact_contexts.length === 0) && (
-                                                        <span className="text-xs text-muted-foreground">-</span>
-                                                    )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-1 text-sm">
-                                                    {contact.email && (
-                                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                                            <Mail className="w-3 h-3" />
-                                                            {contact.email}
-                                                        </div>
-                                                    )}
-                                                    {contact.phone && (
-                                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                                            <Phone className="w-3 h-3" />
-                                                            {contact.phone}
-                                                        </div>
-                                                    )}
-                                                    {!contact.email && !contact.phone && '-'}
+                                            <td>
+                                                <div className="flex flex-col gap-0.5 text-xs opacity-70">
+                                                    {contact.email && <div className="flex items-center gap-2"><Mail className="w-3 h-3" /> {contact.email}</div>}
+                                                    {contact.phone && <div className="flex items-center gap-2"><Phone className="w-3 h-3" /> {contact.phone}</div>}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {contact.email && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                                            onClick={(e) => handleEmail(contact, e)}
-                                                            title="Send Email"
-                                                        >
-                                                            <Mail className="w-4 h-4" />
-                                                        </Button>
-                                                    )}
-                                                    {contact.phone && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-50"
-                                                            onClick={(e) => handleWhatsApp(contact, e)}
-                                                            title="WiFi WhatsApp"
-                                                        >
-                                                            <MessageCircle className="w-4 h-4" />
-                                                        </Button>
-                                                    )}
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                <MoreHorizontal className="w-4 h-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(contact); }}>
-                                                                <Edit2 className="w-4 h-4 mr-2" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(contact); }}
-                                                                className="text-destructive"
+                                            <td className="text-right" onClick={e => e.stopPropagation()}>
+                                                <div className="flex justify-end gap-1">
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {contact.email && (
+                                                            <button
+                                                                className="btn btn-primary btn-ghost btn-xs btn-square"
+                                                                onClick={(e) => handleEmail(contact, e)}
+                                                                title="Envoyer un email"
                                                             >
-                                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                                <Mail className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                        {contact.phone && (
+                                                            <button
+                                                                className="btn btn-success btn-ghost btn-xs btn-square"
+                                                                onClick={(e) => handleWhatsApp(contact, e)}
+                                                                title="WhatsApp"
+                                                            >
+                                                                <MessageCircle className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            className="btn btn-ghost btn-xs btn-square"
+                                                            onClick={() => handleEdit(contact)}
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-error btn-ghost btn-xs btn-square"
+                                                            onClick={() => setDeleteConfirm(contact)}
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="dropdown dropdown-end md:hidden">
+                                                        <label tabIndex={0} className="btn btn-ghost btn-xs btn-square">
+                                                            <MoreHorizontal className="w-3.5 h-3.5" />
+                                                        </label>
+                                                        <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 rounded-box w-32 border border-base-300">
+                                                            <li><a onClick={() => handleEdit(contact)}><Edit2 className="w-4 h-4" /> Éditer</a></li>
+                                                            <li><a onClick={() => setDeleteConfirm(contact)} className="text-error"><Trash2 className="w-4 h-4" /> Supprimer</a></li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -419,7 +403,7 @@ export function Contacts({ initialView = 'list' }) {
                             </table>
                         )}
                     </div>
-                </Card>
+                </div>
             )}
 
             {/* Contact Modal */}
@@ -430,22 +414,20 @@ export function Contacts({ initialView = 'list' }) {
             />
 
             {/* Delete Confirmation */}
-            <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete "{deleteConfirm?.name}"?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. All data associated with this contact will be deleted.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {deleteConfirm && (
+                <div className="modal modal-open">
+                    <div className="modal-box max-w-sm">
+                        <h3 className="font-bold text-lg text-error">Supprimer "{deleteConfirm?.name}" ?</h3>
+                        <p className="py-4 text-sm opacity-70">
+                            Cette action est irréversible. Toutes les données associées à ce contact seront supprimées.
+                        </p>
+                        <div className="modal-action">
+                            <button className="btn btn-ghost btn-sm" onClick={() => setDeleteConfirm(null)}>Annuler</button>
+                            <button className="btn btn-error btn-sm" onClick={handleDelete}>Supprimer définitivement</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Email Modal for List View */}
             <ComposeEmailModal
@@ -454,7 +436,6 @@ export function Contacts({ initialView = 'list' }) {
                 contact={emailContact}
                 onSuccess={() => {
                     setEmailContact(null)
-                    // Optionally refresh list if needed
                 }}
             />
 

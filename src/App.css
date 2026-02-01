@@ -303,67 +303,82 @@
   cursor: pointer;
 }
 
-/* Buttons */
+/* Global Button Harmonization - Less aggressive to respect .btn sizes */
 button {
   cursor: pointer;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: 12px;
   font-weight: 600;
-  font-size: 0.95em;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+button:active {
+  transform: scale(0.96);
 }
 
 .btn-primary {
-  background: #667eea;
-  color: white;
+  background: var(--primary);
+  color: var(--primary-foreground);
   min-width: 120px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary:hover {
-  background: #5568d3;
+  filter: brightness(1.1);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .btn-edit {
   background: #fbbf24;
   color: #78350f;
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 0.85em;
+  border-radius: 8px;
 }
 
 .btn-edit:hover {
   background: #f59e0b;
+  transform: translateY(-1px);
 }
 
 .btn-delete {
   background: #f87171;
   color: white;
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: 0.85em;
+  border-radius: 8px;
 }
 
 .btn-delete:hover {
   background: #dc2626;
+  transform: translateY(-1px);
 }
 
 .btn-success {
   background: #4ade80;
   color: white;
+  padding: 10px 24px;
 }
 
 .btn-success:hover {
   background: #22c55e;
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background: #e5e7eb;
-  color: #374151;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
 }
 
 .btn-secondary:hover {
-  background: #d1d5db;
+  background: hsl(var(--accent));
+  transform: translateY(-1px);
 }
 
 /* Task List */

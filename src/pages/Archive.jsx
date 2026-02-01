@@ -1,21 +1,6 @@
-import { Archive, RefreshCw, FolderOpen, Trash2, X } from 'lucide-react'
+import { Archive, RefreshCw, FolderOpen, Trash2, X, Loader2 } from 'lucide-react'
 import { useTasks, useRestoreTask, useMoveToTrash, useBulkRestoreTasks, useBulkMoveToTrash, useEmptyArchive } from '../hooks/useTasks'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { useEffect, useState } from 'react'
 
 export function ArchivePage() {
@@ -69,140 +54,163 @@ export function ArchivePage() {
     }
 
     if (isLoading) {
-        return <div className="p-8 text-center text-muted-foreground">Loading archive...</div>
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center py-20 animate-in fade-in duration-500">
+                <Loader2 className="w-10 h-10 animate-spin text-primary opacity-50" />
+                <p className="mt-4 text-muted-foreground font-medium">Chargement de l'archive...</p>
+            </div>
+        )
     }
 
     const isAllSelected = tasks.length > 0 && selectedIds.length === tasks.length
 
     return (
-        <div className="container-tight py-8 space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <Archive className="w-8 h-8 text-primary" />
-                        Archive
+                    <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
+                        <Archive className="w-8 h-8" />
+                        Archives
                     </h1>
-                    <p className="text-muted-foreground">Completed projects and old tasks kept for reference.</p>
+                    <p className="text-muted-foreground">Projets terminés et anciennes tâches conservés pour référence.</p>
                 </div>
                 {tasks.length > 0 && (
-                    <AlertDialog open={showEmptyConfirm} onOpenChange={setShowEmptyConfirm}>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="outline" className="text-destructive hover:bg-destructive/10">
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Empty Archive
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Empty Archive?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will move all {tasks.length} archived items to the Trash. You can still restore them from there.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleEmptyArchive} className="bg-destructive text-destructive-foreground">
-                                    Move All to Trash
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    <button
+                        data-tour="archive-empty"
+                        className="btn btn-error btn-outline btn-sm gap-2 font-bold"
+                        onClick={() => setShowEmptyConfirm(true)}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Vider l'archive
+                    </button>
                 )}
             </div>
 
-            <Card className="overflow-hidden">
-                {tasks.length === 0 ? (
-                    <div className="p-12 text-center text-muted-foreground flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center">
-                            <FolderOpen className="w-8 h-8 opacity-50" />
-                        </div>
-                        <p>Archive is empty</p>
-                    </div>
-                ) : (
-                    <div className="divide-y">
-                        {/* Header with Select All */}
-                        <div className="p-4 bg-muted/30 flex items-center gap-4">
-                            <Checkbox
-                                checked={isAllSelected}
-                                onCheckedChange={toggleSelectAll}
-                                aria-label="Select all"
-                            />
-                            <span className="text-sm font-medium text-muted-foreground">
-                                {selectedIds.length > 0 ? `${selectedIds.length} selected` : 'Select tasks'}
-                            </span>
-                        </div>
-
-                        {tasks.map(task => (
-                            <div key={task.id} className={`p-4 flex items-center gap-4 group transition-colors ${selectedIds.includes(task.id) ? 'bg-primary/5' : 'hover:bg-muted/50'}`}>
-                                <Checkbox
-                                    checked={selectedIds.includes(task.id)}
-                                    onCheckedChange={() => toggleSelect(task.id)}
-                                />
-                                <div className="space-y-1 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium text-foreground/80">{task.title}</span>
-                                        {task.project && (
-                                            <Badge variant="outline" className="text-xs">{task.project.name}</Badge>
-                                        )}
-                                        {task.context && (
-                                            <Badge variant="outline" className="text-xs" style={{ color: task.context.color, borderColor: task.context.color }}>
-                                                {task.context.name}
-                                            </Badge>
-                                        )}
-                                        {task.status === 'done' && (
-                                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">Done</Badge>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>Archived on {new Date(task.archived_at).toLocaleDateString()}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => restoreTask.mutate(task.id)}
-                                        title="Restore to Tasks"
-                                    >
-                                        <RefreshCw className="w-4 h-4 mr-2" />
-                                        Restore
-                                    </Button>
-
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                        onClick={() => moveToTrash.mutate(task.id)}
-                                        title="Move to Trash"
-                                    >
-                                        Delete
-                                    </Button>
-                                </div>
+            {/* Content */}
+            <div data-tour="archive-table" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+                <div className="card-body p-0 overflow-auto">
+                    {tasks.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
+                            <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
+                                <FolderOpen className="w-10 h-10 opacity-20" />
                             </div>
-                        ))}
-                    </div>
-                )}
-            </Card>
+                            <h3 className="text-xl font-bold mb-2">L'archive est vide</h3>
+                            <p className="text-muted-foreground max-w-xs">Aucun élément n'a été archivé pour le moment.</p>
+                        </div>
+                    ) : (
+                        <table className="table table-zebra table-pin-rows">
+                            <thead className="bg-base-200">
+                                <tr>
+                                    <th className="w-12">
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                            checked={isAllSelected}
+                                            onChange={toggleSelectAll}
+                                        />
+                                    </th>
+                                    <th>Élément</th>
+                                    <th>Date d'archivage</th>
+                                    <th className="text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {tasks.map(task => (
+                                    <tr key={task.id} className="hover group transition-colors">
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                                checked={selectedIds.includes(task.id)}
+                                                onChange={() => toggleSelect(task.id)}
+                                            />
+                                        </td>
+                                        <td>
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-bold text-base-content/80 group-hover:text-primary transition-colors">{task.title}</span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {task.expand?.project_id && (
+                                                        <span className="badge badge-xs text-[10px] bg-base-200 border-none font-bold uppercase tracking-widest text-base-content/60">
+                                                            {task.expand.project_id.name}
+                                                        </span>
+                                                    )}
+                                                    {task.expand?.context_id && (
+                                                        <span className="badge badge-xs text-[10px] border-none font-black uppercase tracking-widest" style={{ backgroundColor: `${task.expand.context_id.color}20`, color: task.expand.context_id.color }}>
+                                                            {task.expand.context_id.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="text-xs font-bold opacity-40">
+                                            {new Date(task.archived_at || task.updated).toLocaleDateString()}
+                                        </td>
+                                        <td className="text-right">
+                                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    className="btn btn-primary btn-ghost btn-xs font-bold gap-2"
+                                                    onClick={() => restoreTask.mutate(task.id)}
+                                                    title="Désarchiver"
+                                                >
+                                                    <RefreshCw className="w-3.5 h-3.5" />
+                                                    Restaurer
+                                                </button>
+                                                <button
+                                                    className="btn btn-error btn-ghost btn-xs btn-square"
+                                                    onClick={() => moveToTrash.mutate(task.id)}
+                                                    title="Supprimer"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </div>
 
             {/* Bulk Actions Floating Bar */}
             {selectedIds.length > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background border shadow-xl rounded-full px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
-                    <span className="text-sm font-semibold border-r pr-4">{selectedIds.length} tasks selected</span>
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-base-100 border border-base-300 shadow-2xl rounded-2xl px-6 py-3 flex items-center gap-6 animate-in slide-in-from-bottom-4">
+                    <span className="text-xs font-black uppercase tracking-widest border-r border-base-300 pr-6">{selectedIds.length} sélectionnés</span>
 
-                    <Button variant="ghost" size="sm" onClick={handleBulkRestore} className="text-primary hover:text-primary hover:bg-primary/10">
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Restore
-                    </Button>
+                    <button className="btn btn-primary btn-sm gap-2 shadow-lg" onClick={handleBulkRestore}>
+                        <RefreshCw className="w-4 h-4" />
+                        Restaurer tout
+                    </button>
 
-                    <Button variant="ghost" size="sm" onClick={handleBulkTrash} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Move to Trash
-                    </Button>
+                    <button className="btn btn-error btn-sm gap-2 shadow-lg" onClick={handleBulkTrash}>
+                        <Trash2 className="w-4 h-4" />
+                        Supprimer
+                    </button>
 
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedIds([])} className="h-8 w-8 rounded-full ml-2">
+                    <button className="btn btn-ghost btn-xs btn-circle ml-2" onClick={() => setSelectedIds([])}>
                         <X className="w-4 h-4" />
-                    </Button>
+                    </button>
+                </div>
+            )}
+
+            {/* Confirm Modals */}
+            {showEmptyConfirm && (
+                <div className="modal modal-open">
+                    <div className="modal-box border border-base-300 shadow-2xl">
+                        <h3 className="font-bold text-lg text-error flex items-center gap-2">
+                            <Trash2 className="w-5 h-5" />
+                            Vider l'archive ?
+                        </h3>
+                        <p className="py-4 text-sm opacity-70">
+                            Tous les éléments seront déplacés vers la corbeille. Vous pourrez toujours les restaurer de là si besoin.
+                        </p>
+                        <div className="modal-action">
+                            <button className="btn btn-ghost btn-sm font-bold" onClick={() => setShowEmptyConfirm(false)}>Annuler</button>
+                            <button className="btn btn-error btn-sm font-bold shadow-lg" onClick={handleEmptyArchive}>Déplacer vers corbeille</button>
+                        </div>
+                    </div>
+                    <div className="modal-backdrop bg-black/20 backdrop-blur-sm" onClick={() => setShowEmptyConfirm(false)}></div>
                 </div>
             )}
         </div>

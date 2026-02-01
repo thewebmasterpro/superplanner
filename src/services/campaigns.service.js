@@ -30,7 +30,7 @@ class CampaignsService {
       const options = {
         sort: '-start_date',
         expand: 'context_id',
-        requestKey: null // Disable auto-cancellation
+        requestKey: null
       }
 
       if (filterString) {
@@ -39,57 +39,8 @@ class CampaignsService {
 
       return await pb.collection('campaigns').getFullList(options)
     } catch (error) {
-      console.error('❌ Error fetching campaigns (Advanced):', error)
-
-      // Level 1 Fallback: Try without 'expand' (sometimes relations cause issues)
-      try {
-        const options = {
-          sort: '-start_date',
-          requestKey: null
-        }
-        if (filterString) {
-          options.filter = filterString
-        }
-
-        console.log('⚠️ Attempting Level 1 Fallback (No Expand)...')
-        const records = await pb.collection('campaigns').getFullList(options)
-        console.log('✅ Campaigns fetched (Level 1):', records.length)
-        return records
-
-      } catch (fallbackError) {
-        console.error('❌ Level 1 Fallback Failed:', fallbackError)
-
-        // Level 2 Fallback: Minimal fetch (Schema Mismatch Protected)
-        // Removes 'start_date' sort and 'context_id' filters which might be missing from DB
-        try {
-          console.log('⚠️ Attempting Level 2 Fallback (Minimal / Schema Safe)...')
-          const records = await pb.collection('campaigns').getFullList({
-            filter: `user_id = "${user.id}"`, // Only filter by user
-            sort: '-created', // 'created' always exists
-            requestKey: null
-          })
-          console.log('✅ Campaigns fetched (Level 2 - Minimal):', records.length)
-          return records
-        } catch (level2Error) {
-          console.error('❌ Level 2 Fallback Failed:', level2Error)
-
-          // Level 3 Fallback: Extreme Safe Mode - No filters, No sort
-          try {
-            console.log('⚠️ Attempting Level 3 Fallback (Raw Fetch)...')
-            const records = await pb.collection('campaigns').getFullList({
-              requestKey: null
-            })
-
-            // Manually filter in JS to be safe
-            const userCampaigns = records.filter(r => r.user_id === user.id)
-            console.log('✅ Campaigns fetched (Level 3):', userCampaigns.length)
-            return userCampaigns
-          } catch (finalError) {
-            console.error('❌ Critical failure fetching campaigns (All levels failed):', finalError)
-            return []
-          }
-        }
-      }
+      console.error('Error fetching campaigns:', error)
+      return []
     }
   }
 

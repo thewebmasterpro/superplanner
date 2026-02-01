@@ -101,7 +101,7 @@ export function CampaignGantt({ campaigns, onEdit }) {
                         {/* Header Dates */}
                         <div className="flex border-b h-10 bg-muted/30">
                             <div className="w-48 shrink-0 border-r px-4 flex items-center font-medium text-sm sticky left-0 bg-background z-10">
-                                Campaign
+                                Projet
                             </div>
                             <div className="flex-1 relative">
                                 {days.filter(d => d.getDate() === 1 || d.getDate() === 15).map(date => (
@@ -144,7 +144,7 @@ export function CampaignGantt({ campaigns, onEdit }) {
                         {/* Rows */}
                         <div className="relative py-2 space-y-2">
                             {sortedCampaigns.length === 0 && (
-                                <div className="text-center py-8 text-muted-foreground text-sm">No campaigns in this period</div>
+                                <div className="text-center py-8 text-muted-foreground text-sm">Aucun projet sur cette période</div>
                             )}
 
                             {sortedCampaigns.map(campaign => {

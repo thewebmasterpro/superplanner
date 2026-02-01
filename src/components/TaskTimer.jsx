@@ -13,7 +13,7 @@ import { useTimerStore } from '../stores/timerStore'
 import { useTimeTracking } from '../hooks/useTimeTracking'
 import { Loader2 } from 'lucide-react'
 
-function TaskTimer({ tasks }) {
+function TaskTimer({ tasks = [] }) {
     const { taskTimer, setTaskTimerState, resetTaskTimer } = useTimerStore()
     const { selectedTaskId, isRunning, seconds } = taskTimer
 
@@ -44,7 +44,8 @@ function TaskTimer({ tasks }) {
         resetTaskTimer()
     }
 
-    const selectedTask = tasks.find(t => t.id === selectedTaskId)
+    const safeTasks = Array.isArray(tasks) ? tasks : []
+    const selectedTask = safeTasks.find(t => t.id === selectedTaskId)
 
     return (
         <Card className="h-full">
@@ -65,7 +66,7 @@ function TaskTimer({ tasks }) {
                             <SelectValue placeholder="Sélectionner une tâche..." />
                         </SelectTrigger>
                         <SelectContent>
-                            {tasks.filter(t => t.status !== 'done').map(task => (
+                            {safeTasks.filter(t => t.status !== 'done').map(task => (
                                 <SelectItem key={task.id} value={task.id}>
                                     {task.title}
                                 </SelectItem>

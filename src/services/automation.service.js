@@ -22,8 +22,6 @@ class AutomationService {
         if (!isCritical) return
 
         try {
-            console.log('⚡️ Triggering Automation for Critical Task:', task.title)
-
             // Fire and forget - don't block the UI
             fetch(`${this.baseUrl}/webhook/${this.webhookId}`, {
                 method: 'POST',

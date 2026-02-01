@@ -88,7 +88,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
             <div className="flex flex-col md:flex-row justify-between gap-4">
                 <div>
                     <Button variant="ghost" size="sm" onClick={onBack} className="mb-2 -ml-2 text-muted-foreground">
-                        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Campaigns
+                        <ArrowLeft className="w-4 h-4 mr-1" /> Retour aux Projets
                     </Button>
                     <h1 className="text-3xl font-bold flex items-center gap-3">
                         {campaign.name}
@@ -102,7 +102,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
                 </div>
                 <div className="flex gap-2 items-start shrink-0">
                     <Button variant="outline" onClick={() => onEdit(campaign)}>
-                        <Edit2 className="w-4 h-4 mr-2" /> Edit Campaign
+                        <Edit2 className="w-4 h-4 mr-2" /> Modifier le Projet
                     </Button>
                     <Button variant="outline" onClick={() => { setModalTask({ campaign_id: campaign.id, type: 'task' }); setTaskModalOpen(true) }}>
                         + New Task
@@ -192,7 +192,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
                     </h3>
                     {tasks.length === 0 ? (
                         <div className="border border-dashed rounded-lg p-12 text-center text-muted-foreground">
-                            No tasks linked to this campaign yet.
+                            Aucune tâche liée à ce projet.
                         </div>
                     ) : (
                         <div className="space-y-2">

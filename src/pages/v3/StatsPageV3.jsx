@@ -19,18 +19,18 @@ export default function StatsPageV3() {
 
     return (
         <DashboardLayoutV3>
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6 animate-in fade-in duration-500">
                 <div>
                     <h1 className="text-3xl font-bold font-display flex items-center gap-2">
-                        <TrendingUp className="w-8 h-8 text-accent" />
+                        <TrendingUp className="w-8 h-8 text-primary" />
                         Statistiques
                     </h1>
                     <p className="text-muted-foreground">Analyse détaillée de votre productivité.</p>
                 </div>
 
                 {/* KPI Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="stats shadow bg-base-100">
+                <div data-tour="stats-kpis" className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-stagger-fast">
+                    <div className="stats shadow bg-base-100 border border-base-300">
                         <div className="stat">
                             <div className="stat-figure text-primary">
                                 <LayoutDashboard className="w-8 h-8 opacity-20" />
@@ -39,7 +39,7 @@ export default function StatsPageV3() {
                             <div className="stat-value text-primary font-display">{totalTasks}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100">
+                    <div className="stats shadow bg-base-100 border border-base-300">
                         <div className="stat">
                             <div className="stat-figure text-secondary">
                                 <CheckCircle2 className="w-8 h-8 opacity-20" />
@@ -48,7 +48,7 @@ export default function StatsPageV3() {
                             <div className="stat-value text-secondary font-display">{completedTasks}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100">
+                    <div className="stats shadow bg-base-100 border border-base-300">
                         <div className="stat">
                             <div className="stat-figure text-accent">
                                 <TrendingUp className="w-8 h-8 opacity-20" />
@@ -60,7 +60,7 @@ export default function StatsPageV3() {
                 </div>
 
                 {/* Chart Section */}
-                <div className="card bg-base-100 shadow-xl">
+                <div data-tour="stats-chart" className="card bg-base-100 shadow-xl border border-base-300 animate-slide-up delay-200">
                     <div className="card-body">
                         <h2 className="card-title">Tendance Hebdomadaire</h2>
                         {tasks.length > 0 ? <WeeklyChart tasks={tasks} /> : <div className="skeleton h-[300px] w-full"></div>}
@@ -68,8 +68,8 @@ export default function StatsPageV3() {
                 </div>
 
                 {/* Breakdown Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="card bg-base-100 shadow-xl">
+                <div data-tour="stats-breakdown" className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up delay-300">
+                    <div className="card bg-base-100 shadow-xl border border-base-300">
                         <div className="card-body">
                             <h2 className="card-title">Par Priorité</h2>
                             <div className="space-y-4 mt-4">

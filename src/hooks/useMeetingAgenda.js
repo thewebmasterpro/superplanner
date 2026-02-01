@@ -47,8 +47,10 @@ export function useMeetingAgenda(meetingId) {
         }
     })
 
+    const EMPTY_ARRAY = []
+
     return {
-        agenda: agendaQuery.data || [],
+        agenda: agendaQuery.data || EMPTY_ARRAY,
         isLoading: agendaQuery.isLoading,
         addItem: (itemType, itemId) => addItem.mutate({ itemType, itemId }),
         removeItem: removeItem.mutate,

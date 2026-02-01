@@ -25,7 +25,7 @@ ChartJS.register(
     Filler
 );
 
-export default function WeeklyChart({ tasks }) {
+export default function WeeklyChart({ tasks = [] }) {
     const chartData = useMemo(() => {
         // Generate last 7 days labels
         const days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), 6 - i));
@@ -46,10 +46,10 @@ export default function WeeklyChart({ tasks }) {
                     label: 'Tâches complétées',
                     data: dataPoints,
                     fill: true,
-                    borderColor: 'hsl(var(--p))', // Primary color from DaisyUI/Tailwind
-                    backgroundColor: 'hsla(var(--p) / 0.2)',
+                    borderColor: 'var(--color-primary)', // Primary color from DaisyUI/Tailwind
+                    backgroundColor: 'color-mix(in oklch, var(--color-primary) 20%, transparent)',
                     tension: 0.4,
-                    pointBackgroundColor: 'hsl(var(--p))',
+                    pointBackgroundColor: 'var(--color-primary)',
                 },
             ],
         };
@@ -77,17 +77,17 @@ export default function WeeklyChart({ tasks }) {
                     drawBorder: false,
                 },
                 ticks: {
-                    color: 'hsl(var(--bc) / 0.6)'
+                    color: 'color-mix(in oklch, var(--color-base-content) 60%, transparent)'
                 }
             },
             y: {
                 min: 0,
                 ticks: {
                     stepSize: 1,
-                    color: 'hsl(var(--bc) / 0.6)'
+                    color: 'color-mix(in oklch, var(--color-base-content) 60%, transparent)'
                 },
                 grid: {
-                    color: 'hsl(var(--bc) / 0.1)',
+                    color: 'color-mix(in oklch, var(--color-base-content) 10%, transparent)',
                 }
             },
         },
