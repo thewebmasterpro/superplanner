@@ -85,7 +85,18 @@ class TasksService {
     if (!sanitized.user_id) sanitized.user_id = user.id
     if (!sanitized.status) sanitized.status = 'todo'
 
-    return await pb.collection('tasks').create(sanitized)
+    const createdTask = await pb.collection('tasks').create(sanitized)
+
+    // Trigger automation for critical tasks
+    // We import locally to update circular deps or just clean structure
+    try {
+      const { automationService } = await import('./automation.service')
+      automationService.notifyCriticalTask(createdTask)
+    } catch (e) {
+      console.warn('Failed to trigger automation:', e)
+    }
+
+    return createdTask
   }
 
   /**
