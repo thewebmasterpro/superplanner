@@ -32,6 +32,9 @@ const queryClient = new QueryClient({
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 
 import DashboardV3 from './pages/DashboardV3'
+import TasksPageV3 from './pages/v3/TasksPageV3'
+import StatsPageV3 from './pages/v3/StatsPageV3'
+import SettingsPageV3 from './pages/v3/SettingsPageV3'
 
 // Simple router (can upgrade to react-router later)
 const routes = {
