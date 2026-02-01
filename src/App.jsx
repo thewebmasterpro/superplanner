@@ -29,6 +29,8 @@ const queryClient = new QueryClient({
   },
 })
 
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+
 import DashboardV3 from './pages/DashboardV3'
 
 // Simple router (can upgrade to react-router later)
@@ -121,30 +123,46 @@ function AppContent() {
     )
   }
 
-  // V3 Layout Handling
-  // If the page is DashboardV3, we skip the legacy MainLayout because V3 pages have their own layout
-  const isV3 = PageComponent === DashboardV3
+  // React Router Setup
+  const isV3 = (path) => path === '/' || path === '/v3'
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="superplanner-theme">
-      {isV3 ? (
-        <PageComponent />
-      ) : (
-        <MainLayout>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentPath}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex-1 flex flex-col"
-            >
-              <PageComponent />
-            </motion.div>
-          </AnimatePresence>
-        </MainLayout>
-      )}
+      <Routes>
+        {/* V3 Routes (No MainLayout) */}
+        <Route path="/" element={<DashboardV3 />} />
+
+        {/* Legacy Routes (Wrapped in MainLayout) */}
+        {Object.entries(routes).map(([path, Component]) => {
+          if (path === '/') return null // Handled above
+
+          return (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <MainLayout>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={path}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="flex-1 flex flex-col"
+                    >
+                      <Component />
+                    </motion.div>
+                  </AnimatePresence>
+                </MainLayout>
+              }
+            />
+          )
+        })}
+
+        {/* Catch-all redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </ThemeProvider>
   )
 }
