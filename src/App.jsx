@@ -29,9 +29,11 @@ const queryClient = new QueryClient({
   },
 })
 
+import DashboardV3 from './pages/DashboardV3'
+
 // Simple router (can upgrade to react-router later)
 const routes = {
-  '/': Dashboard,
+  '/': DashboardV3, // V3 Dashboard is now default
   '/tasks': Tasks,
   '/meetings': Meetings,
   '/calendar': Calendar,
@@ -52,7 +54,7 @@ function AppContent() {
   const [error, setError] = useState(null)
   const { setUser } = useUserStore()
   const currentPath = window.location.pathname || '/'
-  const PageComponent = routes[currentPath] || Dashboard
+  const PageComponent = routes[currentPath] || DashboardV3
 
   useEffect(() => {
     // Get initial session
@@ -119,23 +121,30 @@ function AppContent() {
     )
   }
 
-  // Show app with MainLayout
+  // V3 Layout Handling
+  // If the page is DashboardV3, we skip the legacy MainLayout because V3 pages have their own layout
+  const isV3 = PageComponent === DashboardV3
+
   return (
-    <ThemeProvider defaultTheme="light" storageKey="superplanner-theme">
-      <MainLayout>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentPath}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex-1 flex flex-col"
-          >
-            <PageComponent />
-          </motion.div>
-        </AnimatePresence>
-      </MainLayout>
+    <ThemeProvider defaultTheme="dark" storageKey="superplanner-theme">
+      {isV3 ? (
+        <PageComponent />
+      ) : (
+        <MainLayout>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentPath}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex-1 flex flex-col"
+            >
+              <PageComponent />
+            </motion.div>
+          </AnimatePresence>
+        </MainLayout>
+      )}
     </ThemeProvider>
   )
 }
