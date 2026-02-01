@@ -5,6 +5,8 @@ import {
     BarChart,
     Calendar,
     Users,
+    Layers,
+    Video,
     Settings,
     LogOut
 } from 'lucide-react'
@@ -19,7 +21,9 @@ export default function SidebarV3() {
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: CheckSquare, label: 'Mes Tâches', path: '/tasks' },
         { icon: Calendar, label: 'Calendrier', path: '/calendar' },
+        { icon: Video, label: 'Réunions', path: '/meetings' },
         { icon: Users, label: 'Contacts', path: '/contacts' },
+        { icon: Layers, label: 'Campagnes', path: '/campaigns' },
         { icon: BarChart, label: 'Statistiques', path: '/stats' },
         { icon: Settings, label: 'Paramètres', path: '/settings' },
     ]
