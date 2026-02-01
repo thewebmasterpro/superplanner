@@ -41,6 +41,8 @@ import CampaignsPageV3 from './pages/v3/CampaignsPageV3'
 import MeetingsPageV3 from './pages/v3/MeetingsPageV3'
 import TrashPageV3 from './pages/v3/TrashPageV3'
 import ArchivePageV3 from './pages/v3/ArchivePageV3'
+import TeamPageV3 from './pages/v3/TeamPageV3'
+import WorkspacePageV3 from './pages/v3/WorkspacePageV3'
 
 // Simple router (can upgrade to react-router later)
 const routes = {
@@ -149,10 +151,12 @@ function AppContent() {
         <Route path="/meetings" element={<MeetingsPageV3 />} />
         <Route path="/trash" element={<TrashPageV3 />} />
         <Route path="/archive" element={<ArchivePageV3 />} />
+        <Route path="/team" element={<TeamPageV3 />} />
+        <Route path="/workspace" element={<WorkspacePageV3 />} />
 
         {/* Legacy Routes (Wrapped in MainLayout) */}
         {Object.entries(routes).map(([path, Component]) => {
-          if (['/', '/tasks', '/settings', '/calendar', '/contacts', '/campaigns', '/meetings', '/trash', '/archive'].includes(path)) return null // Handled above as V3
+          if (['/', '/tasks', '/settings', '/calendar', '/contacts', '/campaigns', '/meetings', '/trash', '/archive', '/team', '/workspace'].includes(path)) return null // Handled above as V3
 
           return (
             <Route
