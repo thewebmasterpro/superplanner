@@ -134,10 +134,13 @@ function AppContent() {
       <Routes>
         {/* V3 Routes (No MainLayout) */}
         <Route path="/" element={<DashboardV3 />} />
+        <Route path="/tasks" element={<TasksPageV3 />} />
+        <Route path="/stats" element={<StatsPageV3 />} />
+        <Route path="/settings" element={<SettingsPageV3 />} />
 
         {/* Legacy Routes (Wrapped in MainLayout) */}
         {Object.entries(routes).map(([path, Component]) => {
-          if (path === '/') return null // Handled above
+          if (['/', '/tasks', '/settings'].includes(path)) return null // Handled above as V3
 
           return (
             <Route
