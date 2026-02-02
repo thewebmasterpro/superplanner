@@ -225,7 +225,7 @@ export function Contacts({ initialView = 'list' }) {
                     <>
                         <div className="divider divider-horizontal m-0 py-2"></div>
                         <select
-                            className="select select-sm select-ghost font-bold text-xs"
+                            className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
                             value={statusFilter}
                             onChange={e => setStatusFilter(e.target.value)}
                         >
@@ -238,7 +238,7 @@ export function Contacts({ initialView = 'list' }) {
                 )}
                 <div className="divider divider-horizontal m-0 py-2"></div>
                 <select
-                    className="select select-sm select-ghost font-bold text-xs"
+                    className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
                     value={workspaceFilter}
                     onChange={e => setWorkspaceFilter(e.target.value)}
                 >

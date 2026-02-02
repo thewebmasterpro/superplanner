@@ -1,5 +1,5 @@
 import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
-import { Settings as SettingsIcon, Save, AlertTriangle, Bell, Monitor, Database, Moon, Info, Plus, X, Layout } from 'lucide-react'
+import { Settings as SettingsIcon, Save, AlertTriangle, Bell, Monitor, Database, Moon, Info, Plus, X, Layout, LayoutDashboard, Building, FolderKanban, Palette, Tag as TagIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useUserStore } from '../../stores/userStore'
 import { useTelegramNotifications } from '../../hooks/useTelegramNotifications'
@@ -10,15 +10,42 @@ import { CategoryManager } from '../../components/CategoryManager'
 import { ProjectManager } from '../../components/ProjectManager'
 import { TagManager } from '../../components/TagManager'
 import { useTheme } from '../../components/ThemeProvider'
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel,
+    AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+    AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+    Dialog, DialogContent, DialogDescription,
+    DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input as ShadcnInput } from '@/components/ui/input'
 import toast from 'react-hot-toast'
 import pb from '../../lib/pocketbase'
-import Swal from 'sweetalert2'
 
 export default function SettingsPageV3() {
     const { preferences, setPreferences } = useUserStore()
     const { sendTestNotification } = useTelegramNotifications()
     const [activeTab, setActiveTab] = useState('apparence')
     const { theme, setTheme } = useTheme()
+
+    // Accordion state for Configuration tab
+    const [openSections, setOpenSections] = useState({
+        workspaces: false,
+        projects: false,
+        categories: false,
+        tags: false
+    })
+
+    // Dialog state for danger zone
+    const [showResetDialog, setShowResetDialog] = useState(false)
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+    const toggleSection = (key) => {
+        setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
+    }
 
     const themes = ["light", "dark", "cupcake", "bumblebee", "emerald", "corporate", "synthwave", "retro", "cyberpunk", "valentine", "halloween", "garden", "forest", "aqua", "lofi", "pastel", "fantasy", "wireframe", "black", "luxury", "dracula", "cmyk", "autumn", "business", "acid", "lemonade", "night", "coffee", "winter", "dim", "nord", "sunset"]
 
@@ -57,53 +84,29 @@ export default function SettingsPageV3() {
         })
     }
 
-    const handleResetApp = () => {
-        Swal.fire({
-            title: 'Réinitialiser l\'application ?',
-            text: 'Toutes vos préférences locales seront effacées. Vos données serveur ne seront pas affectées.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Oui, réinitialiser',
-            cancelButtonText: 'Annuler',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                localStorage.clear()
-                toast.success('Application réinitialisée.')
-                window.location.href = '/'
-            }
-        })
+    const handleResetApp = () => setShowResetDialog(true)
+
+    const executeResetApp = () => {
+        localStorage.clear()
+        toast.success('Application réinitialisée.')
+        window.location.href = '/'
     }
 
     const handleDeleteAccount = () => {
-        Swal.fire({
-            title: 'Supprimer votre compte ?',
-            text: 'Cette action est définitive. Toutes vos données seront supprimées.',
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Supprimer définitivement',
-            cancelButtonText: 'Annuler',
-            input: 'text',
-            inputPlaceholder: 'Tapez SUPPRIMER pour confirmer',
-            inputValidator: (value) => {
-                if (value !== 'SUPPRIMER') return 'Tapez SUPPRIMER pour confirmer'
-            },
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await pb.collection('users').delete(pb.authStore.model.id)
-                    pb.authStore.clear()
-                    toast.success('Compte supprimé.')
-                    window.location.href = '/'
-                } catch (e) {
-                    console.error(e)
-                    toast.error('Erreur lors de la suppression : ' + e.message)
-                }
-            }
-        })
+        setDeleteConfirmText('')
+        setShowDeleteDialog(true)
+    }
+
+    const executeDeleteAccount = async () => {
+        try {
+            await pb.collection('users').delete(pb.authStore.model.id)
+            pb.authStore.clear()
+            toast.success('Compte supprimé.')
+            window.location.href = '/'
+        } catch (e) {
+            console.error(e)
+            toast.error('Erreur lors de la suppression : ' + e.message)
+        }
     }
 
     return (
@@ -127,7 +130,7 @@ export default function SettingsPageV3() {
                     </button>
                 </div>
 
-                {/* Tabs Navigation */}
+                {/* Tabs: Apparence > Configuration > Dashboard > Préférences > Données */}
                 <div data-tour="settings-tabs" className="bg-base-200 p-1 mb-2 rounded-xl flex overflow-x-auto gap-1">
                     <button
                         className={`btn btn-sm flex-1 gap-2 ${activeTab === 'apparence' ? 'btn-primary' : 'btn-ghost'}`}
@@ -136,16 +139,22 @@ export default function SettingsPageV3() {
                         <Monitor className="w-4 h-4" /> Apparence
                     </button>
                     <button
-                        className={`btn btn-sm flex-1 gap-2 ${activeTab === 'preferences' ? 'btn-primary' : 'btn-ghost'}`}
-                        onClick={() => setActiveTab('preferences')}
+                        className={`btn btn-sm flex-1 gap-2 ${activeTab === 'configuration' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setActiveTab('configuration')}
                     >
-                        <Bell className="w-4 h-4" /> Préférences
+                        <Layout className="w-4 h-4" /> Configuration
                     </button>
                     <button
                         className={`btn btn-sm flex-1 gap-2 ${activeTab === 'widgets' ? 'btn-primary' : 'btn-ghost'}`}
                         onClick={() => setActiveTab('widgets')}
                     >
-                        <Monitor className="w-4 h-4" /> Dashboard
+                        <LayoutDashboard className="w-4 h-4" /> Dashboard
+                    </button>
+                    <button
+                        className={`btn btn-sm flex-1 gap-2 ${activeTab === 'preferences' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setActiveTab('preferences')}
+                    >
+                        <Bell className="w-4 h-4" /> Préférences
                     </button>
                     <button
                         className={`btn btn-sm flex-1 gap-2 ${activeTab === 'data' ? 'btn-primary' : 'btn-ghost'}`}
@@ -153,17 +162,13 @@ export default function SettingsPageV3() {
                     >
                         <Database className="w-4 h-4" /> Données
                     </button>
-                    <button
-                        className={`btn btn-sm flex-1 gap-2 ${activeTab === 'configuration' ? 'btn-primary' : 'btn-ghost'}`}
-                        onClick={() => setActiveTab('configuration')}
-                    >
-                        <Layout className="w-4 h-4" /> Configuration
-                    </button>
                 </div>
 
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+
+                    {/* ─── Tab 1: Apparence ─── */}
                     {activeTab === 'apparence' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-stagger">
                             <div data-tour="settings-theme" className="card bg-base-100 shadow-xl border border-base-300">
                                 <div className="card-body">
                                     <h2 className="card-title flex gap-2">
@@ -188,8 +193,6 @@ export default function SettingsPageV3() {
                                                         <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary)]" />
                                                     )}
                                                 </div>
-
-                                                {/* Color Preview Grid */}
                                                 <div className="grid grid-cols-4 gap-1 w-full h-6 rounded-lg overflow-hidden border border-base-content/5">
                                                     <div className="bg-primary h-full" title="Primary"></div>
                                                     <div className="bg-secondary h-full" title="Secondary"></div>
@@ -219,8 +222,143 @@ export default function SettingsPageV3() {
                         </div>
                     )}
 
+                    {/* ─── Tab 2: Configuration (Accordion) ─── */}
+                    {activeTab === 'configuration' && (
+                        <div className="space-y-4 animate-stagger">
+                            {/* Workspaces */}
+                            <div className={`collapse collapse-arrow bg-base-100 border border-base-300 rounded-2xl shadow-md transition-shadow hover:shadow-lg ${openSections.workspaces ? 'collapse-open' : 'collapse-close'}`}>
+                                <div
+                                    className="collapse-title text-lg font-bold flex items-center gap-3 cursor-pointer select-none"
+                                    onClick={() => toggleSection('workspaces')}
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <Building className="w-4 h-4 text-primary" />
+                                    </div>
+                                    Workspaces
+                                </div>
+                                <div className="collapse-content">
+                                    <div className="pt-2">
+                                        <WorkspaceManager />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Départements */}
+                            <div className={`collapse collapse-arrow bg-base-100 border border-base-300 rounded-2xl shadow-md transition-shadow hover:shadow-lg ${openSections.projects ? 'collapse-open' : 'collapse-close'}`}>
+                                <div
+                                    className="collapse-title text-lg font-bold flex items-center gap-3 cursor-pointer select-none"
+                                    onClick={() => toggleSection('projects')}
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center">
+                                        <FolderKanban className="w-4 h-4 text-secondary" />
+                                    </div>
+                                    Départements
+                                </div>
+                                <div className="collapse-content">
+                                    <div className="pt-2">
+                                        <ProjectManager />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Catégories */}
+                            <div className={`collapse collapse-arrow bg-base-100 border border-base-300 rounded-2xl shadow-md transition-shadow hover:shadow-lg ${openSections.categories ? 'collapse-open' : 'collapse-close'}`}>
+                                <div
+                                    className="collapse-title text-lg font-bold flex items-center gap-3 cursor-pointer select-none"
+                                    onClick={() => toggleSection('categories')}
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                                        <Palette className="w-4 h-4 text-accent" />
+                                    </div>
+                                    Catégories
+                                </div>
+                                <div className="collapse-content">
+                                    <div className="pt-2">
+                                        <CategoryManager />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            <div className={`collapse collapse-arrow bg-base-100 border border-base-300 rounded-2xl shadow-md transition-shadow hover:shadow-lg ${openSections.tags ? 'collapse-open' : 'collapse-close'}`}>
+                                <div
+                                    className="collapse-title text-lg font-bold flex items-center gap-3 cursor-pointer select-none"
+                                    onClick={() => toggleSection('tags')}
+                                >
+                                    <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                                        <TagIcon className="w-4 h-4 text-warning" />
+                                    </div>
+                                    Tags
+                                </div>
+                                <div className="collapse-content">
+                                    <div className="pt-2">
+                                        <TagManager />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── Tab 3: Dashboard / Widgets ─── */}
+                    {activeTab === 'widgets' && (
+                        <div className="card bg-base-100 shadow-xl border border-base-300">
+                            <div className="card-body">
+                                <h2 className="card-title">📊 Visibilité des Widgets</h2>
+                                <p className="text-sm opacity-70 mb-4">Affichez ou masquez les éléments du Dashboard.</p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 animate-stagger-fast">
+                                    {[
+                                        { id: 'prayerTimes', label: 'Horaires de Prière', icon: '🕌' },
+                                        { id: 'quranVerse', label: 'Verset du jour (Inspiration)', icon: '📖' },
+                                        { id: 'focusTools', label: 'Outils Focus (Timer)', icon: '⚡' },
+                                        { id: 'stats', label: 'Statistiques Tâches', icon: '📈' },
+                                        { id: 'upcomingTasks', label: 'Tâches à venir', icon: '📅' },
+                                        { id: 'eisenhower', label: 'Matrice Eisenhower', icon: '🎯' },
+                                        { id: 'scratchpad', label: 'Bloc-notes', icon: '📝' },
+                                        { id: 'worldClock', label: 'Horloge Mondiale', icon: '🌍' },
+                                        { id: 'spotify', label: 'Lecteur Spotify', icon: '🎵' },
+                                        { id: 'inspiration_quote', label: 'Citations', icon: '💬' },
+                                        { id: 'inspiration_growth', label: 'Growth Hack', icon: '🚀' },
+                                        { id: 'inspiration_joke', label: 'Blagues', icon: '😄' },
+                                        { id: 'inspiration_fact', label: 'Savoir Inutile', icon: '💡' },
+                                        { id: 'inspiration_bias', label: 'Biais Cognitifs', icon: '🧠' },
+                                        { id: 'inspiration_business', label: 'Business Tips', icon: '💼' },
+                                        { id: 'inspiration_tip', label: 'Conseils Productivité', icon: '⚡' },
+                                        { id: 'inspiration_challenge', label: 'Défis Quotidiens', icon: '🎯' },
+                                        { id: 'inspiration_word', label: 'Mot du Jour', icon: '📚' },
+                                        { id: 'inspiration_quran', label: 'Verset du jour (Coran)', icon: '📖' },
+                                        { id: 'inspiration_zen', label: 'Minute Zen', icon: '🧘' },
+                                    ].map(w => (
+                                        <label
+                                            key={w.id}
+                                            className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer group select-none ${(preferences?.dashboardWidgets?.[w.id] ?? true)
+                                                ? 'bg-primary/5 border-primary/20 hover:border-primary/40'
+                                                : 'bg-base-200/50 border-transparent opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:bg-base-200'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-2 rounded-xl transition-colors ${(preferences?.dashboardWidgets?.[w.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-base-300'
+                                                    }`}>
+                                                    <span className="text-xl leading-none">{w.icon}</span>
+                                                </div>
+                                                <span className="font-bold text-sm">{w.label}</span>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                className="toggle toggle-primary"
+                                                checked={preferences?.dashboardWidgets?.[w.id] ?? true}
+                                                onChange={() => toggleWidget(w.id)}
+                                            />
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── Tab 4: Préférences ─── */}
                     {activeTab === 'preferences' && (
-                        <div className="space-y-6">
+                        <div className="space-y-6 animate-stagger">
                             {/* Prayer Times */}
                             <div className="card bg-base-100 shadow-xl border border-base-300">
                                 <div className="card-body">
@@ -468,64 +606,9 @@ export default function SettingsPageV3() {
                         </div>
                     )}
 
-                    {activeTab === 'widgets' && (
-                        <div className="card bg-base-100 shadow-xl border border-base-300">
-                            <div className="card-body">
-                                <h2 className="card-title">📊 Visibilité des Widgets</h2>
-                                <p className="text-sm opacity-70 mb-4">Affichez ou masquez les éléments du Dashboard.</p>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {[
-                                        { id: 'prayerTimes', label: 'Horaires de Prière', icon: '🕌' },
-                                        { id: 'quranVerse', label: 'Verset du jour (Inspiration)', icon: '📖' },
-                                        { id: 'focusTools', label: 'Outils Focus (Timer)', icon: '⚡' },
-                                        { id: 'stats', label: 'Statistiques Tâches', icon: '📈' },
-                                        { id: 'upcomingTasks', label: 'Tâches à venir', icon: '📅' },
-                                        { id: 'eisenhower', label: 'Matrice Eisenhower', icon: '🎯' },
-                                        { id: 'scratchpad', label: 'Bloc-notes', icon: '📝' },
-                                        { id: 'worldClock', label: 'Horloge Mondiale', icon: '🌍' },
-                                        { id: 'spotify', label: 'Lecteur Spotify', icon: '🎵' },
-                                        { id: 'inspiration_quote', label: 'Citations', icon: '💬' },
-                                        { id: 'inspiration_growth', label: 'Growth Hack', icon: '🚀' },
-                                        { id: 'inspiration_joke', label: 'Blagues', icon: '😄' },
-                                        { id: 'inspiration_fact', label: 'Savoir Inutile', icon: '💡' },
-                                        { id: 'inspiration_bias', label: 'Biais Cognitifs', icon: '🧠' },
-                                        { id: 'inspiration_business', label: 'Business Tips', icon: '💼' },
-                                        { id: 'inspiration_tip', label: 'Conseils Productivité', icon: '⚡' },
-                                        { id: 'inspiration_challenge', label: 'Défis Quotidiens', icon: '🎯' },
-                                        { id: 'inspiration_word', label: 'Mot du Jour', icon: '📚' },
-                                        { id: 'inspiration_quran', label: 'Verset du jour (Coran)', icon: '📖' },
-                                        { id: 'inspiration_zen', label: 'Minute Zen', icon: '🧘' },
-                                    ].map(w => (
-                                        <label
-                                            key={w.id}
-                                            className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer group select-none ${(preferences?.dashboardWidgets?.[w.id] ?? true)
-                                                ? 'bg-primary/5 border-primary/20 hover:border-primary/40'
-                                                : 'bg-base-200/50 border-transparent opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:bg-base-200'
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-2 rounded-xl transition-colors ${(preferences?.dashboardWidgets?.[w.id] ?? true) ? 'bg-primary text-primary-foreground' : 'bg-base-300'
-                                                    }`}>
-                                                    <span className="text-xl leading-none">{w.icon}</span>
-                                                </div>
-                                                <span className="font-bold text-sm">{w.label}</span>
-                                            </div>
-                                            <input
-                                                type="checkbox"
-                                                className="toggle toggle-primary"
-                                                checked={preferences?.dashboardWidgets?.[w.id] ?? true}
-                                                onChange={() => toggleWidget(w.id)}
-                                            />
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
+                    {/* ─── Tab 5: Données ─── */}
                     {activeTab === 'data' && (
-                        <div className="space-y-6">
+                        <div className="space-y-6 animate-stagger">
                             <DataBackupSettings />
 
                             <div className="card bg-error/5 border border-error/20 shadow-xl">
@@ -542,19 +625,10 @@ export default function SettingsPageV3() {
                             </div>
                         </div>
                     )}
-
-                    {activeTab === 'configuration' && (
-                        <div className="space-y-8">
-                            <WorkspaceManager />
-                            <ProjectManager />
-                            <CategoryManager />
-                            <TagManager />
-                        </div>
-                    )}
                 </div>
             </div>
 
-            {/* Sticky Mobile/Bottom Menu for Save */}
+            {/* Sticky Mobile Save */}
             <div className="fixed bottom-0 left-0 right-0 bg-base-100/80 backdrop-blur-md p-4 flex justify-center md:hidden border-t border-base-300 z-50">
                 <button
                     onClick={savePreferences}
@@ -563,6 +637,64 @@ export default function SettingsPageV3() {
                     <Save className="w-4 h-4" /> Sauvegarder tout
                 </button>
             </div>
+
+            {/* Reset App Confirmation */}
+            <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-warning" />
+                            Réinitialiser l'application ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Toutes vos préférences locales seront effacées. Vos données serveur ne seront pas affectées.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={executeResetApp}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Oui, réinitialiser
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Account Confirmation */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-destructive flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5" />
+                            Supprimer votre compte ?
+                        </DialogTitle>
+                        <DialogDescription>
+                            Cette action est définitive. Toutes vos données seront supprimées.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 py-4">
+                        <label className="text-sm font-medium">Tapez SUPPRIMER pour confirmer</label>
+                        <ShadcnInput
+                            value={deleteConfirmText}
+                            onChange={(e) => setDeleteConfirmText(e.target.value)}
+                            placeholder="SUPPRIMER"
+                            className="font-mono"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Annuler</Button>
+                        <Button
+                            variant="destructive"
+                            disabled={deleteConfirmText !== 'SUPPRIMER'}
+                            onClick={executeDeleteAccount}
+                        >
+                            Supprimer définitivement
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayoutV3>
     )
 }

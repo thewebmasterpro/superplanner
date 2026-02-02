@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { categoriesService } from '../services/categories.service'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, LayoutGrid } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export function CategoryManager() {
@@ -63,13 +63,6 @@ export function CategoryManager() {
     return (
         <div className="space-y-4">
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <LayoutGrid className="w-5 h-5 text-primary" />
-                        Add New Category
-                    </CardTitle>
-                    <CardDescription>Create a new task category to organize your priorities</CardDescription>
-                </CardHeader>
                 <CardContent>
                     <form onSubmit={handleAddCategory} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -109,10 +102,6 @@ export function CategoryManager() {
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Your Categories</CardTitle>
-                    <CardDescription>{categories.length} categories configured</CardDescription>
-                </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {categories.length === 0 ? (

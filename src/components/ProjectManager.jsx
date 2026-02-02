@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { projectsService } from '../services/projects.service'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, FolderKanban, AlertCircle, Edit2 } from 'lucide-react'
+import { Plus, Trash2, AlertCircle, Edit2 } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useContacts } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
@@ -111,15 +111,6 @@ export function ProjectManager() {
     return (
         <div className="space-y-4">
             <Card className={editingId ? "border-primary border-2" : ""}>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <FolderKanban className="w-5 h-5 text-primary" />
-                        {editingId ? 'Modifier le Département' : 'Nouveau Département'}
-                    </CardTitle>
-                    <CardDescription>
-                        {editingId ? 'Modifiez les détails, le workspace et le client.' : 'Créez un nouveau département. Chaque département doit être lié à un workspace.'}
-                    </CardDescription>
-                </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -201,10 +192,6 @@ export function ProjectManager() {
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Vos Départements</CardTitle>
-                    <CardDescription>{projects.length} départements configurés</CardDescription>
-                </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {projects.length === 0 ? (

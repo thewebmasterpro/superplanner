@@ -152,14 +152,14 @@ export function Campaigns() {
             />
           </div>
           <div className="divider divider-horizontal m-0 py-2"></div>
-          <div className="join bg-base-200/50 p-0.5">
-            {['active', 'draft', 'completed', 'all'].map((status) => (
+          <div className="flex flex-wrap gap-1.5">
+            {[{v:'active',l:'Actives'},{v:'draft',l:'Brouillons'},{v:'completed',l:'Terminées'},{v:'all',l:'Toutes'}].map(opt => (
               <button
-                key={status}
-                className={`join-item btn btn-sm px-3 font-bold ${statusFilter === status ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => setStatusFilter(status)}
+                key={opt.v}
+                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${statusFilter === opt.v ? 'bg-primary text-primary-content' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                onClick={() => setStatusFilter(opt.v)}
               >
-                {status === 'active' ? 'Actives' : status === 'draft' ? 'Brouillons' : status === 'completed' ? 'Terminées' : 'Toutes'}
+                {opt.l}
               </button>
             ))}
           </div>

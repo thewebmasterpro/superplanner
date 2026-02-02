@@ -271,7 +271,7 @@ export function Tasks() {
         </div>
 
         <select
-          className="select select-bordered select-sm font-bold text-xs"
+          className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
           value={sortOrder}
           onChange={e => setSortOrder(e.target.value)}
         >
@@ -306,29 +306,29 @@ export function Tasks() {
         <div className="p-4 bg-base-200/50 rounded-2xl border border-base-300 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Statut</span></label>
-            <select className="select select-bordered select-sm font-bold text-xs" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="all">Tous</option>
-              <option value="todo">À faire</option>
-              <option value="in_progress">En cours</option>
-              <option value="blocked">Bloqué</option>
-              <option value="done">Terminé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
+            <div className="flex flex-wrap gap-1">
+              {[{v:'all',l:'Tous'},{v:'todo',l:'À faire'},{v:'in_progress',l:'En cours'},{v:'blocked',l:'Bloqué'},{v:'done',l:'Fait'},{v:'cancelled',l:'Annulé'}].map(opt => (
+                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${statusFilter === opt.v ? 'bg-primary text-primary-content' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setStatusFilter(opt.v)}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Priorité</span></label>
-            <select className="select select-bordered select-sm font-bold text-xs" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
-              <option value="all">Toutes</option>
-              <option value="high">Haute</option>
-              <option value="medium">Moyenne</option>
-              <option value="low">Basse</option>
-            </select>
+            <div className="flex flex-wrap gap-1">
+              {[{v:'all',l:'Toutes'},{v:'high',l:'Haute'},{v:'medium',l:'Moy.'},{v:'low',l:'Basse'}].map(opt => (
+                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${priorityFilter === opt.v ? 'bg-primary text-primary-content' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setPriorityFilter(opt.v)}>
+                  {opt.l}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Workspace</span></label>
-            <select className="select select-bordered select-sm font-bold text-xs" value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)}>
               <option value="all">Tous</option>
               <option value="none">Sans</option>
               {workspaces.map(w => (
@@ -339,7 +339,7 @@ export function Tasks() {
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Échéance</span></label>
-            <select className="select select-bordered select-sm font-bold text-xs" value={dueDateFilter} onChange={e => setDueDateFilter(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={dueDateFilter} onChange={e => setDueDateFilter(e.target.value)}>
               <option value="all">Toutes</option>
               <option value="overdue">En retard</option>
               <option value="today">Aujourd'hui</option>
@@ -350,7 +350,7 @@ export function Tasks() {
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Client</span></label>
-            <select className="select select-bordered select-sm font-bold text-xs" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
               <option value="all">Tous</option>
               {contactsList.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>

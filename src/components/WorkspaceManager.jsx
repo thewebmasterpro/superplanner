@@ -3,7 +3,7 @@ import { Plus, Trash2, Edit2, Building, MoreVertical, Archive, RotateCcw } from 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
     Dialog,
@@ -174,24 +174,17 @@ export function WorkspaceManager() {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Building className="w-5 h-5" />
-                        Your Workspaces
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        {allWorkspaces.filter(c => c.status === 'active').length} active workspaces
-                    </p>
-                </div>
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                    {allWorkspaces.filter(c => c.status === 'active').length} workspaces actifs
+                </p>
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setShowArchived(!showArchived)}>
-                        {showArchived ? 'Hide Archived' : 'Show Archived'}
+                        {showArchived ? 'Masquer archivés' : 'Voir archivés'}
                     </Button>
-                    <Button onClick={handleOpenCreate}>
+                    <Button size="sm" onClick={handleOpenCreate}>
                         <Plus className="w-4 h-4 mr-2" />
-                        New Workspace
+                        Nouveau
                     </Button>
                 </div>
             </div>
