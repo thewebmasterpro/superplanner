@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Target, Trophy, Clock, Flame, TrendingUp, Gift, CheckCircle2, Lock } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import DashboardLayoutV3 from '../../layouts/DashboardLayoutV3'
+import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
 import { gamificationService } from '../../services/gamification.service'
 import pb from '../../lib/pocketbase'
 import { Badge } from '../../components/ui/badge'
