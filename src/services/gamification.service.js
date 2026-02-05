@@ -572,6 +572,26 @@ class GamificationService {
   // ========== CHALLENGES ==========
 
   /**
+   * Get all challenges for a team
+   * @param {string} teamId - Team ID
+   * @returns {Promise<Array>} Team challenges
+   */
+  async getTeamChallenges(teamId) {
+    console.log('🎯 [Challenges] Fetching challenges for team:', teamId)
+    try {
+      const challenges = await pb.collection('challenges').getFullList({
+        filter: `team_id = "${teamId}"`,
+        sort: '-created_at',
+      })
+      console.log('🎯 [Challenges] Team challenges fetched:', challenges.length, 'challenges found')
+      return challenges
+    } catch (error) {
+      console.error('❌ [Challenges] Error getting team challenges:', error)
+      return []
+    }
+  }
+
+  /**
    * Create a challenge (team leader or admin only)
    * @param {Object} challengeData - Challenge data
    * @param {string} teamId - Team ID (optional, null for global challenges)

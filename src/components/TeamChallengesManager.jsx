@@ -30,9 +30,7 @@ export default function TeamChallengesManager({ teamId, onClose }) {
     console.log('🎯 [TeamChallengesManager] Loading challenges for team:', teamId)
     setLoading(true)
     try {
-      const allChallenges = await gamificationService.getActiveChallenges()
-      // Filter challenges for this team
-      const teamChallenges = allChallenges.filter(c => c.team_id === teamId)
+      const teamChallenges = await gamificationService.getTeamChallenges(teamId)
       console.log('🎯 [TeamChallengesManager] Team challenges:', teamChallenges)
       setChallenges(teamChallenges)
     } catch (error) {
