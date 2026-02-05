@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button'
 
 export function LandingPage({ onLoginClick }) {
     return (
-        <div className="min-h-screen relative overflow-hidden">
+        <div className="min-h-screen relative overflow-hidden bg-slate-950">
             {/* Animated gradient background */}
-            <div className="fixed inset-0 -z-10">
+            <div className="fixed inset-0 z-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900"></div>
                 <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-600/40 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -13,7 +13,7 @@ export function LandingPage({ onLoginClick }) {
             </div>
 
             {/* Glass Navbar */}
-            <nav className="sticky top-0 z-50 border-b border-white/10">
+            <nav className="sticky top-0 z-50 border-b border-white/10 relative">
                 <div className="backdrop-blur-xl bg-black/30 shadow-lg shadow-purple-500/10">
                     <div className="container flex h-16 items-center justify-between">
                         <div className="flex items-center gap-2 font-bold text-xl">
@@ -41,7 +41,7 @@ export function LandingPage({ onLoginClick }) {
             </nav>
 
             {/* Hero Section */}
-            <section className="flex-1 flex flex-col items-center justify-center text-center py-32 px-4">
+            <section className="flex-1 flex flex-col items-center justify-center text-center py-32 px-4 relative z-10">
                 <div className="space-y-8 max-w-4xl">
                     {/* Floating badge */}
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 shadow-lg shadow-purple-500/20 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -97,7 +97,7 @@ export function LandingPage({ onLoginClick }) {
             </section>
 
             {/* Features Grid */}
-            <section className="py-32 px-4 relative">
+            <section className="py-32 px-4 relative z-10">
                 <div className="container">
                     <div className="text-center mb-20 space-y-4">
                         <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
@@ -142,7 +142,7 @@ export function LandingPage({ onLoginClick }) {
             </section>
 
             {/* Footer */}
-            <footer className="py-12 border-t border-white/10 backdrop-blur-xl bg-black/30">
+            <footer className="py-12 border-t border-white/10 backdrop-blur-xl bg-black/30 relative z-10">
                 <div className="container px-4 text-center text-slate-400">
                     <p>&copy; {new Date().getFullYear()} SuperPlanner. All rights reserved.</p>
                 </div>
