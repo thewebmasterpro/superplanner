@@ -11,15 +11,29 @@ Task Management & CRM pour Small Business avec authentification Google OAuth
 
 ## ✨ Fonctionnalités
 
+### Core Features
 - ✅ Authentification Email/Password
 - ✅ Connexion Google OAuth (2 clics)
-- ✅ Gestion des tâches
-- ✅ Gestion des projets
-- ✅ Gestion des clients
-- ✅ Horaires de prière
+- ✅ Gestion des tâches avec statuts et priorités
+- ✅ Gestion des projets et campagnes
+- ✅ Gestion des clients (CRM)
+- ✅ Time tracking avec timer intégré
+- ✅ Réunions et planification d'équipe
+- ✅ Commentaires et notes sur les tâches
+- ✅ Workspaces et catégories
 - ✅ Row Level Security (chaque utilisateur voit uniquement ses données)
 - ✅ API auto-générée
 - ✅ Temps réel (updates automatiques)
+
+### 🎮 V4 Gamification System (NEW - v1.2.0)
+- ✅ **Système de points et niveaux** - Gagnez des points en complétant des tâches
+- ✅ **Streaks quotidiennes** - Maintenez votre productivité jour après jour
+- ✅ **Leaderboards** - Compétition individuelle et par équipe
+- ✅ **Team Rewards** - Les leaders d'équipe peuvent récompenser les membres
+- ✅ **Historique complet** - Tracking détaillé de tous les gains/dépenses
+- 🔄 **Challenges** - Défis quotidiens, hebdomadaires, mensuels (bientôt)
+- 🔄 **Boutique virtuelle** - Thèmes, avatars, badges, features (bientôt)
+- 🔄 **Interface Super Admin** - Dashboard et gestion globale (bientôt)
 
 ## 🚀 Démarrage Rapide
 
@@ -65,10 +79,23 @@ Ouvrez [http://localhost:5173](http://localhost:5173)
 
 ## 📚 Documentation
 
+### Setup de Base
 - **[QUICK-START-SUPABASE.md](QUICK-START-SUPABASE.md)** - Démarrage rapide (10 min)
 - **[SUPABASE-SETUP.md](SUPABASE-SETUP.md)** - Guide complet de configuration
 - **[ACTIVER-GOOGLE-OAUTH.md](ACTIVER-GOOGLE-OAUTH.md)** - Activer Google OAuth
 - **[MIGRATION-SUPABASE.md](MIGRATION-SUPABASE.md)** - Détails de la migration vers Supabase
+
+### 🎮 V4 Gamification (v1.2.0)
+- **[docs/V4_INDEX.md](docs/V4_INDEX.md)** - Index complet de la documentation V4 📖
+- **[docs/V4_QUICK_SETUP.md](docs/V4_QUICK_SETUP.md)** - Installation rapide (5 min) ⚡
+- **[docs/V4_TESTING_GUIDE.md](docs/V4_TESTING_GUIDE.md)** - Guide de tests détaillé 🧪
+- **[docs/V4_SEED_DATA.md](docs/V4_SEED_DATA.md)** - Données initiales (challenges, shop) 🌱
+- **[docs/POCKETBASE_SETUP_V4.md](docs/POCKETBASE_SETUP_V4.md)** - Schéma complet PocketBase 📋
+- **[pocketbase_v4_all_collections.json](pocketbase_v4_all_collections.json)** - Import automatique des 10 collections 📦
+
+### Autres
+- **[CHANGELOG.md](CHANGELOG.md)** - Historique des versions
+- **[docs/ROADMAP_PHASES_SUIVANTES.md](docs/ROADMAP_PHASES_SUIVANTES.md)** - Roadmap du projet
 
 ## 🏗️ Structure du Projet
 

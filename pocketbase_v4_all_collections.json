@@ -1,0 +1,847 @@
+[
+  {
+    "name": "gamification_points",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "user_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "points",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 0,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "total_earned",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 0,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "total_spent",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 0,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "level",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "streak_days",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 0,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "last_activity_date",
+        "type": "date",
+        "required": true,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "leaderboard_visible",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_user_id ON gamification_points (user_id)",
+      "CREATE INDEX idx_total_earned ON gamification_points (total_earned DESC)",
+      "CREATE INDEX idx_leaderboard ON gamification_points (leaderboard_visible)"
+    ],
+    "listRule": "@request.auth.id = user_id || leaderboard_visible = true",
+    "viewRule": "@request.auth.id = user_id || leaderboard_visible = true",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "points_history",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "user_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "action_type",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": [
+            "task_completed",
+            "challenge_completed",
+            "streak_bonus",
+            "shop_purchase",
+            "daily_login",
+            "team_reward"
+          ]
+        }
+      },
+      {
+        "name": "points_change",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "related_task_id",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "related_challenge_id",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "related_item_id",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_user_created ON points_history (user_id, created_at DESC)"
+    ],
+    "listRule": "@request.auth.id = user_id",
+    "viewRule": "@request.auth.id = user_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "team_rewards",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "team_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "teams",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "points",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "start_date",
+        "type": "date",
+        "required": false,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "end_date",
+        "type": "date",
+        "required": false,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "created_by",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_team_id ON team_rewards (team_id)",
+      "CREATE INDEX idx_created_by ON team_rewards (created_by)"
+    ],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": "@request.auth.id != \"\" && team_id.owner_id = @request.auth.id",
+    "deleteRule": "@request.auth.id != \"\" && team_id.owner_id = @request.auth.id"
+  },
+  {
+    "name": "team_reward_history",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "team_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "teams",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "reward_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "team_rewards",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "member_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "awarded_by",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "points",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "reason",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_team_created ON team_reward_history (team_id, created_at DESC)",
+      "CREATE INDEX idx_member ON team_reward_history (member_id)",
+      "CREATE INDEX idx_reward ON team_reward_history (reward_id)"
+    ],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "user_roles",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "user_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "is_super_admin",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_user_id ON user_roles (user_id)"
+    ],
+    "listRule": "@request.auth.id = user_id",
+    "viewRule": "@request.auth.id = user_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "admin_stats_cache",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "stat_key",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "stat_value",
+        "type": "json",
+        "required": true,
+        "options": {
+          "maxSize": 2000000
+        }
+      },
+      {
+        "name": "calculated_at",
+        "type": "date",
+        "required": true,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_stat_key ON admin_stats_cache (stat_key)"
+    ],
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "challenges",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "title",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "description",
+        "type": "editor",
+        "required": false,
+        "options": {
+          "convertUrls": false
+        }
+      },
+      {
+        "name": "type",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["daily", "weekly", "monthly"]
+        }
+      },
+      {
+        "name": "goal_metric",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["tasks_completed", "hours_tracked", "streak_days"]
+        }
+      },
+      {
+        "name": "goal_value",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "points_reward",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "icon",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "is_active",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "start_date",
+        "type": "date",
+        "required": true,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "end_date",
+        "type": "date",
+        "required": true,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_active_end ON challenges (is_active, end_date)"
+    ],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "user_challenges",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "user_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "challenge_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "challenges",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["title"]
+        }
+      },
+      {
+        "name": "progress",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 0,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "completed",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "completed_at",
+        "type": "date",
+        "required": false,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "claimed",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_user_challenge ON user_challenges (user_id, challenge_id)",
+      "CREATE INDEX idx_user_id ON user_challenges (user_id)"
+    ],
+    "listRule": "@request.auth.id = user_id",
+    "viewRule": "@request.auth.id = user_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "shop_items",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "description",
+        "type": "editor",
+        "required": false,
+        "options": {
+          "convertUrls": false
+        }
+      },
+      {
+        "name": "item_type",
+        "type": "select",
+        "required": true,
+        "options": {
+          "maxSelect": 1,
+          "values": ["theme", "avatar", "badge", "feature"]
+        }
+      },
+      {
+        "name": "price",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "icon",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "config",
+        "type": "json",
+        "required": false,
+        "options": {
+          "maxSize": 2000000
+        }
+      },
+      {
+        "name": "is_available",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "updated_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_available ON shop_items (is_available)",
+      "CREATE INDEX idx_price ON shop_items (price)"
+    ],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  },
+  {
+    "name": "user_purchases",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "user_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": true,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "item_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "shop_items",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "purchased_at",
+        "type": "date",
+        "required": true,
+        "options": {
+          "min": "",
+          "max": ""
+        }
+      },
+      {
+        "name": "is_active",
+        "type": "bool",
+        "required": false,
+        "options": {}
+      },
+      {
+        "name": "created_at",
+        "type": "autodate",
+        "required": false,
+        "options": {}
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_user_id ON user_purchases (user_id)",
+      "CREATE INDEX idx_user_item ON user_purchases (user_id, item_id)"
+    ],
+    "listRule": "@request.auth.id = user_id",
+    "viewRule": "@request.auth.id = user_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+]
