@@ -13,9 +13,9 @@ export function LandingPage({ onLoginClick }) {
             </div>
 
             {/* Glass Navbar */}
-            <nav className="sticky top-0 z-50 border-b border-white/10 relative">
+            <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/10">
                 <div className="backdrop-blur-xl bg-black/30 shadow-lg shadow-purple-500/10">
-                    <div className="container flex h-16 items-center justify-between">
+                    <div className="max-w-[1200px] mx-auto px-4 flex h-16 items-center justify-between">
                         <div className="flex items-center gap-2 font-bold text-xl">
                             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/50">
                                 <Sparkles className="w-5 h-5" />
@@ -41,8 +41,8 @@ export function LandingPage({ onLoginClick }) {
             </nav>
 
             {/* Hero Section */}
-            <section className="flex-1 flex flex-col items-center justify-center text-center py-32 px-4 relative z-10">
-                <div className="space-y-8 max-w-4xl">
+            <section className="flex-1 flex flex-col items-center justify-center text-center py-32 px-4 relative z-10 mt-16">
+                <div className="space-y-8 max-w-[1200px] mx-auto">
                     {/* Floating badge */}
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 shadow-lg shadow-purple-500/20 animate-in fade-in slide-in-from-bottom-4 duration-700">
                         <Sparkles className="w-4 h-4 text-purple-400" />
@@ -98,7 +98,7 @@ export function LandingPage({ onLoginClick }) {
 
             {/* Features Grid */}
             <section className="py-32 px-4 relative z-10">
-                <div className="container">
+                <div className="max-w-[1200px] mx-auto">
                     <div className="text-center mb-20 space-y-4">
                         <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
                             Everything you need
@@ -106,7 +106,7 @@ export function LandingPage({ onLoginClick }) {
                         <p className="text-lg text-slate-300">Powerful features to manage your entire business.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <FeatureCard
                             icon={Layout}
                             title="Task Management"
@@ -143,7 +143,7 @@ export function LandingPage({ onLoginClick }) {
 
             {/* Footer */}
             <footer className="py-12 border-t border-white/10 backdrop-blur-xl bg-black/30 relative z-10">
-                <div className="container px-4 text-center text-slate-400">
+                <div className="max-w-[1200px] mx-auto px-4 text-center text-slate-400">
                     <p>&copy; {new Date().getFullYear()} SuperPlanner. All rights reserved.</p>
                 </div>
             </footer>
