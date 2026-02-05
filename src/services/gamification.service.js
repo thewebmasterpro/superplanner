@@ -422,6 +422,44 @@ class GamificationService {
    * @param {string} rewardId - Reward ID
    * @returns {Promise<void>}
    */
+  /**
+   * Update a team reward (team leader only)
+   * @param {string} teamId - Team ID
+   * @param {string} rewardId - Reward ID to update
+   * @param {Object} rewardData - Updated reward data
+   * @returns {Promise<Object>} Updated reward
+   */
+  async updateTeamReward(teamId, rewardId, rewardData) {
+    console.log('🎁 [TeamRewards] Updating reward:', { teamId, rewardId, rewardData })
+    try {
+      const user = pb.authStore.model
+      if (!user) throw new Error('Not authenticated')
+
+      // Check if user is team leader
+      const membership = await pb.collection('team_members').getFullList({
+        filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
+      })
+
+      if (membership.length === 0) {
+        throw new Error('Only team leaders can update rewards')
+      }
+
+      const updated = await pb.collection('team_rewards').update(rewardId, {
+        name: rewardData.name,
+        description: rewardData.description || '',
+        points: rewardData.points,
+        start_date: rewardData.start_date || '',
+        end_date: rewardData.end_date || '',
+      })
+
+      console.log('🎁 [TeamRewards] Reward updated successfully:', updated)
+      return updated
+    } catch (error) {
+      console.error('❌ [TeamRewards] Error updating reward:', error)
+      throw error
+    }
+  }
+
   async deleteTeamReward(teamId, rewardId) {
     console.log('🎁 [TeamRewards] Deleting reward:', { teamId, rewardId })
     try {
@@ -583,6 +621,81 @@ class GamificationService {
         status: error.status,
         data: error.data
       })
+      throw error
+    }
+  }
+
+  /**
+   * Update a challenge (creator or team leader only)
+   * @param {string} challengeId - Challenge ID to update
+   * @param {Object} challengeData - Updated challenge data
+   * @param {string} teamId - Team ID (optional, for team leader validation)
+   * @returns {Promise<Object>} Updated challenge
+   */
+  async updateChallenge(challengeId, challengeData, teamId = null) {
+    console.log('🎯 [Challenges] Updating challenge:', { challengeId, challengeData, teamId })
+    try {
+      const user = pb.authStore.model
+      if (!user) throw new Error('Not authenticated')
+
+      // If teamId provided, check if user is team leader
+      if (teamId) {
+        const membership = await pb.collection('team_members').getFullList({
+          filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
+        })
+
+        if (membership.length === 0) {
+          throw new Error('Only team leaders can update team challenges')
+        }
+      }
+
+      const updated = await pb.collection('challenges').update(challengeId, {
+        title: challengeData.title,
+        description: challengeData.description || '',
+        type: challengeData.type,
+        goal_metric: challengeData.goal_metric,
+        goal_value: challengeData.goal_value,
+        points_reward: challengeData.points_reward,
+        icon: challengeData.icon || 'Target',
+        start_date: challengeData.start_date,
+        end_date: challengeData.end_date,
+      })
+
+      console.log('🎯 [Challenges] Challenge updated successfully:', updated)
+      return updated
+    } catch (error) {
+      console.error('❌ [Challenges] Error updating challenge:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Delete a challenge (creator or team leader only)
+   * @param {string} challengeId - Challenge ID to delete
+   * @param {string} teamId - Team ID (optional, for team leader validation)
+   * @returns {Promise<void>}
+   */
+  async deleteChallenge(challengeId, teamId = null) {
+    console.log('🎯 [Challenges] Deleting challenge:', { challengeId, teamId })
+    try {
+      const user = pb.authStore.model
+      if (!user) throw new Error('Not authenticated')
+
+      // If teamId provided, check if user is team leader
+      if (teamId) {
+        const membership = await pb.collection('team_members').getFullList({
+          filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
+        })
+
+        if (membership.length === 0) {
+          throw new Error('Only team leaders can delete team challenges')
+        }
+      }
+
+      await pb.collection('challenges').delete(challengeId)
+      console.log('🎯 [Challenges] Challenge deleted successfully')
+    } catch (error) {
+      console.error('❌ [Challenges] Error deleting challenge:', error)
       throw error
     }
   }

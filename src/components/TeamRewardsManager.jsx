@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Gift, Plus, Award, History, Users, X, Trash2, Calendar } from 'lucide-react'
+import { Gift, Plus, Award, History, Users, X, Trash2, Calendar, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,8 +20,9 @@ export function TeamRewardsManager({ teamId, isLeader }) {
   const [loading, setLoading] = useState(false)
   const [activeView, setActiveView] = useState('rewards') // 'rewards', 'award', 'history'
 
-  // Create reward modal
+  // Create/Edit reward modal
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [editingRewardId, setEditingRewardId] = useState(null)
   const [rewardForm, setRewardForm] = useState({
     name: '',
     description: '',
@@ -84,16 +85,42 @@ export function TeamRewardsManager({ teamId, isLeader }) {
 
     setLoading(true)
     try {
-      await gamificationService.createTeamReward(teamId, rewardForm)
-      toast.success('Récompense créée!')
+      if (editingRewardId) {
+        // Update existing reward
+        await gamificationService.updateTeamReward(teamId, editingRewardId, rewardForm)
+        toast.success('Récompense modifiée!')
+      } else {
+        // Create new reward
+        await gamificationService.createTeamReward(teamId, rewardForm)
+        toast.success('Récompense créée!')
+      }
       setCreateModalOpen(false)
+      setEditingRewardId(null)
       setRewardForm({ name: '', description: '', points: 50, start_date: '', end_date: '' })
       loadData()
     } catch (error) {
-      toast.error(error.message || 'Erreur lors de la création')
+      toast.error(error.message || `Erreur lors de ${editingRewardId ? 'la modification' : 'la création'}`)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleEditReward = (reward) => {
+    setEditingRewardId(reward.id)
+    setRewardForm({
+      name: reward.name,
+      description: reward.description || '',
+      points: reward.points,
+      start_date: reward.start_date || '',
+      end_date: reward.end_date || '',
+    })
+    setCreateModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setCreateModalOpen(false)
+    setEditingRewardId(null)
+    setRewardForm({ name: '', description: '', points: 50, start_date: '', end_date: '' })
   }
 
   const handleDeleteReward = async (rewardId, rewardName) => {
@@ -230,6 +257,14 @@ export function TeamRewardsManager({ teamId, isLeader }) {
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                        onClick={() => handleEditReward(reward)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => handleDeleteReward(reward.id, reward.name)}
                       >
@@ -334,11 +369,13 @@ export function TeamRewardsManager({ teamId, isLeader }) {
         </Card>
       )}
 
-      {/* Create Reward Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+      {/* Create/Edit Reward Modal */}
+      <Dialog open={createModalOpen} onOpenChange={handleCloseModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Créer une récompense</DialogTitle>
+            <DialogTitle>
+              {editingRewardId ? 'Modifier la récompense' : 'Créer une récompense'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateReward} className="space-y-4">
             <div className="space-y-2">
@@ -398,11 +435,11 @@ export function TeamRewardsManager({ teamId, isLeader }) {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>
                 Annuler
               </Button>
               <Button type="submit" disabled={loading}>
-                Créer
+                {editingRewardId ? 'Modifier' : 'Créer'}
               </Button>
             </DialogFooter>
           </form>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Target, Trophy, Clock, TrendingUp, Plus, Trash2, Calendar } from 'lucide-react'
+import { Target, Trophy, Clock, TrendingUp, Plus, Trash2, Calendar, Pencil } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { gamificationService } from '../services/gamification.service'
 import { Button } from './ui/button'
@@ -9,6 +9,7 @@ export default function TeamChallengesManager({ teamId, onClose }) {
   const [challenges, setChallenges] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingChallengeId, setEditingChallengeId] = useState(null)
   const [challengeForm, setChallengeForm] = useState({
     title: '',
     description: '',
@@ -43,7 +44,7 @@ export default function TeamChallengesManager({ teamId, onClose }) {
   }
 
   const handleCreateChallenge = async () => {
-    console.log('🎯 [TeamChallengesManager] Creating challenge:', challengeForm)
+    console.log('🎯 [TeamChallengesManager] Creating/updating challenge:', challengeForm)
 
     // Validation
     if (!challengeForm.title.trim()) {
@@ -59,25 +60,68 @@ export default function TeamChallengesManager({ teamId, onClose }) {
     }
 
     try {
-      await gamificationService.createChallenge(challengeForm, teamId)
-      toast.success('Défi créé!', { icon: '🎯' })
-      setShowCreateModal(false)
-      setChallengeForm({
-        title: '',
-        description: '',
-        type: 'daily',
-        goal_metric: 'tasks_completed',
-        goal_value: 5,
-        points_reward: 50,
-        icon: 'Target',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      })
+      if (editingChallengeId) {
+        // Update existing challenge
+        await gamificationService.updateChallenge(editingChallengeId, challengeForm, teamId)
+        toast.success('Défi modifié!', { icon: '🎯' })
+      } else {
+        // Create new challenge
+        await gamificationService.createChallenge(challengeForm, teamId)
+        toast.success('Défi créé!', { icon: '🎯' })
+      }
+      handleCloseModal()
       loadChallenges()
     } catch (error) {
-      console.error('❌ [TeamChallengesManager] Error creating challenge:', error)
-      toast.error(error.message || 'Erreur de création')
+      console.error('❌ [TeamChallengesManager] Error:', error)
+      toast.error(error.message || `Erreur de ${editingChallengeId ? 'modification' : 'création'}`)
     }
+  }
+
+  const handleEditChallenge = (challenge) => {
+    setEditingChallengeId(challenge.id)
+    setChallengeForm({
+      title: challenge.title,
+      description: challenge.description || '',
+      type: challenge.type,
+      goal_metric: challenge.goal_metric,
+      goal_value: challenge.goal_value,
+      points_reward: challenge.points_reward,
+      icon: challenge.icon || 'Target',
+      start_date: challenge.start_date,
+      end_date: challenge.end_date,
+    })
+    setShowCreateModal(true)
+  }
+
+  const handleDeleteChallenge = async (challengeId, challengeTitle) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le défi "${challengeTitle}" ?`)) {
+      return
+    }
+
+    try {
+      await gamificationService.deleteChallenge(challengeId, teamId)
+      toast.success('Défi supprimé!', { icon: '🗑️' })
+      loadChallenges()
+    } catch (error) {
+      console.error('❌ [TeamChallengesManager] Error deleting challenge:', error)
+      toast.error(error.message || 'Erreur de suppression')
+    }
+  }
+
+  const handleCloseModal = () => {
+    setShowCreateModal(false)
+    setEditingChallengeId(null)
+    setChallengeForm({
+      title: '',
+      description: '',
+      type: 'daily',
+      goal_metric: 'tasks_completed',
+      goal_value: 5,
+      points_reward: 50,
+      icon: 'Target',
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    })
   }
 
   const getTypeLabel = (type) => {
@@ -166,6 +210,24 @@ export default function TeamChallengesManager({ teamId, onClose }) {
                     </Badge>
                   </div>
                 </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                    onClick={() => handleEditChallenge(challenge)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDeleteChallenge(challenge.id, challenge.title)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Description */}
@@ -210,11 +272,13 @@ export default function TeamChallengesManager({ teamId, onClose }) {
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* Create/Edit Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-base-100 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-xl font-bold mb-6">Créer un nouveau défi</h3>
+            <h3 className="text-xl font-bold mb-6">
+              {editingChallengeId ? 'Modifier le défi' : 'Créer un nouveau défi'}
+            </h3>
 
             <div className="space-y-4">
               {/* Title */}
@@ -323,7 +387,7 @@ export default function TeamChallengesManager({ teamId, onClose }) {
             <div className="flex gap-3 mt-6">
               <Button
                 variant="outline"
-                onClick={() => setShowCreateModal(false)}
+                onClick={handleCloseModal}
                 className="flex-1"
               >
                 Annuler
@@ -332,8 +396,17 @@ export default function TeamChallengesManager({ teamId, onClose }) {
                 onClick={handleCreateChallenge}
                 className="flex-1 gap-2"
               >
-                <Plus className="w-4 h-4" />
-                Créer le défi
+                {editingChallengeId ? (
+                  <>
+                    <Pencil className="w-4 h-4" />
+                    Modifier
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Créer
+                  </>
+                )}
               </Button>
             </div>
           </div>
