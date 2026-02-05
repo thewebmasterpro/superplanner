@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Get PocketBase Collection IDs</title>
+</head>
+<body>
+  <h1>Get Collection IDs</h1>
+  <p>Ouvrez la console du navigateur (F12) pour voir les résultats</p>
+
+  <script type="module">
+    // Instructions:
+    // 1. Ouvrir PocketBase Admin (http://127.0.0.1:8090/_/)
+    // 2. Ouvrir cette page dans un nouvel onglet
+    // 3. Regarder la console
+
+    async function getCollectionIds() {
+      try {
+        console.log('🔍 Récupération des IDs de collections...\n')
+
+        // Méthode 1: Via l'API publique des collections
+        const response = await fetch('http://127.0.0.1:8090/api/collections', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (!response.ok) {
+          console.log('❌ Erreur API:', response.status)
+          console.log('ℹ️ Solution alternative: Regarde dans l\'URL de PocketBase Admin\n')
+          console.log('📝 Instructions:')
+          console.log('1. Va sur http://127.0.0.1:8090/_/')
+          console.log('2. Clique sur la collection "teams"')
+          console.log('3. L\'URL ressemblera à: http://127.0.0.1:8090/_/#/collections?collectionId=XXXXXXX')
+          console.log('4. Copie le "XXXXXXX" qui est après collectionId=')
+          console.log('5. Répète pour la collection "users"\n')
+          return
+        }
+
+        const data = await response.json()
+
+        console.log('✅ Collections trouvées:\n')
+
+        const teamsCol = data.items?.find(c => c.name === 'teams')
+        const usersCol = data.items?.find(c => c.name === 'users')
+        const challengesCol = data.items?.find(c => c.name === 'challenges')
+
+        if (teamsCol) {
+          console.log('📋 Collection TEAMS:')
+          console.log('   Name:', teamsCol.name)
+          console.log('   ID:', teamsCol.id)
+          console.log('   ✅ Utilise cet ID pour team_id.collectionId\n')
+        }
+
+        if (usersCol) {
+          console.log('📋 Collection USERS:')
+          console.log('   Name:', usersCol.name)
+          console.log('   ID:', usersCol.id)
+          console.log('   ✅ Utilise cet ID pour created_by.collectionId\n')
+        }
+
+        if (challengesCol) {
+          console.log('📋 Collection CHALLENGES:')
+          console.log('   ID:', challengesCol.id)
+          console.log('   Current schema:')
+
+          const teamIdField = challengesCol.schema?.find(f => f.name === 'team_id')
+          const createdByField = challengesCol.schema?.find(f => f.name === 'created_by')
+
+          if (teamIdField) {
+            console.log('   team_id.collectionId:', teamIdField.options?.collectionId)
+            console.log('   ⚠️ Devrait être:', teamsCol?.id)
+          }
+
+          if (createdByField) {
+            console.log('   created_by.collectionId:', createdByField.options?.collectionId)
+            console.log('   ⚠️ Devrait être:', usersCol?.id)
+          }
+          console.log()
+        }
+
+        console.log('🔧 Prochaines étapes:')
+        console.log('1. Note les IDs ci-dessus')
+        console.log('2. Va dans PocketBase Admin → Collections → challenges')
+        console.log('3. Supprime les champs team_id et created_by')
+        console.log('4. Recrée-les avec les bons IDs de collections')
+
+      } catch (error) {
+        console.error('❌ Erreur:', error.message)
+        console.log('\n📝 Solution alternative:')
+        console.log('1. Va sur http://127.0.0.1:8090/_/')
+        console.log('2. Clique sur "teams" dans la liste')
+        console.log('3. Regarde l\'URL: collectionId=XXXXXXX')
+        console.log('4. Le XXXXXXX est l\'ID de la collection teams')
+        console.log('5. Répète pour "users"')
+      }
+    }
+
+    getCollectionIds()
+  </script>
+</body>
+</html>

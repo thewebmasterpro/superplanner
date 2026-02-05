@@ -603,6 +603,11 @@ class GamificationService {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
+      console.log('🔍 [DEBUG] User ID:', user.id)
+      console.log('🔍 [DEBUG] Team ID:', teamId)
+      console.log('🔍 [DEBUG] User ID type:', typeof user.id)
+      console.log('🔍 [DEBUG] Team ID type:', typeof teamId)
+
       // If teamId provided, check if user is team leader
       if (teamId) {
         console.log('🎯 [Challenges] Checking team ownership for user:', user.id)
@@ -616,8 +621,8 @@ class GamificationService {
         }
       }
 
-      console.log('🎯 [Challenges] Creating challenge in database...')
-      const challenge = await pb.collection('challenges').create({
+      // Prepare data to send
+      const dataToSend = {
         title: challengeData.title,
         description: challengeData.description || '',
         type: challengeData.type,
@@ -625,12 +630,49 @@ class GamificationService {
         goal_value: challengeData.goal_value,
         points_reward: challengeData.points_reward,
         icon: challengeData.icon || 'Target',
-        team_id: teamId,
-        created_by: user.id,
         is_active: true,
         start_date: challengeData.start_date,
         end_date: challengeData.end_date,
+      }
+
+      // Only add relations if values are present
+      if (teamId && teamId !== '' && teamId !== null && teamId !== undefined) {
+        dataToSend.team_id = teamId
+      }
+      if (user.id && user.id !== '' && user.id !== null && user.id !== undefined) {
+        dataToSend.created_by = user.id
+      }
+
+      console.log('🔍 [DEBUG] Data being sent to PocketBase:', JSON.stringify(dataToSend, null, 2))
+      console.log('⚠️⚠️⚠️ IMPORTANT - teamId:', teamId, '| user.id:', user.id, '⚠️⚠️⚠️')
+
+      console.log('🎯 [Challenges] Creating challenge in database...')
+      const challenge = await pb.collection('challenges').create(dataToSend)
+
+      console.log('🔍 [DEBUG] Challenge response from create:', JSON.stringify(challenge, null, 2))
+
+      // Try to get the challenge with expand to see if relations are there
+      console.log('🔍 [DEBUG] Fetching challenge with expand...')
+      const challengeWithExpand = await pb.collection('challenges').getOne(challenge.id, {
+        expand: 'team_id,created_by'
       })
+
+      console.log('🔍 [DEBUG] Challenge with expand:', JSON.stringify(challengeWithExpand, null, 2))
+
+      // If relations are empty, try to update them
+      if (!challengeWithExpand.team_id && teamId) {
+        console.log('⚠️ [Challenges] team_id is empty, trying to update...')
+        try {
+          const updated = await pb.collection('challenges').update(challenge.id, {
+            team_id: teamId,
+            created_by: user.id
+          })
+          console.log('✅ [Challenges] Updated with relations:', updated)
+          return updated
+        } catch (updateError) {
+          console.error('❌ [Challenges] Failed to update relations:', updateError)
+        }
+      }
 
       console.log('🎯 [Challenges] Challenge created successfully:', challenge)
       return challenge
