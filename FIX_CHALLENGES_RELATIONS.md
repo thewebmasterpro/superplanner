@@ -37,11 +37,22 @@ The `team_id` and `created_by` fields in the challenges collection are not savin
    - Display fields: Select "name" and "email"
    - Click "Save field"
 
-5. **Clean up test data:**
+5. **IMPORTANT: Fix the API Update Rule:**
+   - Stay in Collections → challenges
+   - Click on "API Rules" tab
+   - Find the "Update rule" field
+   - **Current value:** `@request.auth.id != "" && created_by = @request.auth.id`
+   - **Change to:** `@request.auth.id != "" && (created_by = @request.auth.id || created_by = "")`
+   - Click "Save"
+
+   **Why:** This allows updating challenges where `created_by` is empty (first-time setup).
+   Without this, our fallback update logic can't fix empty relation fields.
+
+6. **Clean up test data:**
    - Go to Collections → challenges → Records
    - Delete any test challenges with N/A values
 
-6. **Test:**
+7. **Test:**
    - Go to your app → Team Settings → Challenges tab
    - Create a new challenge
    - Verify in PocketBase admin that team_id and created_by are now populated

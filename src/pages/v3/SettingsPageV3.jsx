@@ -1,6 +1,6 @@
 import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
-import { Settings as SettingsIcon, Save, AlertTriangle, Bell, Monitor, Database, Moon, Info, Plus, X, Layout, LayoutDashboard, Building, FolderKanban, Palette, Tag as TagIcon } from 'lucide-react'
-import { useState } from 'react'
+import { Settings as SettingsIcon, Save, AlertTriangle, Bell, Monitor, Database, Moon, Info, Plus, X, Layout, LayoutDashboard, Building, FolderKanban, Palette, Tag as TagIcon, User } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useUserStore } from '../../stores/userStore'
 import { useTelegramNotifications } from '../../hooks/useTelegramNotifications'
 import { settingsService } from '../../services/settings.service'
@@ -27,8 +27,16 @@ import pb from '../../lib/pocketbase'
 export default function SettingsPageV3() {
     const { preferences, setPreferences } = useUserStore()
     const { sendTestNotification } = useTelegramNotifications()
-    const [activeTab, setActiveTab] = useState('apparence')
+    const [activeTab, setActiveTab] = useState('profil')
     const { theme, setTheme } = useTheme()
+
+    // Profile state
+    const [userProfile, setUserProfile] = useState({
+        name: '',
+        email: '',
+        username: ''
+    })
+    const [profileLoading, setProfileLoading] = useState(false)
 
     // Accordion state for Configuration tab
     const [openSections, setOpenSections] = useState({
@@ -42,6 +50,18 @@ export default function SettingsPageV3() {
     const [showResetDialog, setShowResetDialog] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
+    // Load user profile on mount
+    useEffect(() => {
+        const user = pb.authStore.model
+        if (user) {
+            setUserProfile({
+                name: user.name || '',
+                email: user.email || '',
+                username: user.username || ''
+            })
+        }
+    }, [])
 
     const toggleSection = (key) => {
         setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
@@ -109,6 +129,25 @@ export default function SettingsPageV3() {
         }
     }
 
+    const saveProfile = async () => {
+        setProfileLoading(true)
+        try {
+            const userId = pb.authStore.model.id
+            await pb.collection('users').update(userId, {
+                name: userProfile.name,
+                username: userProfile.username
+            })
+            // Reload auth to get updated data
+            await pb.collection('users').authRefresh()
+            toast.success('Profil mis à jour!', { icon: '✅' })
+        } catch (e) {
+            console.error(e)
+            toast.error('Erreur lors de la mise à jour: ' + e.message)
+        } finally {
+            setProfileLoading(false)
+        }
+    }
+
     return (
         <DashboardLayoutV3>
             <div className="flex flex-col gap-6 w-full pb-20">
@@ -130,8 +169,14 @@ export default function SettingsPageV3() {
                     </button>
                 </div>
 
-                {/* Tabs: Apparence > Configuration > Dashboard > Préférences > Données */}
+                {/* Tabs: Profil > Apparence > Configuration > Dashboard > Préférences > Données */}
                 <div data-tour="settings-tabs" className="bg-base-200 p-1 mb-2 rounded-xl flex overflow-x-auto gap-1">
+                    <button
+                        className={`btn btn-sm flex-1 gap-2 ${activeTab === 'profil' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setActiveTab('profil')}
+                    >
+                        <User className="w-4 h-4" /> Profil
+                    </button>
                     <button
                         className={`btn btn-sm flex-1 gap-2 ${activeTab === 'apparence' ? 'btn-primary' : 'btn-ghost'}`}
                         onClick={() => setActiveTab('apparence')}
@@ -165,6 +210,108 @@ export default function SettingsPageV3() {
                 </div>
 
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+
+                    {/* ─── Tab 0: Profil ─── */}
+                    {activeTab === 'profil' && (
+                        <div className="space-y-6 animate-stagger">
+                            <div className="card bg-base-100 shadow-xl border border-base-300">
+                                <div className="card-body">
+                                    <h2 className="card-title flex gap-2">
+                                        <User className="w-5 h-5 text-primary" /> Informations du Profil
+                                    </h2>
+                                    <p className="text-sm opacity-70 mb-4">Gérez vos informations personnelles.</p>
+
+                                    <div className="space-y-4">
+                                        {/* Name */}
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-semibold">Nom complet</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input input-bordered w-full"
+                                                value={userProfile.name}
+                                                onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
+                                                placeholder="Votre nom"
+                                            />
+                                        </div>
+
+                                        {/* Username */}
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-semibold">Nom d'utilisateur</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input input-bordered w-full"
+                                                value={userProfile.username}
+                                                onChange={(e) => setUserProfile({ ...userProfile, username: e.target.value })}
+                                                placeholder="votre_nom_utilisateur"
+                                            />
+                                            <label className="label">
+                                                <span className="label-text-alt opacity-50">Utilisé pour vous identifier dans l'application</span>
+                                            </label>
+                                        </div>
+
+                                        {/* Email (read-only) */}
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-semibold">Adresse email</span>
+                                            </label>
+                                            <input
+                                                type="email"
+                                                className="input input-bordered w-full bg-base-200 cursor-not-allowed"
+                                                value={userProfile.email}
+                                                disabled
+                                            />
+                                            <label className="label">
+                                                <span className="label-text-alt opacity-50">L'email ne peut pas être modifié ici</span>
+                                            </label>
+                                        </div>
+
+                                        {/* Save Button */}
+                                        <div className="flex justify-end pt-4">
+                                            <button
+                                                onClick={saveProfile}
+                                                disabled={profileLoading}
+                                                className={`btn btn-primary gap-2 ${profileLoading ? 'loading' : ''}`}
+                                            >
+                                                {!profileLoading && <Save className="w-4 h-4" />}
+                                                {profileLoading ? 'Enregistrement...' : 'Enregistrer le profil'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Account Info */}
+                            <div className="card bg-base-100 shadow-xl border border-primary/10">
+                                <div className="card-body">
+                                    <h2 className="card-title flex gap-2">
+                                        <Info className="w-5 h-5 text-info" /> Informations du Compte
+                                    </h2>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between py-2 border-b border-base-300">
+                                            <span className="opacity-70">ID Utilisateur</span>
+                                            <span className="font-mono font-semibold">{pb.authStore.model?.id}</span>
+                                        </div>
+                                        <div className="flex justify-between py-2 border-b border-base-300">
+                                            <span className="opacity-70">Email vérifié</span>
+                                            <span className={`badge ${pb.authStore.model?.verified ? 'badge-success' : 'badge-warning'}`}>
+                                                {pb.authStore.model?.verified ? 'Oui' : 'Non'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between py-2">
+                                            <span className="opacity-70">Date de création</span>
+                                            <span className="font-semibold">
+                                                {new Date(pb.authStore.model?.created).toLocaleDateString('fr-FR')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ─── Tab 1: Apparence ─── */}
                     {activeTab === 'apparence' && (
