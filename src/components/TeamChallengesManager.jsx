@@ -60,17 +60,22 @@ export default function TeamChallengesManager({ teamId, onClose }) {
     try {
       if (editingChallengeId) {
         // Update existing challenge
+        console.log('🎯 [TeamChallengesManager] Updating challenge with teamId:', teamId)
         await gamificationService.updateChallenge(editingChallengeId, challengeForm, teamId)
         toast.success('Défi modifié!', { icon: '🎯' })
       } else {
         // Create new challenge
-        await gamificationService.createChallenge(challengeForm, teamId)
+        console.log('🎯 [TeamChallengesManager] Creating challenge with teamId:', teamId)
+        const created = await gamificationService.createChallenge(challengeForm, teamId)
+        console.log('🎯 [TeamChallengesManager] Challenge created, result:', created)
         toast.success('Défi créé!', { icon: '🎯' })
       }
       handleCloseModal()
       loadChallenges()
     } catch (error) {
       console.error('❌ [TeamChallengesManager] Error:', error)
+      console.error('❌ [TeamChallengesManager] Error message:', error?.message)
+      console.error('❌ [TeamChallengesManager] Error data:', error?.data)
       toast.error(error.message || `Erreur de ${editingChallengeId ? 'modification' : 'création'}`)
     }
   }
