@@ -146,7 +146,7 @@ export default function DashboardV3() {
 
         return (
             <SortableWidget key={id} id={id} isEditing={isEditing}>
-                <div className={`group/widget card backdrop-blur-xl bg-black/40 shadow-xl border transition-all duration-300 h-full ${!isEnabled ? 'opacity-40 grayscale border-dashed border-white/20' : 'border-white/20 hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/30 hover:bg-black/50'
+                <div className={`group/widget card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border transition-all duration-300 h-full ${!isEnabled ? 'opacity-40 grayscale border-dashed border-base-300 dark:border-white/20' : 'border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 hover:shadow-2xl dark:hover:shadow-purple-500/30 dark:hover:bg-black/50'
                     }`}>
                     <div className="card-body p-5">
                         <div className="flex items-center justify-between mb-3">
@@ -276,28 +276,28 @@ export default function DashboardV3() {
 
             {/* Stats Overview */}
             <section id="stats-section" data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger-fast">
-                <div className="stats shadow-lg shadow-purple-500/20 backdrop-blur-xl bg-black/40 border border-white/20 hover:border-purple-500/50 hover:shadow-purple-500/30 transition-all">
+                <div className="stats shadow-lg bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                     <div className="stat">
-                        <div className="stat-title opacity-70">Total Tâches</div>
+                        <div className="stat-title">Total Tâches</div>
                         <div className="stat-value text-primary font-display">{isLoading ? '...' : totalTasks}</div>
                     </div>
                 </div>
-                <div className="stats shadow-lg shadow-purple-500/20 backdrop-blur-xl bg-black/40 border border-white/20 hover:border-purple-500/50 hover:shadow-purple-500/30 transition-all">
+                <div className="stats shadow-lg bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                     <div className="stat">
-                        <div className="stat-title text-slate-300">Complétées</div>
+                        <div className="stat-title">Complétées</div>
                         <div className="stat-value text-secondary font-display">{isLoading ? '...' : completedTasks}</div>
                         <div className="stat-desc text-success">↗︎ {completedToday} aujourd'hui</div>
                     </div>
                 </div>
-                <div className="stats shadow-lg shadow-purple-500/20 backdrop-blur-xl bg-black/40 border border-white/20 hover:border-purple-500/50 hover:shadow-purple-500/30 transition-all">
+                <div className="stats shadow-lg bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                     <div className="stat">
-                        <div className="stat-title text-slate-300">Productivité</div>
+                        <div className="stat-title">Productivité</div>
                         <div className="stat-value text-accent font-display">{isLoading ? '...' : `${productivity}%`}</div>
                     </div>
                 </div>
-                <div className="stats shadow-lg shadow-purple-500/20 backdrop-blur-xl bg-black/40 border border-white/20 hover:border-purple-500/50 hover:shadow-purple-500/30 transition-all">
+                <div className="stats shadow-lg bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                     <div className="stat">
-                        <div className="stat-title text-slate-300">Critiques</div>
+                        <div className="stat-title">Critiques</div>
                         <div className="stat-value text-error font-display">{isLoading ? '...' : criticalTasks}</div>
                         <div className="stat-desc text-error font-bold italic">Actions requises</div>
                     </div>
@@ -306,7 +306,7 @@ export default function DashboardV3() {
 
             {/* Main Content: Chart + Tasks */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-slide-up delay-200">
-                <section data-tour="dashboard-chart" className="card backdrop-blur-xl bg-black/40 shadow-xl shadow-purple-500/20 border border-white/20 hover:border-purple-500/50 hover:shadow-purple-500/30 transition-all">
+                <section data-tour="dashboard-chart" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                     <div className="card-body p-6">
                         <h2 className="card-title text-lg font-display mb-4">
                             <BarChart3 className="w-5 h-5 text-accent" /> Productivité Hebdo
@@ -315,7 +315,7 @@ export default function DashboardV3() {
                     </div>
                 </section>
 
-                <section id="task-section" data-tour="dashboard-tasks" className="card backdrop-blur-xl bg-black/40 shadow-xl shadow-purple-500/20 border border-white/20 hover:border-purple-500/50 hover:shadow-purple-500/30 transition-all xl:col-span-2 overflow-visible">
+                <section id="task-section" data-tour="dashboard-tasks" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all xl:col-span-2 overflow-visible">
                     <div className="card-body p-6">
                         <h2 className="card-title text-lg font-display mb-4">Suivi des Tâches</h2>
                         <TaskListV3 />
