@@ -38,7 +38,15 @@ export const useUserStore = create(
         },
         dashboardLayoutV3: {
           mainGrid: ['prayerTimes', 'quranVerse', 'focusTools', 'worldClock', 'scratchpad', 'eisenhower', 'activeCampaigns']
-        }
+        },
+        gamification: {
+          enabled: true,
+          showPoints: true,
+          showChallenges: true,
+          leaderboardOptIn: false,
+          notifyLevelUp: true,
+          notifyChallenges: true,
+        },
       },
       setPreferences: (prefs) => set((state) => ({
         preferences: { ...state.preferences, ...prefs }

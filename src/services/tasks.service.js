@@ -131,6 +131,14 @@ class TasksService {
     // Handle Recurrence Logic if task is done
     if (sanitized.status === 'done' || updatedTask.status === 'done') {
       await this._handleRecurrence(updatedTask)
+
+      // Gamification hook - award points for task completion
+      try {
+        const { gamificationService } = await import('./gamification.service')
+        await gamificationService.onTaskCompleted(updatedTask.id, updatedTask.user_id)
+      } catch (e) {
+        console.warn('Gamification failed:', e)
+      }
     }
 
     return updatedTask
