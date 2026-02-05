@@ -13,12 +13,20 @@ export default function DashboardLayoutV3({ children }) {
     } = useUIStore()
 
     return (
-        <div className="drawer md:drawer-open">
+        <div className="drawer md:drawer-open relative">
+            {/* Animated gradient background */}
+            <div className="fixed inset-0 -z-10 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950/50 to-slate-900"></div>
+                <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-blue-600/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute top-1/3 left-1/3 w-[600px] h-[600px] bg-fuchsia-600/10 rounded-full blur-3xl"></div>
+            </div>
+
             <GlobalTimerHandler />
             <input id="my-drawer-2" type="checkbox" className="drawer-toggle" />
 
             {/* Main content area */}
-            <div className="drawer-content min-h-screen bg-base-200 font-sans text-base-content">
+            <div className="drawer-content min-h-screen bg-transparent font-sans text-base-content">
                 {/* Mobile Header */}
                 <div className="md:hidden navbar bg-base-100 shadow-sm sticky top-0 z-30">
                     <div className="flex-1">

@@ -68,7 +68,7 @@ export default function SidebarV3() {
     ]
 
     return (
-        <aside data-tour="sidebar-nav" className="md:col-span-3 lg:col-span-2 card bg-base-100 shadow-xl h-full min-h-[500px]">
+        <aside data-tour="sidebar-nav" className="md:col-span-3 lg:col-span-2 card backdrop-blur-xl bg-black/30 shadow-xl shadow-purple-500/10 border-r border-white/10 h-full min-h-[500px]">
             <div className="card-body p-4">
                 <div
                     className="flex items-center gap-2 mb-8 px-2 cursor-pointer hover:opacity-80 transition-opacity"
