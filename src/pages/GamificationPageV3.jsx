@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Trophy, Zap, Flame, Target, ShoppingBag, Users, Crown, Gift, CheckCircle, Lock, History, TrendingUp, TrendingDown } from 'lucide-react'
+import { Trophy, Zap, Flame, Target, ShoppingBag, Users, Crown, Gift, CheckCircle, Lock, History, TrendingUp, TrendingDown, Clock, CheckCircle2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 import { useGamificationStore } from '../stores/gamificationStore'
 import { gamificationService, POINTS_CONFIG } from '../services/gamification.service'
 import DashboardLayoutV3 from '../components/layout/DashboardLayoutV3'
@@ -329,79 +331,286 @@ function OverviewTab({ userPoints }) {
   )
 }
 
-// Challenges Tab Component
+// Challenges Tab Component (Enriched)
 function ChallengesTab({ challenges, loading, onClaim }) {
-  if (loading) {
-    return <div className="text-center text-base-content/70 py-12">Chargement...</div>
+  const [activeFilter, setActiveFilter] = useState('all')
+  const [claiming, setClaiming] = useState(null)
+
+  const filteredChallenges = challenges.filter(uc => {
+    if (activeFilter === 'all') return true
+    return uc.challenge?.type === activeFilter
+  })
+
+  const stats = {
+    total: challenges.length,
+    completed: challenges.filter(c => c.completed).length,
+    inProgress: challenges.filter(c => !c.completed && c.progress > 0).length,
+    notStarted: challenges.filter(c => c.progress === 0).length,
   }
 
-  if (challenges.length === 0) {
+  const getChallengeIcon = (type) => {
+    switch (type) {
+      case 'daily':
+        return <Clock className="w-5 h-5" />
+      case 'weekly':
+        return <TrendingUp className="w-5 h-5" />
+      case 'monthly':
+        return <Trophy className="w-5 h-5" />
+      default:
+        return <Target className="w-5 h-5" />
+    }
+  }
+
+  const getChallengeColor = (type) => {
+    switch (type) {
+      case 'daily':
+        return 'text-blue-400'
+      case 'weekly':
+        return 'text-purple-400'
+      case 'monthly':
+        return 'text-amber-400'
+      default:
+        return 'text-gray-400'
+    }
+  }
+
+  const getChallengeBadgeColor = (type) => {
+    switch (type) {
+      case 'daily':
+        return 'bg-blue-500/20 text-blue-400'
+      case 'weekly':
+        return 'bg-purple-500/20 text-purple-400'
+      case 'monthly':
+        return 'bg-amber-500/20 text-amber-400'
+      default:
+        return 'bg-gray-500/20 text-gray-400'
+    }
+  }
+
+  const handleClaim = async (challengeId, challengeName, points) => {
+    setClaiming(challengeId)
+    try {
+      await onClaim(challengeId)
+    } finally {
+      setClaiming(null)
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="text-center text-base-content/70 py-12">
-        <Target className="w-16 h-16 mx-auto mb-4 opacity-50" />
-        <p>Aucun défi actif pour le moment</p>
+      <div className="flex items-center justify-center py-20">
+        <div className="loading loading-spinner loading-lg text-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {challenges.map((challenge) => (
-        <div
-          key={challenge.id}
-          className="bg-base-100 border border-base-300 rounded-lg p-6 hover:border-purple-500/30 transition-all"
-        >
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="font-semibold text-base-content">{challenge.challenge?.title}</h3>
-            {challenge.completed && !challenge.claimed && (
-              <CheckCircle className="w-5 h-5 text-green-500" />
-            )}
-            {challenge.claimed && (
-              <Gift className="w-5 h-5 text-purple-400" />
-            )}
+    <div className="space-y-6">
+      {/* Stats & Filters */}
+      <div className="flex items-center justify-between">
+        {/* Stats Cards */}
+        <div className="flex gap-3">
+          <div className="bg-base-200/50 rounded-xl px-4 py-3 text-center">
+            <div className="text-2xl font-bold text-primary">{stats.total}</div>
+            <div className="text-xs text-muted-foreground">Total</div>
           </div>
-
-          <p className="text-sm text-base-content/70 mb-4">
-            {challenge.challenge?.description}
-          </p>
-
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex justify-between text-xs text-base-content/60 mb-1">
-              <span>Progression</span>
-              <span>{challenge.progress} / {challenge.challenge?.goal_value}</span>
-            </div>
-            <div className="h-2 bg-base-300 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
-                style={{ width: `${Math.min(challenge.progressPercentage, 100)}%` }}
-              />
-            </div>
+          <div className="bg-green-500/10 rounded-xl px-4 py-3 text-center">
+            <div className="text-2xl font-bold text-green-400">{stats.completed}</div>
+            <div className="text-xs text-muted-foreground">Complétés</div>
           </div>
-
-          {/* Reward */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-sm">
-              <Zap className="w-4 h-4 text-purple-400" />
-              <span className="text-purple-400 font-semibold">
-                +{challenge.challenge?.points_reward} points
-              </span>
-            </div>
-
-            {challenge.completed && !challenge.claimed && (
-              <button
-                onClick={() => onClaim(challenge.challengeId)}
-                className="px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-base-content text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
-              >
-                Réclamer
-              </button>
-            )}
-            {challenge.claimed && (
-              <span className="text-xs text-base-content/60">Réclamé</span>
-            )}
+          <div className="bg-blue-500/10 rounded-xl px-4 py-3 text-center">
+            <div className="text-2xl font-bold text-blue-400">{stats.inProgress}</div>
+            <div className="text-xs text-muted-foreground">En cours</div>
           </div>
         </div>
-      ))}
+
+        {/* Filters */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveFilter('all')}
+            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
+              activeFilter === 'all'
+                ? 'bg-primary text-primary-content shadow-sm'
+                : 'bg-base-200/60 hover:bg-base-300/80'
+            }`}
+          >
+            <Target className="w-3 h-3 mr-1.5" />
+            Tous ({challenges.length})
+          </button>
+          <button
+            onClick={() => setActiveFilter('daily')}
+            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
+              activeFilter === 'daily'
+                ? 'bg-blue-500 text-white shadow-sm'
+                : 'bg-base-200/60 hover:bg-base-300/80'
+            }`}
+          >
+            <Clock className="w-3 h-3 mr-1.5" />
+            Quotidien ({challenges.filter(c => c.challenge?.type === 'daily').length})
+          </button>
+          <button
+            onClick={() => setActiveFilter('weekly')}
+            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
+              activeFilter === 'weekly'
+                ? 'bg-purple-500 text-white shadow-sm'
+                : 'bg-base-200/60 hover:bg-base-300/80'
+            }`}
+          >
+            <TrendingUp className="w-3 h-3 mr-1.5" />
+            Hebdo ({challenges.filter(c => c.challenge?.type === 'weekly').length})
+          </button>
+          <button
+            onClick={() => setActiveFilter('monthly')}
+            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
+              activeFilter === 'monthly'
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'bg-base-200/60 hover:bg-base-300/80'
+            }`}
+          >
+            <Trophy className="w-3 h-3 mr-1.5" />
+            Mensuel ({challenges.filter(c => c.challenge?.type === 'monthly').length})
+          </button>
+        </div>
+      </div>
+
+      {/* Challenges Grid */}
+      {filteredChallenges.length === 0 ? (
+        <div className="bg-base-200/50 rounded-xl p-12 text-center">
+          <Target className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+            Aucun défi disponible
+          </h3>
+          <p className="text-sm text-muted-foreground/70">
+            {activeFilter === 'all'
+              ? "Les défis apparaîtront ici une fois créés par l'admin"
+              : `Aucun défi ${activeFilter} actif pour le moment`}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredChallenges.map((uc) => {
+            const challenge = uc.challenge
+            if (!challenge) return null
+
+            const isCompleted = uc.completed
+            const isClaimed = uc.claimed
+            const canClaim = isCompleted && !isClaimed
+            const progressPercentage = uc.progressPercentage
+
+            return (
+              <div
+                key={uc.id}
+                className={`bg-base-200/50 rounded-xl p-5 border-2 transition-all hover:shadow-lg ${
+                  isCompleted
+                    ? 'border-green-500/50 bg-green-500/5'
+                    : 'border-base-300 hover:border-primary/50'
+                }`}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-2 rounded-lg bg-base-300/50 ${getChallengeColor(challenge.type)}`}>
+                    {getChallengeIcon(challenge.type)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getChallengeBadgeColor(challenge.type)}>
+                      {challenge.type === 'daily' && 'Quotidien'}
+                      {challenge.type === 'weekly' && 'Hebdo'}
+                      {challenge.type === 'monthly' && 'Mensuel'}
+                    </Badge>
+                    {isCompleted && (
+                      <Badge className="bg-green-500/20 text-green-400">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Complété
+                      </Badge>
+                    )}
+                    {isClaimed && (
+                      <Badge className="bg-amber-500/20 text-amber-400">
+                        <Gift className="w-3 h-3 mr-1" />
+                        Réclamé
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Title & Description */}
+                <h3 className="text-lg font-bold mb-2">{challenge.title}</h3>
+                {challenge.description && (
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    {challenge.description.replace(/<[^>]*>/g, '')}
+                  </p>
+                )}
+
+                {/* Progress */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">Progression</span>
+                    <span className="text-xs font-semibold">
+                      {uc.progress} / {challenge.goal_value}
+                    </span>
+                  </div>
+                  <Progress value={progressPercentage} className="h-2" />
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {Math.round(progressPercentage)}% complété
+                  </div>
+                </div>
+
+                {/* Reward & Action */}
+                <div className="flex items-center justify-between pt-4 border-t border-base-300">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span className="font-semibold text-amber-400">
+                      +{challenge.points_reward} pts
+                    </span>
+                  </div>
+
+                  {canClaim ? (
+                    <Button
+                      size="sm"
+                      onClick={() => handleClaim(challenge.id, challenge.title, challenge.points_reward)}
+                      disabled={claiming === challenge.id}
+                      className="bg-green-500 hover:bg-green-600 text-white"
+                    >
+                      {claiming === challenge.id ? (
+                        <>
+                          <div className="loading loading-spinner loading-xs mr-1"></div>
+                          Réclamation...
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-4 h-4 mr-1" />
+                          Réclamer
+                        </>
+                      )}
+                    </Button>
+                  ) : isClaimed ? (
+                    <Button size="sm" disabled className="bg-base-300">
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Réclamé
+                    </Button>
+                  ) : (
+                    <Button size="sm" disabled className="bg-base-300">
+                      <Lock className="w-4 h-4 mr-1" />
+                      En cours
+                    </Button>
+                  )}
+                </div>
+
+                {/* Dates */}
+                {(challenge.start_date || challenge.end_date) && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 pt-3 border-t border-base-300">
+                    <Clock className="w-3 h-3" />
+                    <span>
+                      {challenge.start_date && new Date(challenge.start_date).toLocaleDateString('fr-FR')}
+                      {challenge.start_date && challenge.end_date && ' → '}
+                      {challenge.end_date && new Date(challenge.end_date).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
