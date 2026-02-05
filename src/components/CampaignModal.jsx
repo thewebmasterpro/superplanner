@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { campaignsService } from '../services/campaigns.service'
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
@@ -27,7 +26,7 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }) {
     const isEditing = !!campaign
     const [loading, setLoading] = useState(false)
-    const { workspaces, activeWorkspaceId, getActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
+    const { workspaces, activeWorkspaceId, defaultWorkspaceId, getActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -41,13 +40,13 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
     useEffect(() => {
         if (open) {
-            loadWorkspaces()
+            loadWorkspaces() // Ensure workspaces are loaded
             if (campaign) {
                 setFormData({
                     name: campaign.name || '',
                     description: campaign.description || '',
-                    start_date: campaign.start_date || '',
-                    end_date: campaign.end_date || '',
+                    start_date: campaign.start_date ? new Date(campaign.start_date).toISOString().split('T')[0] : '', // Handle iso string
+                    end_date: campaign.end_date ? new Date(campaign.end_date).toISOString().split('T')[0] : '',
                     context_id: campaign.context_id || '',
                     priority: campaign.priority || 3,
                     status: campaign.status || 'draft'
@@ -59,7 +58,7 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: '',
-                    context_id: activeWorkspaceId || '',  // Auto-inherit
+                    context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
                     priority: 3,
                     status: 'draft'
                 })
@@ -87,34 +86,25 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
 
         setLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-
+            // Handle dates to maximize compatibility with PB
+            // PB uses ISO8601 strings. 
             const payload = {
                 ...formData,
-                context_id: formData.context_id || null, // Handle empty string
-                user_id: user.id
+                context_id: formData.context_id || null,
             }
 
-            let error
             if (isEditing) {
-                ({ error } = await supabase
-                    .from('campaigns')
-                    .update(payload)
-                    .eq('id', campaign.id))
+                await campaignsService.update(campaign.id, payload)
             } else {
-                ({ error } = await supabase
-                    .from('campaigns')
-                    .insert(payload))
+                await campaignsService.create(payload)
             }
 
-            if (error) throw error
-
-            toast.success(isEditing ? 'Campaign updated' : 'Campaign created')
+            toast.success(isEditing ? 'Projet mis à jour' : 'Projet créé')
             onSuccess?.()
             onOpenChange(false)
         } catch (error) {
             console.error('Error saving campaign:', error)
-            toast.error('Failed to save campaign')
+            toast.error('Échec de la sauvegarde du projet')
         } finally {
             setLoading(false)
         }
@@ -124,20 +114,20 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Campaign' : 'New Campaign'}</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Modifier le Projet' : 'Nouveau Projet'}</DialogTitle>
                     <DialogDescription>
-                        Create a campaign to organize your marketing efforts or projects.
+                        Créez un projet pour organiser vos initiatives.
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Campaign Name *</Label>
+                        <Label htmlFor="name">Nom du Projet *</Label>
                         <Input
                             id="name"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g. Summer Sale, Website Redesign"
+                            placeholder="ex: Refonte site web, Lancement produit"
                             required
                         />
                     </div>
@@ -187,7 +177,7 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                                 )}
                             </Label>
                             {activeWorkspaceId && !isEditing ? (
-                                <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
+                                <div className="flex items-center gap-2 h-11 px-4 rounded-xl bg-base-200/30">
                                     <div
                                         className="w-3 h-3 rounded-full"
                                         style={{ backgroundColor: getActiveWorkspace()?.color || '#6366f1' }}
@@ -256,15 +246,15 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                         </Select>
                     </div>
 
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    <div className="flex items-center justify-end gap-2 pt-4 border-t border-base-200">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={loading}>
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {isEditing ? 'Save Changes' : 'Create Campaign'}
+                            {isEditing ? 'Enregistrer' : 'Créer le Projet'}
                         </Button>
-                    </DialogFooter>
+                    </div>
                 </form>
             </DialogContent>
         </Dialog>

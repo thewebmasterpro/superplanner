@@ -1,24 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Calendar as CalendarIcon, Filter, Layers, MoreVertical, Archive, Trash2, Edit2, LayoutGrid, GanttChartSquare } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { supabase } from '../lib/supabase'
+import { Plus, Search, Layers, MoreVertical, Archive, Trash2, Edit2, LayoutGrid, GanttChartSquare, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
-import { CampaignModal } from '../components/CampaignModal'
-import { CampaignGantt } from '../components/CampaignGantt'
-import { CampaignDetails } from '../components/CampaignDetails'
-import { toast } from 'react-hot-toast'
+import toast from 'react-hot-toast'
+import { campaignsService } from '../services/campaigns.service'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { CampaignModal } from '../components/CampaignModal'
+import { CampaignDetails } from '../components/CampaignDetails'
+import { CampaignGantt } from '../components/CampaignGantt'
 
 export function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
@@ -32,75 +20,59 @@ export function Campaigns() {
   /* New state for View Mode & Selected Campaign */
   const [view, setView] = useState('list') // 'list' | 'gantt' | 'details'
   const [selectedCampaignId, setSelectedCampaignId] = useState(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     loadCampaigns()
-  }, [activeWorkspaceId]) // Reload when workspace changes
+  }, [activeWorkspaceId, statusFilter, search, refreshTrigger])
 
   const loadCampaigns = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      let query = supabase
-        .from('campaigns')
-        .select(`
-          *,
-          context:contexts(name, color),
-          tasks:tasks(count),
-          meetings:meetings(count)
-        `)
-        .eq('user_id', user.id)
-        .order('start_date', { ascending: false })
-
-      // Filter by workspace if not Global view
-      if (activeWorkspaceId) {
-        query = query.eq('context_id', activeWorkspaceId)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      setCampaigns(data || [])
+      const data = await campaignsService.getAll({
+        workspaceId: activeWorkspaceId,
+        status: statusFilter,
+        search: search
+      })
+      setCampaigns(data)
     } catch (error) {
       console.error('Error loading campaigns:', error)
-      toast.error('Failed to load campaigns')
+      toast.error('Échec du chargement des projets')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this campaign?')) return
+    if (!confirm('Voulez-vous vraiment supprimer ce projet ?')) return
 
     try {
-      const { error } = await supabase.from('campaigns').delete().eq('id', id)
-      if (error) throw error
-      toast.success('Campaign deleted')
+      await campaignsService.delete(id)
+      toast.success('Projet supprimé')
       loadCampaigns()
       if (selectedCampaignId === id) {
         setView('list')
         setSelectedCampaignId(null)
       }
     } catch (error) {
-      toast.error('Error deleting campaign')
+      console.error('Error deleting campaign:', error)
+      toast.error(error.message || 'Erreur lors de la suppression')
     }
   }
 
   const handleArchive = async (id, currentStatus) => {
-    const newStatus = currentStatus === 'archived' ? 'draft' : 'archived'
     try {
-      const { error } = await supabase
-        .from('campaigns')
-        .update({ status: newStatus })
-        .eq('id', id)
-
-      if (error) throw error
-      toast.success(`Campaign ${newStatus === 'archived' ? 'archived' : 'restored'}`)
+      if (currentStatus === 'archived') {
+        await campaignsService.restore(id)
+        toast.success('Projet restauré')
+      } else {
+        await campaignsService.archive(id)
+        toast.success('Projet archivé')
+      }
       loadCampaigns()
     } catch (error) {
-      toast.error('Error updating status')
+      console.error('Error updating status:', error)
+      toast.error(error.message || 'Erreur lors de la mise à jour')
     }
   }
 
@@ -109,18 +81,15 @@ export function Campaigns() {
     setView('details')
   }
 
-  const filteredCampaigns = campaigns.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || c.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredCampaigns = campaigns
 
   // Render Details View if active
   if (view === 'details' && selectedCampaignId) {
     return (
-      <div className="container-tight py-6">
+      <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
         <CampaignDetails
           campaignId={selectedCampaignId}
+          lastUpdated={refreshTrigger}
           onBack={() => { setView('list'); setSelectedCampaignId(null); }}
           onEdit={(c) => { setEditingCampaign(c); setIsModalOpen(true); }}
         />
@@ -128,171 +97,159 @@ export function Campaigns() {
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           campaign={editingCampaign}
-          onSuccess={() => { loadCampaigns(); }} // Should ideally reload details too if open
+          onSuccess={() => {
+            setRefreshTrigger(prev => prev + 1);
+          }}
         />
       </div>
     )
   }
 
   return (
-    <div className="container-tight py-6 space-y-6">
+    <div className="flex flex-col h-full gap-6 animate-in fade-in duration-500">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Layers className="w-8 h-8 text-primary" />
-            Campaigns
+          <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
+            <Layers className="w-8 h-8" />
+            Projets
           </h1>
-          <p className="text-muted-foreground">Manage your marketing campaigns and major projects</p>
+          <p className="text-muted-foreground">Gérez vos projets et initiatives.</p>
         </div>
-        <div className="flex gap-2">
-          <div className="bg-muted p-1 rounded-lg flex items-center">
-            <Button
-              variant={view === 'list' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="h-8 w-8"
+        <div className="flex items-center gap-3">
+          <div data-tour="campaigns-view-toggle" className="flex items-center gap-1">
+            <button
+              className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${view === 'list' ? 'btn-active' : ''}`}
               onClick={() => setView('list')}
-              title="List View"
             >
               <LayoutGrid className="w-4 h-4" />
-            </Button>
-            <Button
-              variant={view === 'gantt' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="h-8 w-8"
+            </button>
+            <button
+              className={`btn btn-sm btn-ghost btn-square transition-transform hover:scale-110 active:scale-95 ${view === 'gantt' ? 'btn-active' : ''}`}
               onClick={() => setView('gantt')}
-              title="Gantt View"
             >
               <GanttChartSquare className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
-          <div className="flex gap-2">
-            {/* Centralized creation handled by Navbar */}
-          </div>
+          <button data-tour="campaigns-create" className="btn gap-2 shadow-none transition-transform hover:scale-105 active:scale-95" onClick={() => { setEditingCampaign(null); setIsModalOpen(true); }}>
+            <Plus className="w-5 h-5" />
+            Nouveau Projet
+          </button>
         </div>
       </div>
 
+      {/* Filters */}
       {view === 'list' && (
-        <div className="flex flex-col sm:flex-row gap-4 items-center bg-card p-4 rounded-lg border">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search campaigns..."
-              className="pl-9"
+        <div data-tour="campaigns-filters" className="flex flex-wrap gap-2 items-center bg-base-100 p-3 rounded-2xl shadow-sm border border-base-300">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
+            <input
+              type="text"
+              placeholder="Rechercher un projet..."
+              className="input input-sm input-ghost w-full pl-9 focus:bg-base-200"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              variant={statusFilter === 'active' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('active')}
-              size="sm"
-            >
-              Active
-            </Button>
-            <Button
-              variant={statusFilter === 'draft' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('draft')}
-              size="sm"
-            >
-              Drafts
-            </Button>
-            <Button
-              variant={statusFilter === 'completed' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('completed')}
-              size="sm"
-            >
-              Completed
-            </Button>
-            <Button
-              variant={statusFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setStatusFilter('all')}
-              size="sm"
-            >
-              All
-            </Button>
+          <div className="divider divider-horizontal m-0 py-2"></div>
+          <div className="flex flex-wrap gap-1.5">
+            {[{v:'active',l:'Actives'},{v:'draft',l:'Brouillons'},{v:'completed',l:'Terminées'},{v:'all',l:'Toutes'}].map(opt => (
+              <button
+                key={opt.v}
+                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${statusFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                onClick={() => setStatusFilter(opt.v)}
+              >
+                {opt.l}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-12">Loading campaigns...</div>
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <Loader2 className="w-10 h-10 animate-spin text-primary opacity-50" />
+          <p className="mt-4 text-muted-foreground font-medium">Chargement des projets...</p>
+        </div>
       ) : filteredCampaigns.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg bg-muted/10">
-          <Layers className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">No campaigns found</h3>
-          <p className="text-muted-foreground mb-4">Get started by creating your first campaign.</p>
-          <Button onClick={() => setIsModalOpen(true)}>Create Campaign</Button>
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-20 bg-base-100 rounded-3xl border border-dashed border-base-300">
+          <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
+            <Layers className="w-10 h-10 opacity-20" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Aucun projet trouvé</h3>
+          <p className="text-muted-foreground max-w-sm mb-8">Commencez par créer votre premier projet.</p>
+          <button className="btn btn-primary shadow-lg" onClick={() => { setEditingCampaign(null); setIsModalOpen(true); }}>Créer un Projet</button>
         </div>
       ) : view === 'gantt' ? (
-        <CampaignGantt
-          campaigns={filteredCampaigns}
-          onEdit={(c) => { handleOpenDetails(c.id) }}
-        />
+        <div className="card bg-base-100 shadow-xl border border-base-300 overflow-hidden flex-1 min-h-0">
+          <div className="card-body p-0 overflow-auto">
+            <CampaignGantt
+              campaigns={filteredCampaigns}
+              onEdit={(c) => { handleOpenDetails(c.id) }}
+            />
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div data-tour="campaigns-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCampaigns.map(campaign => (
-            <Card key={campaign.id} className="hover:shadow-md transition-shadow cursor-pointer border-l-4"
-              style={{ borderLeftColor: campaign.status === 'active' ? '#22c55e' : 'transparent' }}
+            <div
+              key={campaign.id}
+              className="card bg-base-100 shadow-xl border border-base-300 hover:shadow-2xl transition-all cursor-pointer group hover:-translate-y-1"
               onClick={() => handleOpenDetails(campaign.id)}
             >
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <CardTitle className="line-clamp-1" title={campaign.name}>
+              <div className="card-body p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="space-y-1 pr-8">
+                    <h2 className="card-title text-base font-bold line-clamp-1 group-hover:text-primary transition-colors">
                       {campaign.name}
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <span className="capitalize">{campaign.status}</span>
-                    </CardDescription>
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <span className={`badge badge-xs text-[10px] font-black uppercase tracking-widest ${campaign.status === 'active' ? 'badge-success' : campaign.status === 'draft' ? 'badge-ghost' : 'badge-primary'}`}>
+                        {campaign.status}
+                      </span>
+                    </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mr-2 -mt-2" onClick={(e) => e.stopPropagation()}>
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingCampaign(campaign); setIsModalOpen(true) }}>
-                        <Edit2 className="w-4 h-4 mr-2" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleArchive(campaign.id, campaign.status) }}>
-                        <Archive className="w-4 h-4 mr-2" />
-                        {campaign.status === 'archived' ? 'Restore' : 'Archive'}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id) }}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs">Start</p>
-                    <p className="font-medium">{format(new Date(campaign.start_date), 'MMM d, yyyy')}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs">End</p>
-                    <p className="font-medium">{format(new Date(campaign.end_date), 'MMM d, yyyy')}</p>
+                  <div className="dropdown dropdown-end" onClick={e => e.stopPropagation()}>
+                    <label tabIndex={0} className="btn btn-ghost btn-xs btn-square">
+                      <MoreVertical className="w-4 h-4 opacity-50" />
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 rounded-box w-32 border border-base-300">
+                      <li><a onClick={() => { setEditingCampaign(campaign); setIsModalOpen(true) }}><Edit2 className="w-4 h-4" /> Éditer</a></li>
+                      <li><a onClick={() => handleArchive(campaign.id, campaign.status)}><Archive className="w-4 h-4" /> {campaign.status === 'archived' ? 'Restaurer' : 'Archiver'}</a></li>
+                      <div className="divider my-1"></div>
+                      <li><a onClick={() => handleDelete(campaign.id)} className="text-error"><Trash2 className="w-4 h-4" /> Supprimer</a></li>
+                    </ul>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center text-sm border-t pt-3">
-                  <div className="flex gap-4">
-                    <div title="Tasks">
-                      <span className="font-bold">{campaign.tasks?.[0]?.count || 0}</span> <span className="text-muted-foreground">tasks</span>
-                    </div>
-                    <div title="Meetings">
-                      <span className="font-bold">{campaign.meetings?.[0]?.count || 0}</span> <span className="text-muted-foreground">meetings</span>
-                    </div>
+                <div className="grid grid-cols-2 gap-4 mb-6 py-4 border-y border-base-200">
+                  <div>
+                    <div className="text-[10px] uppercase font-bold tracking-wider opacity-40 mb-1">Début</div>
+                    <div className="text-sm font-medium">{format(new Date(campaign.start_date || Date.now()), 'd MMM yyyy')}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase font-bold tracking-wider opacity-40 mb-1">Fin</div>
+                    <div className="text-sm font-medium">{format(new Date(campaign.end_date || Date.now()), 'd MMM yyyy')}</div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex -space-x-2">
+                    <div className="avatar placeholder" title={`${campaign.tasks?.[0]?.count || 0} Tâches`}>
+                      <div className="bg-primary/10 text-primary rounded-full w-8 border-2 border-base-100">
+                        <span className="text-[10px] font-black">{campaign.tasks?.[0]?.count || 0}T</span>
+                      </div>
+                    </div>
+                    <div className="avatar placeholder" title={`${campaign.meetings?.[0]?.count || 0} Meetings`}>
+                      <div className="bg-info/10 text-info rounded-full w-8 border-2 border-base-100">
+                        <span className="text-[10px] font-black">{campaign.meetings?.[0]?.count || 0}M</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 transition-all font-bold"> Voir Détails </div>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -306,3 +263,4 @@ export function Campaigns() {
     </div>
   )
 }
+

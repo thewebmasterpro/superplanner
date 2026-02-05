@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { categoriesService } from '../services/categories.service'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, LayoutGrid } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export function CategoryManager() {
@@ -18,15 +18,11 @@ export function CategoryManager() {
 
     const loadCategories = async () => {
         try {
-            const { data, error } = await supabase
-                .from('task_categories')
-                .select('*')
-                .order('name')
-
-            if (error) throw error
-            setCategories(data || [])
+            const records = await categoriesService.getAll()
+            setCategories(records || [])
         } catch (error) {
             console.error('Error loading categories:', error)
+            toast.error('Failed to load categories')
         }
     }
 
@@ -36,16 +32,10 @@ export function CategoryManager() {
 
         setLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            const { error } = await supabase
-                .from('task_categories')
-                .insert({
-                    name: newCategory.name,
-                    color: newCategory.color,
-                    user_id: user.id
-                })
-
-            if (error) throw error
+            await categoriesService.create({
+                name: newCategory.name,
+                color: newCategory.color
+            })
 
             toast.success('Category added successfully!')
             setNewCategory({ name: '', color: '#3b82f6' })
@@ -61,12 +51,7 @@ export function CategoryManager() {
         if (!window.confirm('Delete this category? Tasks using it will remain unaffected.')) return
 
         try {
-            const { error } = await supabase
-                .from('task_categories')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
+            await categoriesService.delete(id)
 
             toast.success('Category deleted successfully!')
             loadCategories()
@@ -78,13 +63,6 @@ export function CategoryManager() {
     return (
         <div className="space-y-4">
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <LayoutGrid className="w-5 h-5 text-primary" />
-                        Add New Category
-                    </CardTitle>
-                    <CardDescription>Create a new task category to organize your priorities</CardDescription>
-                </CardHeader>
                 <CardContent>
                     <form onSubmit={handleAddCategory} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -124,10 +102,6 @@ export function CategoryManager() {
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Your Categories</CardTitle>
-                    <CardDescription>{categories.length} categories configured</CardDescription>
-                </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {categories.length === 0 ? (

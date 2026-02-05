@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { blockersService } from '../services/blockers.service'
 import toast from 'react-hot-toast'
 
 /**
@@ -14,18 +14,13 @@ export function useBlockers(taskId) {
         queryFn: async () => {
             if (!taskId) return []
 
-            const { data, error } = await supabase
-                .from('task_dependencies')
-                .select(`
-          id,
-          blocker_id,
-          created_at,
-          blocker:blocker_id(id, title, status, priority, due_date)
-        `)
-                .eq('task_id', taskId)
+            const records = await blockersService.getBlockers(taskId)
 
-            if (error) throw error
-            return data?.map(d => ({ ...d.blocker, dependency_id: d.id })) || []
+            // Map expand.blocker_id to flat object
+            return records.map(d => ({
+                ...d.expand?.blocker_id,
+                dependency_id: d.id
+            })).filter(b => b.id) // Ensure valid task data
         },
         enabled: !!taskId
     })
@@ -36,18 +31,12 @@ export function useBlockers(taskId) {
         queryFn: async () => {
             if (!taskId) return []
 
-            const { data, error } = await supabase
-                .from('task_dependencies')
-                .select(`
-          id,
-          task_id,
-          created_at,
-          blocked_task:task_id(id, title, status, priority, due_date)
-        `)
-                .eq('blocker_id', taskId)
+            const records = await blockersService.getBlockedTasks(taskId)
 
-            if (error) throw error
-            return data?.map(d => ({ ...d.blocked_task, dependency_id: d.id })) || []
+            return records.map(d => ({
+                ...d.expand?.task_id,
+                dependency_id: d.id
+            })).filter(b => b.id)
         },
         enabled: !!taskId
     })
@@ -55,37 +44,7 @@ export function useBlockers(taskId) {
     // Add a blocker to this task
     const addBlocker = useMutation({
         mutationFn: async (blockerId) => {
-            // Validation: no self-blocking
-            if (blockerId === taskId) {
-                throw new Error('A task cannot block itself')
-            }
-
-            // Validation: check for simple cycle (A↔B)
-            const { data: reverseCheck } = await supabase
-                .from('task_dependencies')
-                .select('id')
-                .eq('task_id', blockerId)
-                .eq('blocker_id', taskId)
-                .single()
-
-            if (reverseCheck) {
-                throw new Error('Circular dependency detected: this would create a cycle')
-            }
-
-            const { data, error } = await supabase
-                .from('task_dependencies')
-                .insert({ task_id: taskId, blocker_id: blockerId })
-                .select()
-                .single()
-
-            if (error) {
-                if (error.code === '23505') {
-                    throw new Error('This blocker already exists')
-                }
-                throw error
-            }
-
-            return data
+            return await blockersService.addBlocker(taskId, blockerId)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['blockers', taskId] })
@@ -100,12 +59,7 @@ export function useBlockers(taskId) {
     // Remove a blocker from this task
     const removeBlocker = useMutation({
         mutationFn: async (dependencyId) => {
-            const { error } = await supabase
-                .from('task_dependencies')
-                .delete()
-                .eq('id', dependencyId)
-
-            if (error) throw error
+            await blockersService.removeBlocker(dependencyId)
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['blockers', taskId] })
@@ -117,9 +71,11 @@ export function useBlockers(taskId) {
         }
     })
 
+    const EMPTY_ARRAY = []
+
     return {
-        blockers: blockersQuery.data || [],
-        blocks: blocksQuery.data || [],
+        blockers: blockersQuery.data || EMPTY_ARRAY,
+        blocks: blocksQuery.data || EMPTY_ARRAY,
         isLoadingBlockers: blockersQuery.isLoading,
         isLoadingBlocks: blocksQuery.isLoading,
         addBlocker: addBlocker.mutate,

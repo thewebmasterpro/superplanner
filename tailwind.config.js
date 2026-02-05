@@ -22,45 +22,49 @@ export default {
 					'4': '#f97316',
 					'5': '#ef4444'
 				},
-				border: 'hsl(var(--border))',
-				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
-				background: 'hsl(var(--background))',
-				foreground: 'hsl(var(--foreground))',
+				border: 'var(--color-base-300)',
+				input: 'var(--color-base-300)',
+				ring: 'var(--color-primary)',
+				background: 'var(--color-base-100)',
+				foreground: 'var(--color-base-content)',
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					DEFAULT: 'var(--color-primary)',
+					foreground: 'var(--color-primary-content)'
 				},
 				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
-				},
-				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
-				},
-				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					DEFAULT: 'var(--color-secondary)',
+					foreground: 'var(--color-secondary-content)'
 				},
 				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					DEFAULT: 'var(--color-accent)',
+					foreground: 'var(--color-accent-content)'
+				},
+				neutral: {
+					DEFAULT: 'var(--color-neutral)',
+					foreground: 'color-mix(in oklch, var(--color-base-content) 60%, transparent)'
+				},
+				destructive: {
+					DEFAULT: 'var(--color-error)',
+					foreground: 'var(--color-error-content)'
+				},
+				muted: {
+					DEFAULT: 'var(--color-neutral)',
+					foreground: 'color-mix(in oklch, var(--color-base-content) 60%, transparent)'
 				},
 				popover: {
-					DEFAULT: 'hsl(var(--popover))',
-					foreground: 'hsl(var(--popover-foreground))'
+					DEFAULT: 'var(--color-base-100)',
+					foreground: 'var(--color-base-content)'
 				},
 				card: {
-					DEFAULT: 'hsl(var(--card))',
-					foreground: 'hsl(var(--card-foreground))'
+					DEFAULT: 'var(--color-base-100)',
+					foreground: 'var(--color-base-content)'
 				},
 				chart: {
-					'1': 'hsl(var(--chart-1))',
-					'2': 'hsl(var(--chart-2))',
-					'3': 'hsl(var(--chart-3))',
-					'4': 'hsl(var(--chart-4))',
-					'5': 'hsl(var(--chart-5))'
+					'1': 'var(--color-primary)',
+					'2': 'var(--color-secondary)',
+					'3': 'var(--color-accent)',
+					'4': 'var(--color-warning, #f59e0b)',
+					'5': 'var(--color-error)'
 				}
 			},
 			borderRadius: {
@@ -83,5 +87,21 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		require("daisyui")({
+			themes: [
+				"light --default",
+				"dark --prefersdark",
+				"cupcake", "bumblebee", "emerald", "corporate",
+				"synthwave", "retro", "cyberpunk", "valentine",
+				"halloween", "garden", "forest", "aqua",
+				"lofi", "pastel", "fantasy", "wireframe",
+				"black", "luxury", "dracula", "cmyk",
+				"autumn", "business", "acid", "lemonade",
+				"night", "coffee", "winter", "dim", "nord", "sunset"
+			],
+			logs: false,
+		})
+	]
 }

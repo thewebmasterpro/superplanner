@@ -4,51 +4,44 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { supabase } from '../lib/supabase'
+import { campaignsService } from '../services/campaigns.service'
+import { tasksService } from '../services/tasks.service'
 import { format } from 'date-fns'
-import { TaskModal } from '../components/TaskModal'
+import { useUIStore } from '../stores/uiStore'
 
-export function CampaignDetails({ campaignId, onBack, onEdit }) {
+export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
     const [campaign, setCampaign] = useState(null)
     const [loading, setLoading] = useState(true)
     const [tasks, setTasks] = useState([])
     const [meetings, setMeetings] = useState([])
     const [stats, setStats] = useState({ total: 0, completed: 0, progress: 0 })
-    const [selectedTask, setSelectedTask] = useState(null)
-    const [isTaskModalOpen, setTaskModalOpen] = useState(false)
+    // stats declared dynamically above or below
+    const { isTaskModalOpen, setTaskModalOpen, setModalTask } = useUIStore()
+
+    // Refresh when modal closes
+    useEffect(() => {
+        if (!isTaskModalOpen) {
+            loadCampaignDetails()
+        }
+    }, [isTaskModalOpen])
 
     useEffect(() => {
         loadCampaignDetails()
-    }, [campaignId])
+    }, [campaignId, lastUpdated]) // Reload when ID OR lastUpdated changes
 
     const loadCampaignDetails = async () => {
         setLoading(true)
         try {
             // 1. Fetch Campaign Info
-            const { data: camp, error: campError } = await supabase
-                .from('campaigns')
-                .select(`
-            *,
-            context:contexts(name)
-        `)
-                .eq('id', campaignId)
-                .single()
-
-            if (campError) throw campError
-            setCampaign(camp)
+            const camp = await campaignsService.getOne(campaignId)
 
             // 2. Fetch Tasks & Meetings
-            const { data: items, error: itemsError } = await supabase
-                .from('tasks')
-                .select(`
-            *,
-            category:task_categories(name, color),
-            task_tags(tag:tags(name, color))
-        `)
-                .eq('campaign_id', campaignId)
-                .order('due_date', { ascending: true })
-
-            if (itemsError) throw itemsError
+            // Note: services should handle filtering. passing filter string.
+            const items = await tasksService.getAll({
+                filter: `campaign_id = "${campaignId}"`,
+                sort: 'due_date',
+                expand: 'category_id,tags'
+            })
 
             const tasksList = items.filter(i => i.type === 'task')
             const meetingsList = items.filter(i => i.type === 'meeting')
@@ -61,6 +54,23 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
             const completed = tasksList.filter(t => t.status === 'done').length
             const progress = total > 0 ? Math.round((completed / total) * 100) : 0
             setStats({ total, completed, progress })
+
+            // Map expanded data to expected format if necessary for rendering
+            // The renderer uses task.category.color. In PB: task.expand.category_id.color
+            // I'll map it to keep JSX clean
+            setCampaign({
+                ...camp,
+                context: camp.expand?.context_id
+            })
+
+            const mapItems = (list) => list.map(item => ({
+                ...item,
+                category: item.expand?.category_id,
+                tags: item.expand?.tags
+            }))
+
+            setTasks(mapItems(tasksList))
+            setMeetings(mapItems(meetingsList))
 
         } catch (error) {
             console.error('Error loading campaign details:', error)
@@ -78,7 +88,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
             <div className="flex flex-col md:flex-row justify-between gap-4">
                 <div>
                     <Button variant="ghost" size="sm" onClick={onBack} className="mb-2 -ml-2 text-muted-foreground">
-                        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Campaigns
+                        <ArrowLeft className="w-4 h-4 mr-1" /> Retour aux Projets
                     </Button>
                     <h1 className="text-3xl font-bold flex items-center gap-3">
                         {campaign.name}
@@ -92,12 +102,12 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                 </div>
                 <div className="flex gap-2 items-start shrink-0">
                     <Button variant="outline" onClick={() => onEdit(campaign)}>
-                        <Edit2 className="w-4 h-4 mr-2" /> Edit Campaign
+                        <Edit2 className="w-4 h-4 mr-2" /> Modifier le Projet
                     </Button>
-                    <Button variant="outline" onClick={() => { setSelectedTask({ campaign_id: campaign.id, type: 'task' }); setTaskModalOpen(true) }}>
+                    <Button variant="outline" onClick={() => { setModalTask({ campaign_id: campaign.id, type: 'task' }); setTaskModalOpen(true) }}>
                         + New Task
                     </Button>
-                    <Button onClick={() => { setSelectedTask({ campaign_id: campaign.id, type: 'meeting' }); setTaskModalOpen(true) }}>
+                    <Button onClick={() => { setModalTask({ campaign_id: campaign.id, type: 'meeting' }); setTaskModalOpen(true) }}>
                         + New Meeting
                     </Button>
                 </div>
@@ -137,9 +147,9 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                         <CardTitle className="text-sm font-medium text-muted-foreground">Timeline</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-sm font-medium">{format(new Date(campaign.start_date), 'MMM d')} - {format(new Date(campaign.end_date), 'MMM d, yyyy')}</div>
+                        <div className="text-sm font-medium">{format(new Date(campaign.start_date || Date.now()), 'MMM d')} - {format(new Date(campaign.end_date || Date.now()), 'MMM d, yyyy')}</div>
                         <p className="text-xs text-muted-foreground mt-1">
-                            {Math.ceil((new Date(campaign.end_date) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
+                            {Math.ceil((new Date(campaign.end_date || Date.now()) - new Date()) / (1000 * 60 * 60 * 24))} days remaining
                         </p>
                     </CardContent>
                 </Card>
@@ -158,14 +168,14 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                     ) : (
                         <div className="space-y-3">
                             {meetings.map(meeting => (
-                                <Card key={meeting.id} className="cursor-pointer hover:shadow-sm transition-all" onClick={() => { setSelectedTask(meeting); setTaskModalOpen(true) }}>
+                                <Card key={meeting.id} className="cursor-pointer hover:shadow-sm transition-all" onClick={() => { setModalTask(meeting); setTaskModalOpen(true) }}>
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-2">
                                             <h4 className="font-medium line-clamp-1">{meeting.title}</h4>
-                                            <Badge variant="outline" className="text-[10px]">{format(new Date(meeting.due_date || meeting.created_at), 'MMM d')}</Badge>
+                                            <Badge variant="outline" className="text-[10px]">{format(new Date(meeting.due_date || meeting.created || Date.now()), 'MMM d')}</Badge>
                                         </div>
                                         <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <Clock className="w-3 h-3" />
+                                            <Clock className="w-3" />
                                             {meeting.scheduled_time ? format(new Date(meeting.scheduled_time), 'h:mm a') : 'Unscheduled'}
                                         </div>
                                     </CardContent>
@@ -182,14 +192,14 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                     </h3>
                     {tasks.length === 0 ? (
                         <div className="border border-dashed rounded-lg p-12 text-center text-muted-foreground">
-                            No tasks linked to this campaign yet.
+                            Aucune tâche liée à ce projet.
                         </div>
                     ) : (
                         <div className="space-y-2">
                             {tasks.map(task => (
                                 <div key={task.id}
                                     className="flex items-center justify-between p-3 bg-card border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                                    onClick={() => { setSelectedTask(task); setTaskModalOpen(true) }}
+                                    onClick={() => { setModalTask(task); setTaskModalOpen(true) }}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={`w-3 h-3 rounded-full border ${task.status === 'done' ? 'bg-green-500 border-green-600' : 'border-muted-foreground'}`}></div>
@@ -212,14 +222,7 @@ export function CampaignDetails({ campaignId, onBack, onEdit }) {
                 </div>
             </div>
 
-            <TaskModal
-                open={isTaskModalOpen}
-                onOpenChange={(open) => {
-                    setTaskModalOpen(open)
-                    if (!open) loadCampaignDetails() // Refresh on close
-                }}
-                task={selectedTask}
-            />
+            {/* Task Modal is global */}
         </div>
     )
 }

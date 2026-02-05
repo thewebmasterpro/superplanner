@@ -1,0 +1,157 @@
+[
+  {
+    "name": "team_rewards",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "team_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "teams",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      },
+      {
+        "name": "points",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "created_by",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_team_id ON team_rewards (team_id)",
+      "CREATE INDEX idx_created_by ON team_rewards (created_by)"
+    ],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": "@request.auth.id != \"\" && team_id.owner_id = @request.auth.id",
+    "deleteRule": "@request.auth.id != \"\" && team_id.owner_id = @request.auth.id"
+  },
+  {
+    "name": "team_reward_history",
+    "type": "base",
+    "system": false,
+    "schema": [
+      {
+        "name": "team_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "teams",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "reward_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "team_rewards",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "member_id",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "awarded_by",
+        "type": "relation",
+        "required": true,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
+        "name": "points",
+        "type": "number",
+        "required": true,
+        "options": {
+          "min": 1,
+          "max": null,
+          "noDecimal": true
+        }
+      },
+      {
+        "name": "reason",
+        "type": "text",
+        "required": false,
+        "options": {
+          "min": null,
+          "max": null,
+          "pattern": ""
+        }
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_team_created ON team_reward_history (team_id, created DESC)",
+      "CREATE INDEX idx_member ON team_reward_history (member_id)",
+      "CREATE INDEX idx_reward ON team_reward_history (reward_id)"
+    ],
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": null,
+    "deleteRule": null
+  }
+]

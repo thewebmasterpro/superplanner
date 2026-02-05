@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useCreateTask, useUpdateTask, useDeleteTask, useArchiveTask } from '../hooks/useTasks'
-import { supabase } from '../lib/supabase'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -21,7 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, AlertCircle, Archive, Trash2 } from 'lucide-react'
+import { Loader2, AlertCircle, Archive, Trash2, ChevronRight } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
 import { TaskComments } from './TaskComments'
@@ -31,6 +29,11 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
+import { categoriesService } from '../services/categories.service'
+import { projectsService } from '../services/projects.service'
+import { tagsService } from '../services/tags.service'
+import { campaignsService } from '../services/campaigns.service'
+import { teamsService } from '../services/teams.service'
 
 export function TaskModal({ open, onOpenChange, task = null }) {
   const isEditing = !!task?.id
@@ -38,7 +41,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const archiveTask = useArchiveTask()
-  const { workspaces, activeWorkspaceId, getActiveWorkspace } = useWorkspaceStore()
+  const { workspaces, activeWorkspaceId, defaultWorkspaceId, getActiveWorkspace } = useWorkspaceStore()
   const { currentTeam } = useUserStore()
   const { data: contactsList = [] } = useContactsList()
 
@@ -48,17 +51,13 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const [selectedTags, setSelectedTags] = useState([])
   const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(false)
-
-  // Agenda Items (sub-tasks) for meetings
-  const [agendaItems, setAgendaItems] = useState([])
-  const [newAgendaItem, setNewAgendaItem] = useState({ title: '', description: '', priority: 3 })
-  const [showAgendaForm, setShowAgendaForm] = useState(false)
+  const [campaigns, setCampaigns] = useState([])
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     status: 'todo',
-    priority: 3,
+    priority: 'medium',
     due_date: '',
     duration: 60,
     scheduled_time: '',
@@ -81,46 +80,48 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     if (open) {
       loadCategoriesAndProjects()
       if (task) {
-        if (task.type === 'meeting') {
-          loadAgendaItems(task.id)
+        // Load tags from task 'tags' relation field (array of IDs)
+        // If task comes from useTasks with 'expand', task.tags might be IDs or objects depending on SDK version/expansion.
+        // Usually plain field access gives IDs.
+        if (task.tags && Array.isArray(task.tags)) {
+          setSelectedTags(task.tags)
+        } else {
+          // Fallback if using join table or not expanded properly initially
+          // For now assume tasks have tags array.
+          setSelectedTags([])
         }
-        loadTaskTags(task.id)
-        if (task.team_id) {
-          loadTeamMembers(task.team_id)
-        } else if (currentTeam) {
-          loadTeamMembers(currentTeam.id)
-        }
+
+        // Load users for assignment
+        loadTeamMembers()
       } else {
         setSelectedTags([])
-        if (currentTeam) {
-          loadTeamMembers(currentTeam.id)
-        }
+        loadTeamMembers()
       }
     } else {
       // Reset when modal closes
-      setAgendaItems([])
-      setShowAgendaForm(false)
-      setNewAgendaItem({ title: '', description: '', priority: 3 })
       setSelectedTags([])
     }
   }, [open, task])
 
-  // Populate form when editing
+  // Populate form when editing or reset for creation
   useEffect(() => {
-    if (task) {
+    if (task?.id) {
+      // Editing existing task - populate from task data
       setFormData({
         title: task.title || '',
         description: task.description || '',
         status: task.status || 'todo',
-        priority: task.priority || 3,
-        due_date: task.due_date || '',
+        priority: task.priority || 'medium',
+        // Truncate ISO date to YYYY-MM-DD for date input
+        due_date: task.due_date ? task.due_date.substring(0, 10) : '',
         duration: task.duration || 60,
-        scheduled_time: task.scheduled_time || '',
+        // scheduled_time is datetime-local, needs YYYY-MM-DDTHH:mm
+        scheduled_time: task.scheduled_time ? task.scheduled_time.substring(0, 16) : '',
         category_id: task.category_id || '',
         project_id: task.project_id || '',
         blocked_reason: task.blocked_reason || '',
         recurrence: task.recurrence || '',
-        recurrence_end: task.recurrence_end || '',
+        recurrence_end: task.recurrence_end ? task.recurrence_end.substring(0, 10) : '',
         type: task.type || 'task',
         agenda: task.agenda || '',
         campaign_id: task.campaign_id || '',
@@ -130,12 +131,12 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         assigned_to: task.assigned_to || ''
       })
     } else {
-      // Reset form for creation
+      // Creating new task/meeting - use defaults + type from task prop if provided
       setFormData({
         title: '',
         description: '',
         status: 'todo',
-        priority: 3,
+        priority: 'medium',
         due_date: '',
         duration: 60,
         scheduled_time: '',
@@ -144,10 +145,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         blocked_reason: '',
         recurrence: '',
         recurrence_end: '',
-        type: 'task',
+        type: task?.type || 'task',
         agenda: '',
         campaign_id: '',
-        context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? '' : (activeWorkspaceId || ''),
+        context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
         team_id: currentTeam ? currentTeam.id : '',
         assigned_to: ''
@@ -155,21 +156,17 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     }
   }, [task, activeWorkspaceId])
 
-  const [campaigns, setCampaigns] = useState([])
-
-  const loadTeamMembers = async (teamId) => {
+  const loadTeamMembers = async () => {
     try {
-      // Attempt to fetch with user details (requires profiles table or visible auth.users)
-      // Since we likely don't have a public profiles table yet, this might fail to get emails.
-      // We really should have a public profiles table or a view.
-      // For now, we'll try to get what we can.
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('team_id', teamId)
+      // Fetch users directly via service
+      const records = await teamsService.getAllUsers()
 
-      if (error) throw error
-      setTeamMembers(data || [])
+      // Map to structure expected
+      const members = records.map(user => ({
+        user_id: user.id,
+        auth_user: user
+      }))
+      setTeamMembers(members)
     } catch (error) {
       console.error('Error loading team members:', error)
     }
@@ -178,105 +175,21 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const loadCategoriesAndProjects = async () => {
     try {
       const [categoriesRes, projectsRes, tagsRes, campaignsRes] = await Promise.all([
-        supabase.from('task_categories').select('*').order('name'),
-        supabase.from('projects').select('*').order('name'),
-        supabase.from('tags').select('*').order('name'),
-        supabase.from('campaigns').select('id, name').eq('status', 'active').order('name')
+        categoriesService.getAll(),
+        projectsService.getAll(),
+        tagsService.getAll(),
+        campaignsService.getAll()
       ])
 
-      if (categoriesRes.data) setCategories(categoriesRes.data)
-      if (projectsRes.data) setProjects(projectsRes.data)
-      if (tagsRes.data) setTags(tagsRes.data)
-      if (campaignsRes.data) setCampaigns(campaignsRes.data)
+      // Handle raw array or ListResult wrapper if necessary
+      // Services return array usually.
+
+      setCategories(categoriesRes || [])
+      setProjects(projectsRes || [])
+      setTags(tagsRes?.items || tagsRes || [])
+      setCampaigns(campaignsRes || [])
     } catch (error) {
       console.error('Error loading data:', error)
-    }
-  }
-
-  const loadTaskTags = async (taskId) => {
-    try {
-      const { data, error } = await supabase
-        .from('task_tags')
-        .select('tag_id')
-        .eq('task_id', taskId)
-
-      if (error) throw error
-      setSelectedTags(data.map(t => t.tag_id))
-    } catch (error) {
-      console.error('Error loading task tags:', error)
-    }
-  }
-
-  const loadAgendaItems = async (meetingId) => {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('parent_meeting_id', meetingId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-      setAgendaItems(data || [])
-    } catch (error) {
-      console.error('Error loading agenda items:', error)
-    }
-  }
-
-  const createAgendaItem = async () => {
-    if (!newAgendaItem.title.trim() || !task?.id) return
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { error } = await supabase.from('tasks').insert({
-        user_id: user.id,
-        parent_meeting_id: task.id,
-        title: newAgendaItem.title,
-        description: newAgendaItem.description || null,
-        priority: newAgendaItem.priority,
-        status: 'todo',
-        type: 'task',
-        due_date: task.due_date // Inherit meeting date
-      })
-
-      if (error) throw error
-
-      // Reload agenda items
-      await loadAgendaItems(task.id)
-
-      // Reset form
-      setNewAgendaItem({ title: '', description: '', priority: 3 })
-      setShowAgendaForm(false)
-    } catch (error) {
-      console.error('Error creating agenda item:', error)
-    }
-  }
-
-  const toggleAgendaItemStatus = async (itemId, currentStatus) => {
-    const newStatus = currentStatus === 'done' ? 'todo' : 'done'
-
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus, completed_at: newStatus === 'done' ? new Date().toISOString() : null })
-        .eq('id', itemId)
-
-      if (error) throw error
-      await loadAgendaItems(task.id)
-    } catch (error) {
-      console.error('Error updating agenda item:', error)
-    }
-  }
-
-  const deleteAgendaItem = async (itemId) => {
-    if (!confirm('Delete this agenda item?')) return
-
-    try {
-      const { error } = await supabase.from('tasks').delete().eq('id', itemId)
-      if (error) throw error
-      await loadAgendaItems(task.id)
-    } catch (error) {
-      console.error('Error deleting agenda item:', error)
     }
   }
 
@@ -287,8 +200,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       return
     }
 
-    // Validate context_id is required in Global view (when creating)
-    if (!isEditing && !activeWorkspaceId && !formData.context_id) {
+    const isSpecialView = activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive'
+    if (!isEditing && (!activeWorkspaceId || isSpecialView) && !formData.context_id) {
       toast.error('Please select a workspace before creating')
       return
     }
@@ -296,32 +209,19 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     setLoading(true)
 
     try {
-      let taskId = task?.id
+      // Include selected tags in the payload
+      const payload = {
+        ...formData,
+        tags: selectedTags
+      }
 
       if (isEditing) {
         await updateTask.mutateAsync({
           id: task.id,
-          updates: formData
+          updates: payload
         })
       } else {
-        const newTask = await createTask.mutateAsync(formData)
-        taskId = newTask.id // Ensure backend returns the full object or ID
-      }
-
-      // Handle Tags (Delete all and re-insert for simplicity)
-      if (taskId) {
-        // 1. Delete existing tags
-        await supabase.from('task_tags').delete().eq('task_id', taskId)
-
-        // 2. Insert new tags
-        if (selectedTags.length > 0) {
-          const tagsToInsert = selectedTags.map(tagId => ({
-            task_id: taskId,
-            tag_id: tagId
-          }))
-          const { error: tagError } = await supabase.from('task_tags').insert(tagsToInsert)
-          if (tagError) console.error('Error saving tags:', tagError)
-        }
+        await createTask.mutateAsync(payload)
       }
 
       onOpenChange(false)
@@ -388,331 +288,363 @@ export function TaskModal({ open, onOpenChange, task = null }) {
             <TabsTrigger value="comments" disabled={!isEditing}>💬 Comments</TabsTrigger>
             <TabsTrigger value="notes" disabled={!isEditing}>Notes</TabsTrigger>
           </TabsList>
-          <TabsContent value="details" className="space-y-4">
-            {/* Task/Meeting selection is handled by the Navbar menu or derived from existing task */}
+          <TabsContent value="details">
+            <form onSubmit={handleSubmit} className="space-y-1">
 
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Title */}
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Task title"
-                  required
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Task description (optional)"
-                  rows={3}
-                />
-              </div>
-
-              {/* Row 1: Status, Priority */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Essential: Title + Description (always visible) */}
+              <div className="space-y-4 pb-4">
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="blocked">Blocked</SelectItem>
-                      <SelectItem value="done">Done</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select value={String(formData.priority)} onValueChange={(value) => setFormData({ ...formData, priority: parseInt(value) })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Priority 1 (Low)</SelectItem>
-                      <SelectItem value="2">Priority 2</SelectItem>
-                      <SelectItem value="3">Priority 3 (Medium)</SelectItem>
-                      <SelectItem value="4">Priority 4</SelectItem>
-                      <SelectItem value="5">Priority 5 (High)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Blocked Reason (conditional) */}
-              {formData.status === 'blocked' && (
-                <div className="space-y-2">
-                  <Label htmlFor="blocked_reason">Blocked Reason</Label>
+                  <Label htmlFor="title">Title *</Label>
                   <Input
-                    id="blocked_reason"
-                    value={formData.blocked_reason}
-                    onChange={(e) => setFormData({ ...formData, blocked_reason: e.target.value })}
-                    placeholder="Why is this task blocked?"
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder={formData.type === 'meeting' ? 'Meeting title...' : 'Task title...'}
+                    className="text-base font-semibold h-12"
+                    required
                   />
                 </div>
-              )}
-
-              {/* Row 2: Category, Project */}
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category_id || undefined} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="project">Project</Label>
-                  <Select value={formData.project_id || undefined} onValueChange={(value) => setFormData({ ...formData, project_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map((proj) => (
-                        <SelectItem key={proj.id} value={proj.id}>{proj.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Add details..."
+                    rows={2}
+                  />
                 </div>
               </div>
 
-              {/* Tags Selection */}
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="flex flex-wrap gap-2 border rounded-md p-3 min-h-[2.5rem]">
-                  {tags.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No tags available. Create them in Settings.</p>
+              {/* Section: Planification */}
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
+                  <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                  Planification
+                </summary>
+                <div className="pb-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todo">To Do</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                          <SelectItem value="done">Done</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="priority">Priority</Label>
+                      <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {formData.status === 'blocked' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="blocked_reason">Blocked Reason</Label>
+                      <Input
+                        id="blocked_reason"
+                        value={formData.blocked_reason}
+                        onChange={(e) => setFormData({ ...formData, blocked_reason: e.target.value })}
+                        placeholder="Why is this task blocked?"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="due_date">Due Date</Label>
+                      <Input
+                        id="due_date"
+                        type="date"
+                        value={formData.due_date}
+                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="duration">Duration (min)</Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        value={formData.duration}
+                        onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
+                        min="5"
+                        step="5"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduled_time">Scheduled Time</Label>
+                    <Input
+                      id="scheduled_time"
+                      type="datetime-local"
+                      value={formData.scheduled_time}
+                      onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </details>
+
+              {/* Section: Organisation */}
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
+                  <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                  Organisation
+                </summary>
+                <div className="pb-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Select value={formData.category_id || undefined} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="project">Département</Label>
+                      <Select value={formData.project_id || undefined} onValueChange={(value) => setFormData({ ...formData, project_id: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un département" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((proj) => (
+                            <SelectItem key={proj.id} value={proj.id}>{proj.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tags</Label>
+                    <div className="flex flex-wrap gap-2 rounded-xl bg-base-200/30 p-3 min-h-[2.5rem]">
+                      {tags.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No tags available</p>
+                      ) : (
+                        tags.map(tag => {
+                          const isSelected = selectedTags.includes(tag.id)
+                          return (
+                            <Badge
+                              key={tag.id}
+                              variant={isSelected ? "default" : "outline"}
+                              className="cursor-pointer select-none transition-all hover:scale-105 rounded-lg"
+                              style={isSelected ? { backgroundColor: tag.color, color: 'white' } : { borderColor: tag.color, color: tag.color }}
+                              onClick={() => {
+                                setSelectedTags(prev =>
+                                  isSelected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                                )
+                              }}
+                            >
+                              {tag.name}
+                            </Badge>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="campaign">Projet</Label>
+                    <Select value={formData.campaign_id || 'none'} onValueChange={(value) => setFormData({ ...formData, campaign_id: value === 'none' ? null : value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un projet" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {campaigns.map((camp) => (
+                          <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </details>
+
+              {/* Section: Liens */}
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
+                  <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                  Liens
+                </summary>
+                <div className="pb-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact">Client</Label>
+                      <Select value={formData.contact_id || 'none'} onValueChange={(value) => setFormData({ ...formData, contact_id: value === 'none' ? null : value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {contactsList.map((contact) => (
+                            <SelectItem key={contact.id} value={contact.id}>
+                              {contact.name} {contact.company && `(${contact.company})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {teamMembers.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="assigned_to">Assigned To</Label>
+                        <Select value={formData.assigned_to || 'none'} onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? null : value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Unassigned" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Unassigned</SelectItem>
+                            {teamMembers.map((member) => (
+                              <SelectItem key={member.user_id} value={member.user_id}>
+                                {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Workspace Selector */}
+                  {(!activeWorkspaceId || activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (
+                    <div className="space-y-2 p-3 rounded-xl bg-base-200/30">
+                      <Label htmlFor="context" className="flex items-center gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                        Workspace *
+                      </Label>
+                      <Select
+                        value={formData.context_id || 'none'}
+                        onValueChange={(value) => setFormData({ ...formData, context_id: value === 'none' ? '' : value })}
+                      >
+                        <SelectTrigger className={!formData.context_id ? 'border-amber-500' : ''}>
+                          <SelectValue placeholder="Select a workspace" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none" disabled>Select a workspace...</SelectItem>
+                          {workspaces.map((w) => (
+                            <SelectItem key={w.id} value={w.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color || '#6366f1' }} />
+                                {w.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   ) : (
-                    tags.map(tag => {
-                      const isSelected = selectedTags.includes(tag.id)
-                      return (
-                        <Badge
-                          key={tag.id}
-                          variant={isSelected ? "default" : "outline"}
-                          className="cursor-pointer select-none transition-all"
-                          style={isSelected ? { backgroundColor: tag.color, color: 'white' } : { borderColor: tag.color, color: tag.color }}
-                          onClick={() => {
-                            setSelectedTags(prev =>
-                              isSelected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
-                            )
-                          }}
-                        >
-                          {tag.name}
-                        </Badge>
-                      )
-                    })
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>Creating in:</span>
+                      <Badge variant="outline" className="rounded-lg" style={{ borderColor: getActiveWorkspace()?.color, color: getActiveWorkspace()?.color }}>
+                        {getActiveWorkspace()?.name || 'Unknown Workspace'}
+                      </Badge>
+                    </div>
                   )}
                 </div>
-              </div>
+              </details>
 
-              {/* Row 3: Due Date, Duration */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="due_date">Due Date</Label>
-                  <Input
-                    id="due_date"
-                    type="date"
-                    value={formData.due_date}
-                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (minutes)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                    min="5"
-                    step="5"
-                  />
-                </div>
-              </div>
-
-              {/* Scheduled Time */}
-              <div className="space-y-2">
-                <Label htmlFor="scheduled_time">Scheduled Time</Label>
-                <Input
-                  id="scheduled_time"
-                  type="datetime-local"
-                  value={formData.scheduled_time}
-                  onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-                />
-              </div>
-
-              {/* Row 4: Recurrence & Campaign */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="recurrence">Recurrence</Label>
-                  <Select value={formData.recurrence || 'none'} onValueChange={(value) => setFormData({ ...formData, recurrence: value === 'none' ? '' : value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="No recurrence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No recurrence</SelectItem>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="campaign">Campaign</Label>
-                  <Select value={formData.campaign_id || 'none'} onValueChange={(value) => setFormData({ ...formData, campaign_id: value === 'none' ? null : value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select campaign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {campaigns.map((camp) => (
-                        <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 5: Client */}
-              <div className="space-y-2">
-                <Label htmlFor="contact">👤 Client</Label>
-                <Select value={formData.contact_id || 'none'} onValueChange={(value) => setFormData({ ...formData, contact_id: value === 'none' ? null : value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {contactsList.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.name} {contact.company && `(${contact.company})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Row 5.5: Assignee (Only if team members available) */}
-              {teamMembers.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="assigned_to">👷 Assigned To</Label>
-                  <Select value={formData.assigned_to || 'none'} onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? null : value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Unassigned</SelectItem>
-                      {teamMembers.map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          {/* Try to show email/name if available, else ID */}
-                          {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`} ({member.role})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Section: Recurrence (only when relevant) */}
+              {(formData.recurrence || isEditing) && (
+                <details className="group" open={!!formData.recurrence}>
+                  <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
+                    <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                    Recurrence
+                  </summary>
+                  <div className="pb-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="recurrence">Frequency</Label>
+                        <Select value={formData.recurrence || 'none'} onValueChange={(value) => setFormData({ ...formData, recurrence: value === 'none' ? '' : value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="No recurrence" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No recurrence</SelectItem>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {formData.recurrence && (
+                        <div className="space-y-2">
+                          <Label htmlFor="recurrence_end">End Date</Label>
+                          <Input
+                            id="recurrence_end"
+                            type="date"
+                            value={formData.recurrence_end}
+                            onChange={(e) => setFormData({ ...formData, recurrence_end: e.target.value })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </details>
               )}
 
-              {formData.recurrence && (
-                <div className="space-y-2">
-                  <Label htmlFor="recurrence_end">Recurrence End Date</Label>
-                  <Input
-                    id="recurrence_end"
-                    type="date"
-                    value={formData.recurrence_end}
-                    onChange={(e) => setFormData({ ...formData, recurrence_end: e.target.value })}
-                  />
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-base-200">
+                <div className="flex items-center gap-2">
+                  {isEditing && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleArchive}
+                        disabled={loading}
+                        title="Archive"
+                        className="opacity-50 hover:opacity-100"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleDelete}
+                        disabled={loading}
+                        title="Move to Trash"
+                        className="opacity-50 hover:opacity-100 hover:text-error"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
-              )}
-
-              {/* Workspace Selector - shown prominently in Global view, hidden when workspace is active */}
-              {(!activeWorkspaceId || activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (
-                <div className="space-y-2 p-3 border border-dashed rounded-lg bg-muted/30">
-                  <Label htmlFor="context" className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                    Workspace * <span className="text-xs text-muted-foreground font-normal">(required)</span>
-                  </Label>
-                  <Select
-                    value={formData.context_id || 'none'}
-                    onValueChange={(value) => setFormData({ ...formData, context_id: value === 'none' ? '' : value })}
-                  >
-                    <SelectTrigger className={!formData.context_id ? 'border-amber-500' : ''}>
-                      <SelectValue placeholder="Select a workspace" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none" disabled>Select a workspace...</SelectItem>
-                      {workspaces.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color || '#6366f1' }} />
-                            {w.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {isEditing ? 'Save Changes' : (formData.type === 'meeting' ? 'Create Meeting' : 'Create Task')}
+                  </Button>
                 </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Creating in:</span>
-                  <Badge variant="outline" style={{ borderColor: getActiveWorkspace()?.color, color: getActiveWorkspace()?.color }}>
-                    {getActiveWorkspace()?.name || 'Unknown Workspace'}
-                  </Badge>
-                </div>
-              )}
-
-              <DialogFooter className="gap-2">
-                {isEditing && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleArchive}
-                      disabled={loading}
-                      title="Archive"
-                    >
-                      <Archive className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={loading}
-                      title="Move to Trash"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </>
-                )}
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {isEditing ? 'Save Changes' : (formData.type === 'meeting' ? '📅 Create Meeting' : '✅ Create Task')}
-                </Button>
-              </DialogFooter>
+              </div>
             </form>
           </TabsContent>
 

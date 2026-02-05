@@ -8,6 +8,24 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="startup-error" style="display:none; padding:20px; color:red; font-family:monospace; background:#fff; border:1px solid red; margin:20px;">
+        <h3>Application Failed to Start</h3>
+        <pre id="error-msg"></pre>
+    </div>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        var div = document.getElementById('startup-error');
+        var pre = document.getElementById('error-msg');
+        div.style.display = 'block';
+        pre.innerText = msg + '\n\n' + url + ':' + line + ':' + col + '\n' + (error ? error.stack : '');
+      };
+      window.addEventListener('unhandledrejection', function(event) {
+        var div = document.getElementById('startup-error');
+        var pre = document.getElementById('error-msg');
+        div.style.display = 'block';
+        pre.innerText = 'Unhandled Rejection: ' + event.reason;
+      });
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

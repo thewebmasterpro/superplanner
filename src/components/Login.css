@@ -146,20 +146,7 @@
   margin-bottom: 20px;
 }
 
-/* Supabase Auth UI wrapper */
-.supabase-auth-wrapper {
-  width: 100%;
-}
 
-/* Override Supabase Auth UI styles */
-.supabase-auth-wrapper button {
-  width: 100%;
-}
-
-.supabase-auth-wrapper input {
-  width: 100%;
-  box-sizing: border-box;
-}
 
 /* Logout button */
 .logout-button {

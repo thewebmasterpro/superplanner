@@ -53,9 +53,11 @@ export function PipelineBoard({ contacts, onStatusChange, onContactClick, onEdit
 
         if (!over) return
 
-        const activeContactData = active.data.current
-        const overData = over.data.current
+        // FIX: Look up contact from props instead of relying on dnd-kit data which might be undefined
+        const activeContact = contacts.find(c => c.id === active.id)
+        if (!activeContact) return
 
+        const overData = over.data.current
         let newStatus = over.id
 
         // If dropping over another card, get its status
@@ -64,8 +66,9 @@ export function PipelineBoard({ contacts, onStatusChange, onContactClick, onEdit
         }
 
         const validStatuses = COLUMNS.map(c => c.id)
+        const currentStatus = activeContact.status || 'prospect_new'
 
-        if (activeContactData.contact.status !== newStatus && validStatuses.includes(newStatus)) {
+        if (currentStatus !== newStatus && validStatuses.includes(newStatus)) {
             onStatusChange(active.id, newStatus)
         }
     }

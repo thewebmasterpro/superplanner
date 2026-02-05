@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Building, MoreVertical, Archive, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, Edit2, Building, MoreVertical, Archive, RotateCcw, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
     Dialog,
@@ -12,7 +12,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog'
 import {
     DropdownMenu,
@@ -22,7 +21,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { supabase } from '../lib/supabase'
+import { workspacesService } from '../services/workspaces.service'
+import { tasksService } from '../services/tasks.service'
+import { campaignsService } from '../services/campaigns.service'
 import toast from 'react-hot-toast'
 
 const PRESET_COLORS = [
@@ -37,7 +38,7 @@ const PRESET_COLORS = [
 ]
 
 export function WorkspaceManager() {
-    const { workspaces, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace } = useWorkspaceStore()
+    const { workspaces, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, defaultWorkspaceId, setDefaultWorkspace } = useWorkspaceStore()
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingWorkspace, setEditingWorkspace] = useState(null)
     const [workspaceStats, setWorkspaceStats] = useState({})
@@ -59,31 +60,34 @@ export function WorkspaceManager() {
 
     const loadAllWorkspacesWithStats = async () => {
         try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-
             // Fetch all workspaces including archived
-            const { data: ctxs, error: ctxError } = await supabase
-                .from('contexts')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('name')
+            // Use service
+            const ctxs = await workspacesService.getAll()
 
-            if (ctxError) throw ctxError
             setAllWorkspaces(ctxs || [])
 
             // Fetch stats for each workspace
             const stats = {}
-            for (const ctx of ctxs || []) {
-                const [tasksRes, campaignsRes] = await Promise.all([
-                    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('context_id', ctx.id),
-                    supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('context_id', ctx.id)
-                ])
-                stats[ctx.id] = {
-                    tasks: tasksRes.count || 0,
-                    campaigns: campaignsRes.count || 0
+            await Promise.all(ctxs.map(async (ctx) => {
+                try {
+                    // Fetch all items to count them. 
+                    // TODO: Optimization - Add getCount method to services to avoid fetching full lists
+                    const tasks = await tasksService.getAll({
+                        filter: `context_id = "${ctx.id}"`
+                    })
+                    const campaigns = await campaignsService.getAll({
+                        filter: `context_id = "${ctx.id}"`
+                    })
+
+                    stats[ctx.id] = {
+                        tasks: tasks.length,
+                        campaigns: campaigns.length
+                    }
+                } catch (e) {
+                    stats[ctx.id] = { tasks: 0, campaigns: 0 }
                 }
-            }
+            }))
+
             setWorkspaceStats(stats)
         } catch (error) {
             console.error('Error loading workspaces with stats:', error)
@@ -138,7 +142,7 @@ export function WorkspaceManager() {
 
         let message = `Delete "${ctx.name}"?`
         if (totalItems > 0) {
-            message += `\n\n⚠️ This workspace has ${stats.tasks} tasks and ${stats.campaigns} campaigns linked. They will become orphaned (no workspace).`
+            message += `\n\n⚠️ Ce workspace contient ${stats.tasks} tâches et ${stats.campaigns} projets liés. Ils deviendront orphelins (sans workspace).`
         }
 
         if (!window.confirm(message)) return
@@ -164,30 +168,28 @@ export function WorkspaceManager() {
         }
     }
 
+    const handleSetDefault = (ctx) => {
+        setDefaultWorkspace(ctx.id)
+        toast.success(`"${ctx.name}" défini comme workspace par défaut`)
+    }
+
     const displayedWorkspaces = showArchived
         ? allWorkspaces
         : allWorkspaces.filter(c => c.status !== 'archived')
 
     return (
         <div className="space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center">
-                <div>
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Building className="w-5 h-5" />
-                        Your Workspaces
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        {allWorkspaces.filter(c => c.status === 'active').length} active workspaces
-                    </p>
-                </div>
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                    {allWorkspaces.filter(c => c.status === 'active').length} workspaces actifs
+                </p>
                 <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setShowArchived(!showArchived)}>
-                        {showArchived ? 'Hide Archived' : 'Show Archived'}
+                        {showArchived ? 'Masquer archivés' : 'Voir archivés'}
                     </Button>
-                    <Button onClick={handleOpenCreate}>
+                    <Button size="sm" onClick={handleOpenCreate}>
                         <Plus className="w-4 h-4 mr-2" />
-                        New Workspace
+                        Nouveau
                     </Button>
                 </div>
             </div>
@@ -230,6 +232,12 @@ export function WorkspaceManager() {
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <h4 className="font-semibold">{ctx.name}</h4>
+                                                    {defaultWorkspaceId === ctx.id && (
+                                                        <Badge variant="default" className="text-xs flex items-center gap-1">
+                                                            <Star className="w-3 h-3" fill="currentColor" />
+                                                            Par défaut
+                                                        </Badge>
+                                                    )}
                                                     {isArchived && (
                                                         <Badge variant="secondary" className="text-xs">Archived</Badge>
                                                     )}
@@ -239,7 +247,7 @@ export function WorkspaceManager() {
                                                 )}
                                                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
                                                     <span><strong>{stats.tasks}</strong> tasks</span>
-                                                    <span><strong>{stats.campaigns}</strong> campaigns</span>
+                                                    <span><strong>{stats.campaigns}</strong> projets</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -254,6 +262,14 @@ export function WorkspaceManager() {
                                                 <DropdownMenuItem onClick={() => handleOpenEdit(ctx)}>
                                                     <Edit2 className="w-4 h-4 mr-2" /> Edit
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleSetDefault(ctx)}
+                                                    disabled={defaultWorkspaceId === ctx.id}
+                                                >
+                                                    <Star className="w-4 h-4 mr-2" />
+                                                    {defaultWorkspaceId === ctx.id ? 'Workspace par défaut' : 'Définir par défaut'}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={() => handleArchive(ctx)}>
                                                     {isArchived ? (
                                                         <><RotateCcw className="w-4 h-4 mr-2" /> Restore</>

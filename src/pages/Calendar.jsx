@@ -1,20 +1,18 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar'
 import { format, parse, startOfWeek, getDay } from 'date-fns'
-import { enUS } from 'date-fns/locale'
+import { fr } from 'date-fns/locale'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { useTasks, useUpdateTask } from '../hooks/useTasks'
 import { usePrayerTimes, getPrayerEvents } from '../hooks/usePrayerTimes'
 import { TaskModal } from '@/components/TaskModal'
 import { useUIStore } from '../stores/uiStore'
 import { useUserStore } from '../stores/userStore'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Plus, Calendar as CalendarIcon } from 'lucide-react'
+import { Plus, Calendar as CalendarIcon, Info, CheckSquare, Video } from 'lucide-react'
 import { expandTasksWithVirtualOccurrences } from '../utils/recurrence'
 
 const locales = {
-  'en-US': enUS,
+  'fr': fr,
 }
 
 const localizer = dateFnsLocalizer({
@@ -32,6 +30,8 @@ export function Calendar() {
   const { preferences } = useUserStore()
   const [selectedTask, setSelectedTask] = useState(null)
   const [view, setView] = useState('week')
+  const [slotPopup, setSlotPopup] = useState(null) // { x, y, start }
+  const popupRef = useRef(null)
 
   // Fetch prayer times if location is configured
   const { data: prayerData } = usePrayerTimes(
@@ -44,12 +44,28 @@ export function Calendar() {
     const expandedTasks = expandTasksWithVirtualOccurrences(tasks)
 
     const taskEvents = expandedTasks
-      .filter(task => task.scheduled_time)
+      .filter(task => {
+        // Accept if it has EITHER scheduled_time OR due_date
+        return task.scheduled_time || task.due_date;
+      })
       .map(task => {
-        // Strip timezone to avoid day shifts (parse as local time)
-        const timeStr = task.scheduled_time.replace(/\+00:00$/, '').replace('Z', '')
-        const start = new Date(timeStr)
-        const end = new Date(start.getTime() + (task.duration || 60) * 60000) // duration in minutes
+        let start, end, isAllDay = false;
+
+        if (task.scheduled_time) {
+          // Strip timezone to avoid day shifts (parse as local time)
+          const timeStr = task.scheduled_time.replace(/\+00:00$/, '').replace('Z', '')
+          start = new Date(timeStr)
+          end = new Date(start.getTime() + (task.duration || 60) * 60000) // duration in minutes
+        } else if (task.due_date) {
+          // Fallback to due_date as All Day event
+          const dateOnly = task.due_date.substring(0, 10);
+          const [year, month, day] = dateOnly.split('-').map(Number);
+
+          // Month is 0-indexed in JS Date
+          start = new Date(year, month - 1, day);
+          end = new Date(year, month - 1, day, 23, 59, 59);
+          isAllDay = true;
+        }
 
         return {
           id: task.id,
@@ -57,6 +73,7 @@ export function Calendar() {
           start,
           end,
           resource: task,
+          allDay: isAllDay
         }
       })
 
@@ -90,14 +107,40 @@ export function Calendar() {
     }
   }, [updateTask])
 
-  // Handle slot selection (create new task)
-  const handleSelectSlot = useCallback(({ start }) => {
-    setSelectedTask({
-      scheduled_time: start.toISOString().slice(0, 16), // format for datetime-local input
-      duration: 60,
+  // Handle slot selection - show type picker
+  const handleSelectSlot = useCallback(({ start, box, bounds }) => {
+    const pos = box || bounds
+    if (!pos) return
+    setSlotPopup({
+      x: pos.clientX ?? pos.x,
+      y: pos.clientY ?? pos.y,
+      start,
     })
+  }, [])
+
+  // Pick task or meeting from slot popup
+  const handleSlotTypePick = useCallback((type) => {
+    if (!slotPopup) return
+    setSelectedTask({
+      type,
+      scheduled_time: slotPopup.start.toISOString().slice(0, 16),
+      duration: type === 'meeting' ? 30 : 60,
+    })
+    setSlotPopup(null)
     setTaskModalOpen(true)
-  }, [setTaskModalOpen])
+  }, [slotPopup, setTaskModalOpen])
+
+  // Close popup on outside click
+  useEffect(() => {
+    if (!slotPopup) return
+    const handleClick = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) {
+        setSlotPopup(null)
+      }
+    }
+    window.addEventListener('mousedown', handleClick)
+    return () => window.removeEventListener('mousedown', handleClick)
+  }, [slotPopup])
 
   // Event style getter
   const eventStyleGetter = (event) => {
@@ -106,12 +149,14 @@ export function Calendar() {
       return {
         style: {
           backgroundColor: '#10b981', // Green color
-          borderRadius: '5px',
+          borderRadius: '8px',
           opacity: 0.9,
           color: 'white',
           border: '2px solid #059669',
           display: 'block',
-          fontWeight: '600',
+          fontWeight: '700',
+          fontSize: '11px',
+          padding: '2px 4px'
         },
       }
     }
@@ -127,10 +172,13 @@ export function Calendar() {
 
     const baseStyle = {
       backgroundColor: statusColors[task.status] || '#3b82f6',
-      borderRadius: '5px',
+      borderRadius: '8px',
       color: 'white',
       border: '0px',
       display: 'block',
+      fontSize: '11px',
+      fontWeight: '600',
+      padding: '2px 4px'
     }
 
     // Style virtual occurrences differently
@@ -149,11 +197,14 @@ export function Calendar() {
       return {
         style: {
           backgroundColor: '#8b5cf6', // Violet
-          borderRadius: '5px',
+          borderRadius: '8px',
           color: 'white',
           border: '2px solid #7c3aed',
           display: 'block',
           opacity: 0.9,
+          fontSize: '11px',
+          fontWeight: '700',
+          padding: '2px 4px'
         },
       }
     }
@@ -161,119 +212,190 @@ export function Calendar() {
     return {
       style: {
         ...baseStyle,
-        opacity: 0.8,
+        opacity: 0.9,
       },
     }
   }
 
   return (
-    <div className="container-tight py-8 space-y-6">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
             <CalendarIcon className="w-8 h-8" />
-            Calendar
+            Calendrier
           </h1>
-          <p className="text-muted-foreground">Schedule and manage your tasks</p>
+          <p className="text-muted-foreground">Planifiez et gérez vos tâches visuellement.</p>
         </div>
-        <Button
+        <button
+          data-tour="calendar-create"
           onClick={() => {
             setSelectedTask(null)
             setTaskModalOpen(true)
           }}
+          className="btn gap-2 shadow-none transition-transform hover:scale-105 active:scale-95"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          New Task
-        </Button>
+          <Plus className="w-5 h-5" />
+          Nouvelle Tâche
+        </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Scheduled Tasks</p>
-          <p className="text-2xl font-bold">{events.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">This Week</p>
-          <p className="text-2xl font-bold">
-            {events.filter(e => {
-              const now = new Date()
-              const weekStart = startOfWeek(now)
-              const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
-              return e.start >= weekStart && e.start <= weekEnd
-            }).length}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Completed</p>
-          <p className="text-2xl font-bold text-green-600">
-            {events.filter(e => e.resource?.status === 'done').length}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">In Progress</p>
-          <p className="text-2xl font-bold text-orange-600">
-            {events.filter(e => e.resource?.status === 'in_progress').length}
-          </p>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger-fast">
+        <div className="stats shadow bg-base-100 border border-base-300">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Événements</div>
+            <div className="stat-value text-primary font-black">{events.length}</div>
+          </div>
+        </div>
+        <div className="stats shadow bg-base-100 border border-base-300">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Cette Semaine</div>
+            <div className="stat-value text-secondary font-black">
+              {events.filter(e => {
+                const now = new Date()
+                const weekStart = startOfWeek(now)
+                const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+                return e.start >= weekStart && e.start <= weekEnd
+              }).length}
+            </div>
+          </div>
+        </div>
+        <div className="stats shadow bg-base-100 border border-base-300">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Terminés</div>
+            <div className="stat-value text-success font-black">
+              {events.filter(e => e.resource?.status === 'done').length}
+            </div>
+          </div>
+        </div>
+        <div className="stats shadow bg-base-100 border border-base-300">
+          <div className="stat">
+            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">En cours</div>
+            <div className="stat-value text-warning font-black">
+              {events.filter(e => e.resource?.status === 'in_progress').length}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Calendar */}
-      <Card className="p-4">
-        <div style={{ height: '600px' }}>
-          <BigCalendar
-            localizer={localizer}
-            events={events}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: '100%' }}
-            onSelectEvent={handleSelectEvent}
-            onSelectSlot={handleSelectSlot}
-            onEventDrop={handleEventDrop}
-            eventPropGetter={eventStyleGetter}
-            view={view}
-            onView={setView}
-            selectable
-            resizable
-            draggableAccessor={(event) => !event.resource?.isVirtual && !event.isPrayer} // Only real events can be dragged, not virtual or prayers
-            popup
-            views={['month', 'week', 'day', 'agenda']}
-          />
+      <div data-tour="calendar-view" className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl overflow-hidden">
+        <div className="card-body p-0">
+          <div style={{ height: '700px' }} className="p-4">
+            <BigCalendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: '100%' }}
+              onSelectEvent={handleSelectEvent}
+              onSelectSlot={handleSelectSlot}
+              onEventDrop={handleEventDrop}
+              eventPropGetter={eventStyleGetter}
+              view={view}
+              onView={setView}
+              selectable
+              resizable
+              draggableAccessor={(event) => !event.resource?.isVirtual && !event.isPrayer}
+              popup
+              views={['month', 'week', 'day', 'agenda']}
+              culture="fr"
+              messages={{
+                next: "Suivant",
+                previous: "Précédent",
+                today: "Aujourd'hui",
+                month: "Mois",
+                week: "Semaine",
+                day: "Jour",
+                agenda: "Agenda",
+                date: "Date",
+                time: "Heure",
+                event: "Événement",
+                noEventsInRange: "Aucun événement dans cette plage",
+                showMore: total => `+ ${total} de plus`
+              }}
+            />
+          </div>
         </div>
-      </Card>
+      </div>
 
-      {/* Legend */}
-      <Card className="p-4">
-        <h3 className="font-semibold mb-3">Status Legend</h3>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }} />
-            <span className="text-sm">To Do</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f59e0b' }} />
-            <span className="text-sm">In Progress</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }} />
-            <span className="text-sm">Blocked</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }} />
-            <span className="text-sm">Done</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#6b7280' }} />
-            <span className="text-sm">Cancelled</span>
+      {/* Legend & Help */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 card bg-base-100 shadow-sm border border-base-300 rounded-2xl">
+          <div className="card-body p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Info className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-black uppercase tracking-widest opacity-60">Légende des statuts</h3>
+            </div>
+            <div className="flex flex-wrap gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: '#3b82f6' }} />
+                <span className="text-xs font-bold text-base-content/70">À faire</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: '#f59e0b' }} />
+                <span className="text-xs font-bold text-base-content/70">En cours</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: '#ef4444' }} />
+                <span className="text-xs font-bold text-base-content/70">Bloqué</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: '#10b981' }} />
+                <span className="text-xs font-bold text-base-content/70">Terminé</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: '#6b7280' }} />
+                <span className="text-xs font-bold text-base-content/70">Annulé</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: '#8b5cf6' }} />
+                <span className="text-xs font-bold text-base-content/70">Réunion</span>
+              </div>
+            </div>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground mt-3">
-          Click on a time slot to create a new task. Click on an event to edit it. Drag and drop events to reschedule.
-          <br />
-          <strong>Future Recurrences:</strong> Events with dashed borders are virtual future occurrences of recurring tasks. They cannot be edited individually until they become the active occurrence.
-        </p>
-      </Card>
+
+        <div className="card bg-primary text-primary-content shadow-lg rounded-2xl">
+          <div className="card-body p-6 justify-center">
+            <p className="text-xs font-bold leading-relaxed flex flex-col gap-2">
+              <span className="uppercase tracking-widest opacity-80">Astuce Pro</span>
+              <span>Cliquez sur un créneau vide pour créer une tâche. Glissez-déposez pour replanifier vos engagements.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Slot type picker popup */}
+      {slotPopup && (
+        <div
+          ref={popupRef}
+          className="fixed z-50 animate-in fade-in zoom-in-95 duration-150"
+          style={{ top: slotPopup.y, left: slotPopup.x, transform: 'translate(-50%, -50%)' }}
+        >
+          <div className="flex flex-col gap-1 p-2 rounded-xl bg-base-100 border border-base-300 shadow-xl">
+            <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-1">Ajouter</span>
+            <div className="flex gap-1">
+            <button
+              onClick={() => handleSlotTypePick('task')}
+              className="btn btn-sm gap-2 shadow-none transition-transform hover:scale-105 active:scale-95"
+            >
+              <CheckSquare className="w-4 h-4" />
+              Tâche
+            </button>
+            <button
+              onClick={() => handleSlotTypePick('meeting')}
+              className="btn btn-sm gap-2 shadow-none transition-transform hover:scale-105 active:scale-95"
+            >
+              <Video className="w-4 h-4" />
+              Réunion
+            </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Task Modal */}
       <TaskModal

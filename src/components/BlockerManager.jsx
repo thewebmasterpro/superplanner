@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useBlockers, isTaskBlocked, areAllBlockersDone } from '../hooks/useBlockers'
-import { supabase } from '../lib/supabase'
+import { tasksService } from '../services/tasks.service'
 
 /**
  * Component to display and manage blockers for a task
@@ -26,20 +26,18 @@ export function BlockerManager({ taskId, readOnly = false }) {
         const timer = setTimeout(async () => {
             setSearching(true)
             try {
-                const { data: { user } } = await supabase.auth.getUser()
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .select('id, title, status')
-                    .eq('user_id', user.id)
-                    .neq('id', taskId) // Exclude current task
-                    .ilike('title', `%${searchQuery}%`)
-                    .limit(5)
+                // Fetch all tasks using service
+                const allTasks = await tasksService.getAll()
 
-                if (!error) {
-                    // Filter out already added blockers
-                    const blockerIds = blockers.map(b => b.id)
-                    setSearchResults(data?.filter(t => !blockerIds.includes(t.id)) || [])
-                }
+                // Filter locally: exclude current task, match title search
+                const result = allTasks
+                    .filter(t => t.id !== taskId && t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .slice(0, 5)
+
+                // Filter out already added blockers
+                const blockerIds = blockers.map(b => b.id)
+                setSearchResults(result.filter(t => !blockerIds.includes(t.id)))
+
             } catch (err) {
                 console.error('Search error:', err)
             } finally {

@@ -3,7 +3,6 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
@@ -23,7 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, X, Calendar, CheckSquare, MessageSquare, Clock, Mail, Phone, MessageCircle } from 'lucide-react'
 import { useContacts } from '../hooks/useContacts'
 import { useWorkspaceStore } from '../stores/workspaceStore'
-import { supabase } from '../lib/supabase'
+import { tasksService } from '../services/tasks.service'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ComposeEmailModal } from './ComposeEmailModal'
 
@@ -66,15 +65,14 @@ export function ContactModal({ open, onOpenChange, contact }) {
     const loadActivities = async () => {
         setLoadingActivities(true)
         try {
-            const { data: tasks, error: tError } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('contact_id', contact.id)
-                .order('created_at', { ascending: false })
-                .limit(20) // Increased limit to show emails
+            // Fetch recent tasks linked to this contact
+            const allTasks = await tasksService.getAll()
+            const records = allTasks
+                .filter(t => t.contact_id === contact.id)
+                .sort((a, b) => new Date(b.created) - new Date(a.created))
+                .slice(0, 20)
 
-            if (tError) throw tError
-            setActivities(tasks || [])
+            setActivities(records || [])
         } catch (error) {
             console.error('Error loading activities:', error)
         } finally {
@@ -106,7 +104,8 @@ export function ContactModal({ open, onOpenChange, contact }) {
                 workspaceIds: []
             })
         }
-    }, [contact, open])
+
+    }, [contact?.id, contact?.status, open])
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -144,7 +143,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                 </DialogHeader>
 
                 <Tabs defaultValue="details" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1">
+                    <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="details">Details</TabsTrigger>
                         <TabsTrigger value="timeline">Timeline</TabsTrigger>
                     </TabsList>
@@ -153,15 +152,13 @@ export function ContactModal({ open, onOpenChange, contact }) {
                         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                             {/* Quick Actions for Existing Contacts */}
                             {isEditing && (formData.email || formData.phone) && (
-                                <div className="flex items-center gap-2 mb-4 p-3 bg-muted/30 rounded-lg border border-dashed border-border/60">
-                                    <span className="text-xs font-medium text-muted-foreground mr-auto">Quick Actions:</span>
-
+                                <div className="flex items-center gap-2 mb-2">
                                     {formData.email && (
                                         <Button
                                             type="button"
                                             size="sm"
-                                            variant="outline"
-                                            className="h-8 gap-2 bg-background hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                                            variant="ghost"
+                                            className="h-9 gap-2 rounded-xl hover:bg-primary/10 hover:text-primary"
                                             onClick={() => setIsEmailModalOpen(true)}
                                         >
                                             <Mail className="w-3.5 h-3.5" />
@@ -172,8 +169,8 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                     {formData.phone && (
                                         <Button
                                             size="sm"
-                                            variant="outline"
-                                            className="h-8 gap-2 bg-background hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+                                            variant="ghost"
+                                            className="h-9 gap-2 rounded-xl hover:bg-green-500/10 hover:text-green-600"
                                             asChild
                                         >
                                             <a
@@ -199,7 +196,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="John Doe"
                                         required
-                                        className="bg-background/50"
+                                        className=""
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -209,7 +206,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                         value={formData.company}
                                         onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                                         placeholder="Acme Inc."
-                                        className="bg-background/50"
+                                        className=""
                                     />
                                 </div>
                             </div>
@@ -224,7 +221,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         placeholder="john@example.com"
-                                        className="bg-background/50"
+                                        className=""
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -234,7 +231,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         placeholder="+33 6 12 34 56 78"
-                                        className="bg-background/50"
+                                        className=""
                                     />
                                 </div>
                             </div>
@@ -244,7 +241,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                 <div className="space-y-2">
                                     <Label>Type</Label>
                                     <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                                        <SelectTrigger className="bg-background/50">
+                                        <SelectTrigger className="">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -256,7 +253,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                 <div className="space-y-2">
                                     <Label>Status</Label>
                                     <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                                        <SelectTrigger className="bg-background/50">
+                                        <SelectTrigger className="">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -271,7 +268,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                             {/* Workspaces (multi-select) */}
                             <div className="space-y-2">
                                 <Label>Workspaces</Label>
-                                <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-muted/20">
+                                <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-base-200/30">
                                     {workspaces.length === 0 ? (
                                         <p className="text-sm text-muted-foreground">No workspaces available</p>
                                     ) : (
@@ -279,7 +276,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                             <Badge
                                                 key={w.id}
                                                 variant={formData.workspaceIds.includes(w.id) ? "default" : "outline"}
-                                                className="cursor-pointer transition-all hover:scale-105"
+                                                className="cursor-pointer transition-all hover:scale-105 rounded-lg"
                                                 style={formData.workspaceIds.includes(w.id) ? { backgroundColor: w.color } : {}}
                                                 onClick={() => toggleWorkspace(w.id)}
                                             >
@@ -300,19 +297,19 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                     placeholder="Additional notes about this contact..."
                                     rows={3}
-                                    className="bg-background/50"
+                                    className=""
                                 />
                             </div>
 
-                            <DialogFooter className="pt-2">
-                                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            <div className="flex items-center justify-end gap-2 pt-4 border-t border-base-200">
+                                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={loading || !formData.name.trim()} className="shadow-lg shadow-primary/10">
+                                <Button type="submit" disabled={loading || !formData.name.trim()}>
                                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                     {isEditing ? 'Save Changes' : 'Create Contact'}
                                 </Button>
-                            </DialogFooter>
+                            </div>
                         </form>
                     </TabsContent>
 
@@ -341,7 +338,7 @@ export function ContactModal({ open, onOpenChange, contact }) {
                                                         {activity.type === 'meeting' ? 'Meeting' : activity.type === 'email' ? 'Email Sent' : 'Task'}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground">
-                                                        {new Date(activity.created_at).toLocaleDateString()} {new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {new Date(activity.created).toLocaleDateString()} {new Date(activity.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
                                                 <h5 className="text-sm font-medium">{activity.title}</h5>

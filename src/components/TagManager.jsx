@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
+import { tagsService } from '../services/tags.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,13 +19,8 @@ export function TagManager() {
 
     const loadTags = async () => {
         try {
-            const { data, error } = await supabase
-                .from('tags')
-                .select('*')
-                .order('name')
-
-            if (error) throw error
-            setTags(data || [])
+            const records = await tagsService.getAll()
+            setTags(records || [])
         } catch (error) {
             console.error('Error loading tags:', error)
             toast.error('Failed to load tags')
@@ -37,17 +33,13 @@ export function TagManager() {
 
         setLoading(true)
         try {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = pb.authStore.model
 
-            const { error } = await supabase
-                .from('tags')
-                .insert({
-                    name: newTag.name,
-                    color: newTag.color,
-                    user_id: user.id
-                })
-
-            if (error) throw error
+            await tagsService.create({
+                name: newTag.name,
+                color: newTag.color,
+                user_id: user?.id
+            })
 
             toast.success('Tag created!')
             setNewTag({ name: '', color: '#6366f1' })
@@ -63,12 +55,7 @@ export function TagManager() {
         if (!confirm('Delete this tag?')) return
 
         try {
-            const { error } = await supabase
-                .from('tags')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
+            await tagsService.delete(id)
             toast.success('Tag deleted')
             loadTags()
         } catch (error) {

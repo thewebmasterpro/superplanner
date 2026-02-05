@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMeetingAgenda, formatAgendaItem } from '../hooks/useMeetingAgenda'
-import { supabase } from '../lib/supabase'
+import pb from '../lib/pocketbase'
 
 /**
  * Component to manage the agenda of a meeting (add tasks + campaigns)
@@ -29,35 +29,29 @@ export function MeetingAgendaManager({ meetingId }) {
         const timer = setTimeout(async () => {
             setSearching(true)
             try {
-                const { data: { user } } = await supabase.auth.getUser()
-
                 if (searchType === 'task') {
-                    const { data, error } = await supabase
-                        .from('tasks')
-                        .select('id, title, status, priority')
-                        .eq('user_id', user.id)
-                        .eq('type', 'task') // Exclude meetings from results
-                        .ilike('title', `%${searchQuery}%`)
-                        .limit(5)
+                    // Search tasks
+                    // Use service and filter locally as getAll gets everything
+                    const allTasks = await tasksService.getAll()
+                    const records = allTasks
+                        .filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => new Date(b.created) - new Date(a.created))
+                        .slice(0, 5)
 
-                    if (!error) {
-                        // Filter out already added items
-                        const existingIds = agenda.filter(a => a.type === 'task').map(a => a.item_id)
-                        setSearchResults(data?.filter(t => !existingIds.includes(t.id)) || [])
-                    }
+                    // Filter out already added items
+                    const existingIds = agenda.filter(a => a.type === 'task').map(a => a.item_id)
+                    setSearchResults(records.filter(t => !existingIds.includes(t.id)))
                 } else {
-                    const { data, error } = await supabase
-                        .from('campaigns')
-                        .select('id, name, status, end_date')
-                        .eq('user_id', user.id)
-                        .ilike('name', `%${searchQuery}%`)
-                        .limit(5)
+                    // Search campaigns
+                    const allCampaigns = await campaignsService.getAll()
+                    const records = allCampaigns
+                        .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .sort((a, b) => new Date(b.created) - new Date(a.created))
+                        .slice(0, 5)
 
-                    if (!error) {
-                        // Filter out already added items
-                        const existingIds = agenda.filter(a => a.type === 'campaign').map(a => a.item_id)
-                        setSearchResults(data?.filter(c => !existingIds.includes(c.id)) || [])
-                    }
+                    // Filter out already added items
+                    const existingIds = agenda.filter(a => a.type === 'campaign').map(a => a.item_id)
+                    setSearchResults(records.filter(c => !existingIds.includes(c.id)))
                 }
             } catch (err) {
                 console.error('Search error:', err)
@@ -116,7 +110,7 @@ export function MeetingAgendaManager({ meetingId }) {
                                     <Target className="w-3 h-3" /> Task
                                 </TabsTrigger>
                                 <TabsTrigger value="campaign" className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" /> Campaign
+                                    <Calendar className="w-3 h-3" /> Projet
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
@@ -172,7 +166,7 @@ export function MeetingAgendaManager({ meetingId }) {
                 <div className="text-center py-6 border border-dashed rounded-lg">
                     <p className="text-sm text-muted-foreground">No items in agenda yet.</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Add tasks or campaigns to discuss in this meeting.
+                        Ajoutez des tâches ou projets à discuter.
                     </p>
                 </div>
             ) : (

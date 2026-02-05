@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 import { fetchPrayerTimesByCity, fetchMonthlyPrayerTimesByCity } from '../services/prayerTimesApi'
+import { settingsService } from '../services/settings.service'
+import { categoriesService } from '../services/categories.service'
 import './Settings.css'
 
 function Settings({ user, onClose }) {
@@ -25,12 +26,8 @@ function Settings({ user, onClose }) {
 
     const loadCategories = async () => {
         try {
-            const { data, error } = await supabase
-                .from('task_categories')
-                .select('*')
-                .order('name', { ascending: true })
-            if (error) throw error
-            setCategories(data || [])
+            const records = await categoriesService.getAll()
+            setCategories(records || [])
         } catch (err) {
             console.error('Error loading categories:', err)
         }
@@ -38,17 +35,9 @@ function Settings({ user, onClose }) {
 
     const loadPreferences = async () => {
         try {
-            const { data, error } = await supabase
-                .from('user_preferences')
-                .select('*')
-                .eq('user_id', user.id)
-                .single()
+            const data = await settingsService.getPreferences()
 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Load error:', error)
-            }
-
-            if (data) {
+            if (data && data.id) {
                 setCity(data.city || '')
                 setPomodoroWork(data.pomodoro_work_duration || 25)
                 setPomodoroBreak(data.pomodoro_break_duration || 5)
@@ -98,37 +87,19 @@ function Settings({ user, onClose }) {
             const monthlyTimes = await fetchMonthlyPrayerTimesByCity(city, '', 3, month, year)
 
             // Save preferences
-            const { error: prefError } = await supabase
-                .from('user_preferences')
-                .upsert({
-                    user_id: user.id,
-                    city: city.trim(),
-                    country: '',
-                    calculation_method: 3,
-                    pomodoro_work_duration: parseInt(pomodoroWork),
-                    pomodoro_break_duration: parseInt(pomodoroBreak),
-                    spotify_playlist_url: spotifyPlaylistUrl.trim(),
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'user_id'
-                })
-
-            if (prefError) {
-                console.error('Preferences error:', prefError)
-                throw new Error(`Database error: ${prefError.message}`)
+            const payload = {
+                city: city.trim(),
+                country: '',
+                calculation_method: 3,
+                pomodoro_work_duration: parseInt(pomodoroWork),
+                pomodoro_break_duration: parseInt(pomodoroBreak),
+                spotify_playlist_url: spotifyPlaylistUrl.trim(),
             }
+
+            await settingsService.updatePreferences(payload)
 
             // Save monthly prayer times
-            const { error: scheduleError } = await supabase
-                .from('prayer_schedule')
-                .upsert(monthlyTimes, {
-                    onConflict: 'date'
-                })
-
-            if (scheduleError) {
-                console.error('Schedule error:', scheduleError)
-                throw new Error(`Schedule error: ${scheduleError.message}`)
-            }
+            await settingsService.savePrayerTimes(monthlyTimes)
 
             setSuccess('Settings saved successfully!')
             setTimeout(() => {
@@ -145,10 +116,9 @@ function Settings({ user, onClose }) {
     const handleAddCategory = async () => {
         if (!newCategoryName.trim()) return
         try {
-            const { error } = await supabase
-                .from('task_categories')
-                .insert({ user_id: user.id, name: newCategoryName.trim() })
-            if (error) throw error
+            await categoriesService.create({
+                name: newCategoryName.trim()
+            })
             setNewCategoryName('')
             loadCategories()
             setSuccess('Catégorie ajoutée !')
@@ -160,11 +130,7 @@ function Settings({ user, onClose }) {
 
     const handleDeleteCategory = async (id) => {
         try {
-            const { error } = await supabase
-                .from('task_categories')
-                .delete()
-                .eq('id', id)
-            if (error) throw error
+            await categoriesService.delete(id)
             loadCategories()
             setSuccess('Catégorie supprimée')
         } catch (err) {

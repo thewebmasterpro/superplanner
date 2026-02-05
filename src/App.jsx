@@ -1,24 +1,26 @@
-import React, { useState, useEffect } from 'react'
+import React, { Suspense, useState, useEffect } from 'react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
-import { supabase } from './lib/supabase'
-import { MainLayout } from './components/layout/MainLayout'
-import { Dashboard } from './pages/Dashboard'
-import { Tasks } from './pages/Tasks'
-import { Calendar } from './pages/Calendar'
-import { Campaigns } from './pages/Campaigns'
-import { Contacts } from './pages/Contacts'
-import { Settings } from './pages/Settings'
-import { Trash } from './pages/Trash'
-import { ArchivePage } from './pages/Archive'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import pb from './lib/pocketbase'
 import { LandingPage } from './pages/LandingPage'
-import { TeamSettings } from './pages/TeamSettings'
-import { Meetings } from './pages/Meetings'
-import { Workspace } from './pages/Workspace'
 import { LoginModal } from './components/LoginModal'
 import { useUserStore } from './stores/userStore'
 import { ThemeProvider } from './components/ThemeProvider'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Toaster } from 'react-hot-toast'
 import './globals.css'
+
+const DashboardV3 = React.lazy(() => import('./pages/DashboardV3'))
+const TasksPageV3 = React.lazy(() => import('./pages/v3/TasksPageV3'))
+const StatsPageV3 = React.lazy(() => import('./pages/v3/StatsPageV3'))
+const SettingsPageV3 = React.lazy(() => import('./pages/v3/SettingsPageV3'))
+const CalendarPageV3 = React.lazy(() => import('./pages/v3/CalendarPageV3'))
+const ContactsPageV3 = React.lazy(() => import('./pages/v3/ContactsPageV3'))
+const CampaignsPageV3 = React.lazy(() => import('./pages/v3/CampaignsPageV3'))
+const MeetingsPageV3 = React.lazy(() => import('./pages/v3/MeetingsPageV3'))
+const TrashPageV3 = React.lazy(() => import('./pages/v3/TrashPageV3'))
+const ArchivePageV3 = React.lazy(() => import('./pages/v3/ArchivePageV3'))
+const TeamPageV3 = React.lazy(() => import('./pages/v3/TeamPageV3'))
+const GamificationPageV3 = React.lazy(() => import('./pages/GamificationPageV3'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,60 +31,29 @@ const queryClient = new QueryClient({
   },
 })
 
-// Simple router (can upgrade to react-router later)
-const routes = {
-  '/': Dashboard,
-  '/tasks': Tasks,
-  '/meetings': Meetings,
-  '/calendar': Calendar,
-  '/campaigns': Campaigns,
-  '/contacts': Contacts,
-  '/pipeline': () => <Contacts initialView="pipeline" />,
-  '/settings': Settings,
-  '/trash': Trash,
-  '/archive': ArchivePage,
-  '/team': TeamSettings,
-  '/workspace': Workspace,
-}
-
 function AppContent() {
   const [session, setSession] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { setUser } = useUserStore()
-  const currentPath = window.location.pathname || '/'
-  const PageComponent = routes[currentPath] || Dashboard
+  const { setUser, loadPreferences } = useUserStore()
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
-        if (error) {
-          console.error('Auth error:', error)
-          setError(error.message)
-        }
-        setSession(session)
-        setUser(session?.user || null)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Failed to get session:', err)
-        setError(err.message)
-        setLoading(false)
-      })
+    if (pb.authStore.isValid) {
+      setSession(pb.authStore.token)
+      setUser(pb.authStore.model)
+      loadPreferences()
+    }
+    setLoading(false)
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email)
-      setSession(session)
-      setUser(session?.user || null)
+    const removeListener = pb.authStore.onChange((token, model) => {
+      setSession(token)
+      setUser(model)
+      if (token) loadPreferences()
     })
 
-    return () => subscription.unsubscribe()
-  }, [setUser])
+    return () => removeListener()
+  }, [setUser, loadPreferences])
 
   if (loading) {
     return (
@@ -112,7 +83,6 @@ function AppContent() {
     )
   }
 
-  // Show login or landing if not authenticated
   if (!session) {
     return (
       <>
@@ -121,7 +91,6 @@ function AppContent() {
           open={showLogin}
           onOpenChange={setShowLogin}
           onLoginSuccess={(data) => {
-            console.log('Login success:', data.user?.email)
             setSession(data.session)
             setUser(data.user)
             setShowLogin(false)
@@ -131,28 +100,35 @@ function AppContent() {
     )
   }
 
-  // Show app with MainLayout
   return (
-    <ThemeProvider defaultTheme="light" storageKey="superplanner-theme">
-      <MainLayout>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentPath}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="flex-1 flex flex-col"
-          >
-            <PageComponent />
-          </motion.div>
-        </AnimatePresence>
-      </MainLayout>
+    <ThemeProvider defaultTheme="dark" storageKey="superplanner-theme">
+      <Toaster position="top-right" />
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen bg-base-200">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <Routes>
+          <Route path="/" element={<DashboardV3 />} />
+          <Route path="/tasks" element={<TasksPageV3 />} />
+          <Route path="/stats" element={<StatsPageV3 />} />
+          <Route path="/settings" element={<SettingsPageV3 />} />
+          <Route path="/calendar" element={<CalendarPageV3 />} />
+          <Route path="/contacts" element={<ContactsPageV3 />} />
+          <Route path="/campaigns" element={<CampaignsPageV3 />} />
+          <Route path="/meetings" element={<MeetingsPageV3 />} />
+          <Route path="/trash" element={<TrashPageV3 />} />
+          <Route path="/archive" element={<ArchivePageV3 />} />
+          <Route path="/team" element={<TeamPageV3 />} />
+          <Route path="/gamification" element={<GamificationPageV3 />} />
+          <Route path="/workspace" element={<Navigate to="/settings" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </ThemeProvider>
   )
 }
 
-// Basic Error Boundary Component
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
@@ -172,7 +148,7 @@ class ErrorBoundary extends React.Component {
       return (
         <div className="flex items-center justify-center min-h-screen bg-background">
           <div className="text-center p-8 max-w-md">
-            <h1 className="text-2xl font-bold text-destructive mb-4">Something went wrong 😵</h1>
+            <h1 className="text-2xl font-bold text-destructive mb-4">Something went wrong</h1>
             <div className="bg-muted p-4 rounded-md text-left mb-6 overflow-auto max-h-48 text-sm font-mono">
               {this.state.error?.toString()}
             </div>

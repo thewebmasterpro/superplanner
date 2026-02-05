@@ -25,7 +25,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'supabase-vendor': ['@supabase/supabase-js', '@supabase/auth-ui-react']
+          'ui-vendor': ['lucide-react', 'framer-motion']
         }
       }
     }

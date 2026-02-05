@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+import { contactsService } from '../services/contacts.service'
 import toast from 'react-hot-toast'
 
 export function useContacts(filters = {}) {
@@ -8,83 +8,20 @@ export function useContacts(filters = {}) {
     // Fetch contacts with filters
     const contactsQuery = useQuery({
         queryKey: ['contacts', filters],
-        queryFn: async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            let query = supabase
-                .from('contacts')
-                .select(`
-          *,
-          contact_contexts(
-            context:contexts(id, name, color)
-          )
-        `)
-                .eq('user_id', user.id)
-                .order('name')
-
-            if (filters.status && filters.status !== 'all') {
-                query = query.eq('status', filters.status)
-            }
-
-            if (filters.workspaceId && filters.workspaceId !== 'all') {
-                // Filter by workspace - need subquery
-                const { data: contactIds } = await supabase
-                    .from('contact_contexts')
-                    .select('contact_id')
-                    .eq('context_id', filters.workspaceId)
-
-                if (contactIds && contactIds.length > 0) {
-                    query = query.in('id', contactIds.map(c => c.contact_id))
-                } else {
-                    return [] // No contacts in this workspace
-                }
-            }
-
-            if (filters.search) {
-                query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,company.ilike.%${filters.search}%`)
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-            return data || []
-        }
+        queryFn: () => contactsService.getAll(filters)
     })
 
     // Create contact
     const createContact = useMutation({
-        mutationFn: async (contactData) => {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            const { contextIds, ...contact } = contactData
-
-            // Create contact
-            const { data, error } = await supabase
-                .from('contacts')
-                .insert({ ...contact, user_id: user.id })
-                .select()
-                .single()
-
-            if (error) throw error
-
-            // Link contexts
-            if (contextIds && contextIds.length > 0) {
-                const contextLinks = contextIds.map(contextId => ({
-                    contact_id: data.id,
-                    context_id: contextId
-                }))
-
-                await supabase.from('contact_contexts').insert(contextLinks)
-            }
-
-            return data
-        },
+        mutationFn: (contactData) => contactsService.create(contactData),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contacts'] })
+            queryClient.invalidateQueries({ queryKey: ['contactsList'] })
             toast.success('Contact created')
         },
         onError: (error) => {
-            if (error.code === '23505') {
+            // PB returns 400 for unique constraint
+            if (error.status === 400 && error.message?.includes('email')) {
                 toast.error('A contact with this email already exists')
             } else {
                 toast.error('Failed to create contact')
@@ -94,56 +31,30 @@ export function useContacts(filters = {}) {
 
     // Update contact
     const updateContact = useMutation({
-        mutationFn: async ({ id, contextIds, ...contactData }) => {
-            const { error } = await supabase
-                .from('contacts')
-                .update({ ...contactData, updated_at: new Date().toISOString() })
-                .eq('id', id)
-
-            if (error) throw error
-
-            // Update contexts
-            if (contextIds !== undefined) {
-                // Remove existing
-                await supabase.from('contact_contexts').delete().eq('contact_id', id)
-
-                // Add new
-                if (contextIds.length > 0) {
-                    const contextLinks = contextIds.map(contextId => ({
-                        contact_id: id,
-                        context_id: contextId
-                    }))
-                    await supabase.from('contact_contexts').insert(contextLinks)
-                }
-            }
-        },
-        onMutate: async (updatedContact) => {
-            // Cancel any outgoing refetches
+        mutationFn: ({ id, ...updates }) => contactsService.update(id, updates),
+        onMutate: async ({ id, ...updates }) => {
             await queryClient.cancelQueries({ queryKey: ['contacts'] })
-
-            // Snapshot the previous value
             const previousContacts = queryClient.getQueryData(['contacts', filters])
 
-            // Optimistically update to the new value
             if (previousContacts) {
-                queryClient.setQueryData(['contacts', filters], (old) => {
-                    return old.map(contact =>
-                        contact.id === updatedContact.id
-                            ? { ...contact, ...updatedContact }
-                            : contact
+                queryClient.setQueryData(['contacts', filters],
+                    previousContacts.map(contact =>
+                        contact.id === id ? { ...contact, ...updates } : contact
                     )
-                })
+                )
             }
 
-            // Return a context object with the snapshotted value
             return { previousContacts }
         },
-        onError: (err, newContact, context) => {
-            queryClient.setQueryData(['contacts', filters], context.previousContacts)
+        onError: (error, variables, context) => {
+            if (context?.previousContacts) {
+                queryClient.setQueryData(['contacts', filters], context.previousContacts)
+            }
             toast.error('Failed to update contact')
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['contacts'] })
+            queryClient.invalidateQueries({ queryKey: ['contactsList'] })
         },
         onSuccess: () => {
             toast.success('Contact updated')
@@ -152,43 +63,14 @@ export function useContacts(filters = {}) {
 
     // Delete contact
     const deleteContact = useMutation({
-        mutationFn: async (id) => {
-            const { error } = await supabase
-                .from('contacts')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
-        },
+        mutationFn: (id) => contactsService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contacts'] })
+            queryClient.invalidateQueries({ queryKey: ['contactsList'] })
             toast.success('Contact deleted')
         },
         onError: () => {
             toast.error('Failed to delete contact')
-        }
-    })
-
-    // Send email
-    const sendEmail = useMutation({
-        mutationFn: async ({ to, subject, html, contactId }) => {
-            const { data, error } = await supabase.functions.invoke('send-email', {
-                body: { to, subject, html, contactId }
-            })
-
-            if (error) {
-                console.error('Edge Function Error Detail:', {
-                    message: error.message,
-                    context: error.context,
-                    status: error.status, // Check if this property exists on the error object
-                    fullError: error
-                })
-                throw error
-            }
-            return data
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['contacts'] })
         }
     })
 
@@ -198,28 +80,14 @@ export function useContacts(filters = {}) {
         createContact: createContact.mutate,
         updateContact: updateContact.mutate,
         deleteContact: deleteContact.mutate,
-        sendEmail: sendEmail.mutate,
         isCreating: createContact.isPending,
-        isUpdating: updateContact.isPending,
-        isSendingEmail: sendEmail.isPending
+        isUpdating: updateContact.isPending
     }
 }
 
-// Simple hook to get all contacts for dropdowns
 export function useContactsList() {
     return useQuery({
         queryKey: ['contactsList'],
-        queryFn: async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            const { data, error } = await supabase
-                .from('contacts')
-                .select('id, name, company, status')
-                .eq('user_id', user.id)
-                .order('name')
-
-            if (error) throw error
-            return data || []
-        }
+        queryFn: () => contactsService.getAll()
     })
 }

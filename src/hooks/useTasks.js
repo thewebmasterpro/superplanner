@@ -1,70 +1,45 @@
+/**
+ * Tasks Hooks
+ *
+ * React Query hooks for task operations.
+ * These hooks connect React Query to the tasks service layer.
+ *
+ * Benefits of this approach:
+ * - Separation of concerns: React Query manages cache/state, service manages data
+ * - Easy to test: service can be tested independently
+ * - Reusable: service can be used outside of React (stores, scripts, etc.)
+ *
+ * @module hooks/useTasks
+ */
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useGamificationStore } from '../stores/gamificationStore'
+import { tasksService } from '../services/tasks.service'
+import pb from '../lib/pocketbase'
 
+/**
+ * Query hook to fetch all tasks
+ * Automatically filters by active workspace
+ */
 export function useTasks() {
   const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   return useQuery({
     queryKey: ['tasks', activeWorkspaceId],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return []
-
-      let query = supabase
-        .from('tasks')
-        .select(`
-          *,
-          category:task_categories(name, color),
-          project:projects(name),
-          parent_meeting:parent_meeting_id(id, title, type),
-          task_tags(tag:tags(id, name, color)),
-          campaign:campaigns(name),
-          context:contexts(name, color)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      // Filter logic for Trash/Archive
-      if (activeWorkspaceId === 'trash') {
-        query = query.not('deleted_at', 'is', null)
-      } else if (activeWorkspaceId === 'archive') {
-        query = query.is('deleted_at', null).not('archived_at', 'is', null)
-      } else {
-        // Default view (Global or Workspace): Not deleted, Not archived
-        query = query.is('deleted_at', null).is('archived_at', null)
-
-        // Filter by specific workspace if selected (and not 'all')
-        if (activeWorkspaceId && activeWorkspaceId !== 'all') {
-          query = query.eq('context_id', activeWorkspaceId)
-        }
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error('Error fetching tasks details:', error)
-        throw error
-      }
-      return data || []
-    },
+    queryFn: () => tasksService.getAll({ workspaceId: activeWorkspaceId }),
   })
 }
 
-// Hook to move task to trash (soft delete)
+/**
+ * Mutation hook to move task to trash (soft delete)
+ */
 export function useMoveToTrash() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.moveToTrash.bind(tasksService),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Moved to trash')
@@ -75,19 +50,14 @@ export function useMoveToTrash() {
   })
 }
 
-// Hook to archive task
+/**
+ * Mutation hook to archive task
+ */
 export function useArchiveTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ archived_at: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.archive.bind(tasksService),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task archived')
@@ -98,19 +68,14 @@ export function useArchiveTask() {
   })
 }
 
-// Hook to restore task (from trash or archive)
+/**
+ * Mutation hook to restore task (from trash or archive)
+ */
 export function useRestoreTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: null, archived_at: null })
-        .eq('id', id)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.restore.bind(tasksService),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task restored')
@@ -121,19 +86,14 @@ export function useRestoreTask() {
   })
 }
 
-// Permanent delete (only for trash)
+/**
+ * Mutation hook to permanently delete task (only for trash)
+ */
 export function usePermanentDeleteTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.permanentDelete.bind(tasksService),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task permanently deleted')
@@ -144,19 +104,14 @@ export function usePermanentDeleteTask() {
   })
 }
 
-// Bulk restore tasks
+/**
+ * Mutation hook to bulk restore tasks
+ */
 export function useBulkRestoreTasks() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (ids) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: null, archived_at: null })
-        .in('id', ids)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.bulkRestore.bind(tasksService),
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success(`${ids.length} tasks restored`)
@@ -167,19 +122,14 @@ export function useBulkRestoreTasks() {
   })
 }
 
-// Bulk permanent delete
+/**
+ * Mutation hook to bulk permanent delete tasks
+ */
 export function useBulkPermanentDeleteTasks() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (ids) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .in('id', ids)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.bulkPermanentDelete.bind(tasksService),
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success(`${ids.length} tasks permanently deleted`)
@@ -190,19 +140,14 @@ export function useBulkPermanentDeleteTasks() {
   })
 }
 
-// Bulk move to trash
+/**
+ * Mutation hook to bulk move to trash
+ */
 export function useBulkMoveToTrash() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (ids) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .in('id', ids)
-
-      if (error) throw error
-    },
+    mutationFn: tasksService.bulkMoveToTrash.bind(tasksService),
     onSuccess: (_, ids) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success(`${ids.length} tasks moved to trash`)
@@ -213,26 +158,17 @@ export function useBulkMoveToTrash() {
   })
 }
 
-// Empty Trash
+/**
+ * Mutation hook to empty trash (permanently delete all trashed tasks)
+ */
 export function useEmptyTrash() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('user_id', user.id)
-        .not('deleted_at', 'is', null)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
+    mutationFn: tasksService.emptyTrash.bind(tasksService),
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Trash emptied')
+      toast.success(`Trash emptied (${count} tasks deleted)`)
     },
     onError: (error) => {
       toast.error(`Failed to empty trash: ${error.message}`)
@@ -240,27 +176,17 @@ export function useEmptyTrash() {
   })
 }
 
-// Empty Archive (Move all archived to trash)
+/**
+ * Mutation hook to empty archive (move all archived to trash)
+ */
 export function useEmptyArchive() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .is('deleted_at', null)
-        .not('archived_at', 'is', null)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
+    mutationFn: tasksService.emptyArchive.bind(tasksService),
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Archive emptied (moved to trash)')
+      toast.success(`Archive emptied (${count} tasks moved to trash)`)
     },
     onError: (error) => {
       toast.error(`Failed to empty archive: ${error.message}`)
@@ -268,177 +194,56 @@ export function useEmptyArchive() {
   })
 }
 
+/**
+ * Mutation hook to create a new task
+ */
 export function useCreateTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (taskData) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      // Sanitize empty strings to null
-      const sanitizedData = { ...taskData }
-      Object.keys(sanitizedData).forEach(key => {
-        if (sanitizedData[key] === '') {
-          sanitizedData[key] = null
-        }
-      })
-
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({
-          ...sanitizedData,
-          user_id: user.id,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
+    mutationFn: tasksService.create.bind(tasksService),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task created successfully!')
     },
     onError: (error) => {
-      toast.error(`Failed to create task: ${error.message}`)
+      console.error("Task creation failed:", error)
+
+      // Handle PocketBase validation errors
+      if (error.data && error.data.data) {
+        console.error("Validation errors:", error.data.data)
+        const fieldErrors = Object.entries(error.data.data)
+          .map(([field, err]) => `${field}: ${err.message}`)
+          .join(', ')
+        toast.error(`Failed to create task: ${fieldErrors}`)
+      } else {
+        toast.error(`Failed to create task: ${error.message}`)
+      }
     },
   })
 }
 
+/**
+ * Mutation hook to update a task
+ * Automatically handles recurrence and completed_at
+ */
 export function useUpdateTask() {
   const queryClient = useQueryClient()
+  const { fetchUserPoints } = useGamificationStore()
+  const user = pb.authStore.model
 
   return useMutation({
-    mutationFn: async ({ id, updates }) => {
-      // Get the current task first (to check recurrence)
-      const { data: currentTask } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      // Sanitize empty strings to null
-      const sanitizedUpdates = { ...updates }
-      Object.keys(sanitizedUpdates).forEach(key => {
-        if (sanitizedUpdates[key] === '') {
-          sanitizedUpdates[key] = null
-        }
-      })
-
-      // Set completed_at if status changed to done
-      if (sanitizedUpdates.status === 'done') {
-        sanitizedUpdates.completed_at = new Date().toISOString()
-      } else if (sanitizedUpdates.status && sanitizedUpdates.status !== 'done') {
-        sanitizedUpdates.completed_at = null
-      }
-
-      const { data, error } = await supabase
-        .from('tasks')
-        .update(sanitizedUpdates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Handle recurrence: create next instance if marking as done
-      console.log('🔍 Checking recurrence conditions:', {
-        statusIsDone: sanitizedUpdates.status === 'done',
-        hasRecurrence: !!currentTask?.recurrence,
-        recurrenceValue: currentTask?.recurrence,
-        hasDueDate: !!currentTask?.due_date,
-        dueDateValue: currentTask?.due_date,
-        hasScheduledTime: !!currentTask?.scheduled_time,
-        scheduledTimeValue: currentTask?.scheduled_time
-      })
-
-      if (sanitizedUpdates.status === 'done' && currentTask?.recurrence && (currentTask?.due_date || currentTask?.scheduled_time)) {
-        console.log('🔄 Recurrence triggered for task:', currentTask.title)
-        try {
-          // Use due_date if available, otherwise extract date from scheduled_time
-          const referenceDate = currentTask.due_date || (currentTask.scheduled_time ? currentTask.scheduled_time.split('T')[0] : null)
-          if (!referenceDate) {
-            console.log('⚠️ No valid date found for recurrence')
-            return data
-          }
-          console.log('📅 Reference date for recurrence:', referenceDate)
-
-          const dueDate = new Date(referenceDate)
-          let nextDate = new Date(dueDate)
-
-          switch (currentTask.recurrence) {
-            case 'daily':
-              nextDate.setDate(dueDate.getDate() + 1)
-              break
-            case 'weekly':
-              nextDate.setDate(dueDate.getDate() + 7)
-              break
-            case 'biweekly':
-              nextDate.setDate(dueDate.getDate() + 14)
-              break
-            case 'monthly':
-              nextDate.setMonth(dueDate.getMonth() + 1)
-              break
-          }
-
-          // Check if next date exceeds recurrence_end
-          if (!currentTask.recurrence_end || nextDate <= new Date(currentTask.recurrence_end)) {
-            const { data: { user } } = await supabase.auth.getUser()
-
-            // Calculate the new due_date as a string
-            const newDueDate = nextDate.toISOString().split('T')[0]
-            console.log('📅 New due_date:', newDueDate)
-
-            // If there's a scheduled_time, update it with the new date but keep the same time
-            let newScheduledTime = null
-            if (currentTask.scheduled_time) {
-              const originalTime = currentTask.scheduled_time.split('T')[1] // Get the time part (e.g., "11:00:00+00:00")
-              newScheduledTime = `${newDueDate}T${originalTime}`
-              console.log('🕐 New scheduled_time:', newScheduledTime)
-            }
-
-            // Build the new task object, only including fields that exist
-            const newTask = {
-              user_id: user.id,
-              title: currentTask.title,
-              description: currentTask.description,
-              status: 'todo',
-              priority: currentTask.priority,
-              due_date: newDueDate,
-              duration: currentTask.duration,
-              scheduled_time: newScheduledTime,
-              category_id: currentTask.category_id,
-              project_id: currentTask.project_id,
-              recurrence: currentTask.recurrence,
-              recurrence_end: currentTask.recurrence_end
-            }
-
-            // Only add type and agenda if they exist (V2 migration)
-            if ('type' in currentTask) newTask.type = currentTask.type
-            if ('agenda' in currentTask) newTask.agenda = currentTask.agenda
-
-            console.log('📝 Creating next occurrence:', newTask)
-            const { error: insertError } = await supabase.from('tasks').insert(newTask)
-
-            if (insertError) {
-              console.error('❌ Error creating recurring task:', insertError)
-              // Don't throw - let the main update succeed even if recurrence fails
-            } else {
-              console.log('✅ Next occurrence created successfully!')
-            }
-          }
-        } catch (recurrenceError) {
-          console.error('Recurrence handling error:', recurrenceError)
-          // Don't throw - let the main update succeed even if recurrence fails
-        }
-      }
-
-      return data
-    },
-    onSuccess: () => {
+    mutationFn: ({ id, updates }) => tasksService.update(id, updates),
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task updated successfully!')
+
+      // Refresh gamification points if task was marked as done
+      if (variables.updates.status === 'done' && user) {
+        setTimeout(() => {
+          fetchUserPoints(user.id)
+        }, 500) // Small delay to ensure backend has processed the points
+      }
     },
     onError: (error) => {
       toast.error(`Failed to update task: ${error.message}`)
@@ -446,8 +251,9 @@ export function useUpdateTask() {
   })
 }
 
-// Fallback for legacy useDeleteTask (now maps to useMoveToTrash for safety, or permanent if specified)
+/**
+ * Alias for useMoveToTrash (backward compatibility)
+ */
 export function useDeleteTask() {
-  const moveToTrash = useMoveToTrash()
-  return moveToTrash
+  return useMoveToTrash()
 }

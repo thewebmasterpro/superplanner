@@ -1,39 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+import { projectsService } from '../services/projects.service'
+import pb from '../lib/pocketbase' // Still needed for useCategories for now
 
 export const useProjects = (userId) => {
   return useQuery({
     queryKey: ['projects', userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-      
-      if (error) throw error
-      return data || []
-    },
+    queryFn: () => projectsService.getAll(),
     enabled: !!userId,
   })
 }
 
-export const useCategories = (userId) => {
-  return useQuery({
-    queryKey: ['categories', userId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .select('*')
-        .eq('user_id', userId)
-      
-      if (error) throw error
-      return data || []
-    },
-    enabled: !!userId,
-  })
-}
+// useCategories moved to src/hooks/useCategories.js
