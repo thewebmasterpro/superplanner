@@ -534,14 +534,88 @@ class GamificationService {
   // ========== CHALLENGES ==========
 
   /**
+   * Create a challenge (team leader or admin only)
+   * @param {Object} challengeData - Challenge data
+   * @param {string} teamId - Team ID (optional, null for global challenges)
+   * @returns {Promise<Object>} Created challenge
+   */
+  async createChallenge(challengeData, teamId = null) {
+    console.log('🎯 [Challenges] Creating challenge:', { challengeData, teamId })
+    try {
+      const user = pb.authStore.model
+      if (!user) throw new Error('Not authenticated')
+
+      // If teamId provided, check if user is team leader
+      if (teamId) {
+        console.log('🎯 [Challenges] Checking team ownership for user:', user.id)
+        const membership = await pb.collection('team_members').getFullList({
+          filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
+        })
+
+        console.log('🎯 [Challenges] Membership check result:', membership)
+        if (membership.length === 0) {
+          throw new Error('Only team leaders can create team challenges')
+        }
+      }
+
+      console.log('🎯 [Challenges] Creating challenge in database...')
+      const challenge = await pb.collection('challenges').create({
+        title: challengeData.title,
+        description: challengeData.description || '',
+        type: challengeData.type,
+        goal_metric: challengeData.goal_metric,
+        goal_value: challengeData.goal_value,
+        points_reward: challengeData.points_reward,
+        icon: challengeData.icon || 'Target',
+        team_id: teamId,
+        created_by: user.id,
+        is_active: true,
+        start_date: challengeData.start_date,
+        end_date: challengeData.end_date,
+      })
+
+      console.log('🎯 [Challenges] Challenge created successfully:', challenge)
+      return challenge
+    } catch (error) {
+      console.error('❌ [Challenges] Error creating challenge:', error)
+      console.error('❌ [Challenges] Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data
+      })
+      throw error
+    }
+  }
+
+  /**
    * Get all active challenges
    * @returns {Promise<Array>} Active challenges
    */
-  async getActiveChallenges() {
+  async getActiveChallenges(userId = null) {
     try {
       const now = new Date().toISOString()
+      let filter = `is_active = true && start_date <= "${now}" && end_date >= "${now}"`
+
+      // If userId provided, filter to include global challenges + user's team challenges
+      if (userId) {
+        // Get user's teams
+        const teamMemberships = await pb.collection('team_members').getFullList({
+          filter: `user_id = "${userId}"`,
+        })
+        const teamIds = teamMemberships.map(tm => tm.team_id)
+
+        if (teamIds.length > 0) {
+          // Include global challenges (team_id = null or empty) OR challenges from user's teams
+          const teamFilter = teamIds.map(id => `team_id = "${id}"`).join(' || ')
+          filter += ` && (team_id = null || team_id = "" || ${teamFilter})`
+        } else {
+          // User has no teams, only show global challenges
+          filter += ` && (team_id = null || team_id = "")`
+        }
+      }
+
       return await pb.collection('challenges').getFullList({
-        filter: `is_active = true && start_date <= "${now}" && end_date >= "${now}"`,
+        filter: filter,
         sort: 'type,created_at',
       })
     } catch (error) {
@@ -588,7 +662,7 @@ class GamificationService {
    */
   async enrollUserInActiveChallenges(userId) {
     try {
-      const activeChallenges = await this.getActiveChallenges()
+      const activeChallenges = await this.getActiveChallenges(userId)
       const existingEnrollments = await pb.collection('user_challenges').getFullList({
         filter: `user_id = "${userId}"`,
       })
@@ -1061,7 +1135,7 @@ class GamificationService {
    */
   async _updateTaskChallenges(userId) {
     try {
-      const activeChallenges = await this.getActiveChallenges()
+      const activeChallenges = await this.getActiveChallenges(userId)
       const taskChallenges = activeChallenges.filter((c) => c.goal_metric === 'tasks_completed')
 
       for (const challenge of taskChallenges) {

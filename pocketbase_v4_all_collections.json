@@ -566,6 +566,30 @@
         }
       },
       {
+        "name": "team_id",
+        "type": "relation",
+        "required": false,
+        "options": {
+          "collectionId": "teams",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name"]
+        }
+      },
+      {
+        "name": "created_by",
+        "type": "relation",
+        "required": false,
+        "options": {
+          "collectionId": "users",
+          "cascadeDelete": false,
+          "minSelect": null,
+          "maxSelect": 1,
+          "displayFields": ["name", "email"]
+        }
+      },
+      {
         "name": "is_active",
         "type": "bool",
         "required": false,
@@ -603,13 +627,14 @@
       }
     ],
     "indexes": [
-      "CREATE INDEX idx_active_end ON challenges (is_active, end_date)"
+      "CREATE INDEX idx_active_end ON challenges (is_active, end_date)",
+      "CREATE INDEX idx_team_id ON challenges (team_id)"
     ],
     "listRule": "@request.auth.id != \"\"",
     "viewRule": "@request.auth.id != \"\"",
-    "createRule": null,
-    "updateRule": null,
-    "deleteRule": null
+    "createRule": "@request.auth.id != \"\"",
+    "updateRule": "@request.auth.id != \"\" && created_by = @request.auth.id",
+    "deleteRule": "@request.auth.id != \"\" && created_by = @request.auth.id"
   },
   {
     "name": "user_challenges",

@@ -8,9 +8,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import toast from 'react-hot-toast'
-import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw, Gift } from 'lucide-react'
+import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw, Gift, Target } from 'lucide-react'
 import { teamsService } from '../services/teams.service'
 import { TeamRewardsManager } from '../components/TeamRewardsManager'
+import TeamChallengesManager from '../components/TeamChallengesManager'
 import pb from '../lib/pocketbase' // Keep for pb.files.getUrl usage in AvatarImage
 
 export function TeamSettings() {
@@ -21,7 +22,7 @@ export function TeamSettings() {
     const [receivedInvitations, setReceivedInvitations] = useState([]) // Invites TO the user
     const [createTeamName, setCreateTeamName] = useState('')
     const [inviteEmail, setInviteEmail] = useState('')
-    const [activeView, setActiveView] = useState('members') // 'members', 'rewards', 'settings'
+    const [activeView, setActiveView] = useState('members') // 'members', 'rewards', 'challenges', 'settings'
 
     // Load teams on mount
     useEffect(() => {
@@ -263,13 +264,22 @@ export function TeamSettings() {
                                             Membres
                                         </button>
                                         {currentTeam.myRole === 'owner' && (
-                                            <button
-                                                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'rewards' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
-                                                onClick={() => setActiveView('rewards')}
-                                            >
-                                                <Gift className="w-3 h-3 mr-1.5" />
-                                                Récompenses
-                                            </button>
+                                            <>
+                                                <button
+                                                    className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'rewards' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                                                    onClick={() => setActiveView('rewards')}
+                                                >
+                                                    <Gift className="w-3 h-3 mr-1.5" />
+                                                    Récompenses
+                                                </button>
+                                                <button
+                                                    className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'challenges' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                                                    onClick={() => setActiveView('challenges')}
+                                                >
+                                                    <Target className="w-3 h-3 mr-1.5" />
+                                                    Défis
+                                                </button>
+                                            </>
                                         )}
                                         <button
                                             className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'settings' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
@@ -359,6 +369,13 @@ export function TeamSettings() {
                                         <TeamRewardsManager
                                             teamId={currentTeam.id}
                                             isLeader={currentTeam.myRole === 'owner'}
+                                        />
+                                    )}
+
+                                    {/* Challenges View */}
+                                    {activeView === 'challenges' && (
+                                        <TeamChallengesManager
+                                            teamId={currentTeam.id}
                                         />
                                     )}
 
