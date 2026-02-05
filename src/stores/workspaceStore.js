@@ -21,6 +21,7 @@ export const useWorkspaceStore = create(
         (set, get) => ({
             workspaces: [],
             activeWorkspaceId: null, // null = Global view
+            defaultWorkspaceId: null, // Default workspace for new items
             loading: false,
 
             /**
@@ -44,6 +45,14 @@ export const useWorkspaceStore = create(
              */
             setActiveWorkspace: (workspaceId) => {
                 set({ activeWorkspaceId: workspaceId })
+            },
+
+            /**
+             * Set the default workspace (used when creating new items)
+             * @param {string|null} workspaceId - Workspace ID or null
+             */
+            setDefaultWorkspace: (workspaceId) => {
+                set({ defaultWorkspaceId: workspaceId })
             },
 
             /**
@@ -115,6 +124,7 @@ export const useWorkspaceStore = create(
             name: 'superplanner-workspace',
             partialize: (state) => ({
                 workspaces: state.workspaces,
+                defaultWorkspaceId: state.defaultWorkspaceId,
                 // activeWorkspaceId: state.activeWorkspaceId  // Removed to enforce Global View on load
             })
         }

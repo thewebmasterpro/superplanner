@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Edit2, Building, MoreVertical, Archive, RotateCcw } from 'lucide-react'
+import { Plus, Trash2, Edit2, Building, MoreVertical, Archive, RotateCcw, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -38,7 +38,7 @@ const PRESET_COLORS = [
 ]
 
 export function WorkspaceManager() {
-    const { workspaces, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace } = useWorkspaceStore()
+    const { workspaces, loadWorkspaces, createWorkspace, updateWorkspace, deleteWorkspace, defaultWorkspaceId, setDefaultWorkspace } = useWorkspaceStore()
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingWorkspace, setEditingWorkspace] = useState(null)
     const [workspaceStats, setWorkspaceStats] = useState({})
@@ -168,6 +168,11 @@ export function WorkspaceManager() {
         }
     }
 
+    const handleSetDefault = (ctx) => {
+        setDefaultWorkspace(ctx.id)
+        toast.success(`"${ctx.name}" défini comme workspace par défaut`)
+    }
+
     const displayedWorkspaces = showArchived
         ? allWorkspaces
         : allWorkspaces.filter(c => c.status !== 'archived')
@@ -227,6 +232,12 @@ export function WorkspaceManager() {
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <h4 className="font-semibold">{ctx.name}</h4>
+                                                    {defaultWorkspaceId === ctx.id && (
+                                                        <Badge variant="default" className="text-xs flex items-center gap-1">
+                                                            <Star className="w-3 h-3" fill="currentColor" />
+                                                            Par défaut
+                                                        </Badge>
+                                                    )}
                                                     {isArchived && (
                                                         <Badge variant="secondary" className="text-xs">Archived</Badge>
                                                     )}
@@ -251,6 +262,14 @@ export function WorkspaceManager() {
                                                 <DropdownMenuItem onClick={() => handleOpenEdit(ctx)}>
                                                     <Edit2 className="w-4 h-4 mr-2" /> Edit
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleSetDefault(ctx)}
+                                                    disabled={defaultWorkspaceId === ctx.id}
+                                                >
+                                                    <Star className="w-4 h-4 mr-2" />
+                                                    {defaultWorkspaceId === ctx.id ? 'Workspace par défaut' : 'Définir par défaut'}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={() => handleArchive(ctx)}>
                                                     {isArchived ? (
                                                         <><RotateCcw className="w-4 h-4 mr-2" /> Restore</>

@@ -15,7 +15,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useGamificationStore } from '../stores/gamificationStore'
 import { tasksService } from '../services/tasks.service'
+import pb from '../lib/pocketbase'
 
 /**
  * Query hook to fetch all tasks
@@ -227,12 +229,21 @@ export function useCreateTask() {
  */
 export function useUpdateTask() {
   const queryClient = useQueryClient()
+  const { fetchUserPoints } = useGamificationStore()
+  const user = pb.authStore.model
 
   return useMutation({
     mutationFn: ({ id, updates }) => tasksService.update(id, updates),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task updated successfully!')
+
+      // Refresh gamification points if task was marked as done
+      if (variables.updates.status === 'done' && user) {
+        setTimeout(() => {
+          fetchUserPoints(user.id)
+        }, 500) // Small delay to ensure backend has processed the points
+      }
     },
     onError: (error) => {
       toast.error(`Failed to update task: ${error.message}`)

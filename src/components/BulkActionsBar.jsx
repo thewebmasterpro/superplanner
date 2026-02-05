@@ -29,6 +29,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useWorkspaceStore } from '../stores/workspaceStore'
+import { useGamificationStore } from '../stores/gamificationStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { useContactsList } from '../hooks/useContacts'
 import toast from 'react-hot-toast'
@@ -46,6 +47,8 @@ import pb from '../lib/pocketbase' // Still needed for authStore check if servic
 export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
     const queryClient = useQueryClient()
     const { workspaces } = useWorkspaceStore()
+    const { fetchUserPoints } = useGamificationStore()
+    const user = pb.authStore.model
     const [tags, setTags] = useState([])
     const [categories, setCategories] = useState([])
     const [meetings, setMeetings] = useState([])
@@ -207,6 +210,14 @@ export function BulkActionsBar({ selectedIds, onClear, onSuccess }) {
         const success = await updateTasks({ status })
         if (success) {
             toast.success(`${count} task(s) marked as ${status.replace('_', ' ')}`)
+
+            // Refresh gamification points if tasks were marked as done
+            if (status === 'done' && user) {
+                setTimeout(() => {
+                    fetchUserPoints(user.id)
+                }, 500) // Small delay to ensure backend has processed the points
+            }
+
             onClear()
             onSuccess?.()
         }

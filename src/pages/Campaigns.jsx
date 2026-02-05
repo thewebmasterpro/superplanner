@@ -156,7 +156,7 @@ export function Campaigns() {
             {[{v:'active',l:'Actives'},{v:'draft',l:'Brouillons'},{v:'completed',l:'Terminées'},{v:'all',l:'Toutes'}].map(opt => (
               <button
                 key={opt.v}
-                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${statusFilter === opt.v ? 'bg-primary text-primary-content' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${statusFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
                 onClick={() => setStatusFilter(opt.v)}
               >
                 {opt.l}

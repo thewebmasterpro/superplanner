@@ -129,15 +129,29 @@ class TasksService {
     const updatedTask = await pb.collection('tasks').update(id, sanitized)
 
     // Handle Recurrence Logic if task is done
+    console.log('🔍 [TaskService] Task updated:', {
+      id: updatedTask.id,
+      status: updatedTask.status,
+      sanitizedStatus: sanitized.status,
+      shouldTriggerGamification: sanitized.status === 'done' || updatedTask.status === 'done',
+    })
+
     if (sanitized.status === 'done' || updatedTask.status === 'done') {
       await this._handleRecurrence(updatedTask)
 
       // Gamification hook - award points for task completion
+      console.log('🎮 [TaskService] Triggering gamification for task completion')
       try {
         const { gamificationService } = await import('./gamification.service')
+        console.log('🎮 [TaskService] gamificationService imported:', gamificationService)
         await gamificationService.onTaskCompleted(updatedTask.id, updatedTask.user_id)
+        console.log('🎮 [TaskService] gamification hook completed successfully')
       } catch (e) {
-        console.warn('Gamification failed:', e)
+        console.error('❌ [TaskService] Gamification failed:', e)
+        console.error('❌ [TaskService] Error details:', {
+          message: e.message,
+          stack: e.stack,
+        })
       }
     }
 
@@ -221,18 +235,13 @@ class TasksService {
     const user = pb.authStore.model
     if (!user) throw new Error('Not authenticated')
 
-    // Sanitize updates
-    const sanitized = this._sanitize(updates)
+    console.log('🔍 [TaskService] bulkUpdate called for', ids.length, 'tasks with updates:', updates)
 
-    // Handle special fields logic
-    if (sanitized.status === 'done') {
-      sanitized.completed_at = new Date().toISOString()
-    } else if (sanitized.status && sanitized.status !== 'done') {
-      sanitized.completed_at = null
-    }
-
-    const promises = ids.map(id => pb.collection('tasks').update(id, sanitized))
+    // Use this.update() for each task to trigger gamification hooks
+    const promises = ids.map(id => this.update(id, updates))
     await Promise.all(promises)
+
+    console.log('🔍 [TaskService] bulkUpdate completed')
   }
 
   /**

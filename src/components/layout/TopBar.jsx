@@ -1,6 +1,7 @@
 import { Plus, Video, Contact, Bug, HelpCircle } from 'lucide-react'
 import { useUIStore } from '../../stores/uiStore'
 import { useTour } from '../../hooks/useTour'
+import GamificationBadge from '../GamificationBadge'
 
 export default function TopBar() {
   const {
@@ -67,16 +68,19 @@ export default function TopBar() {
           </button>
         </div>
 
-        {hasTour && (
-          <button
-            onClick={replayTour}
-            className="btn btn-ghost btn-xs md:btn-sm gap-1 md:gap-2 shadow-none transition-transform hover:scale-105 active:scale-95"
-            title="Rejouer le guide de cette page"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Guide</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 md:gap-3">
+          {hasTour && (
+            <button
+              onClick={replayTour}
+              className="btn btn-ghost btn-xs md:btn-sm gap-1 md:gap-2 shadow-none transition-transform hover:scale-105 active:scale-95"
+              title="Rejouer le guide de cette page"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Guide</span>
+            </button>
+          )}
+          <GamificationBadge />
+        </div>
       </div>
     </div>
   )

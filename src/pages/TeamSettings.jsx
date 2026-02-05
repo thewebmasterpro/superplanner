@@ -8,8 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import toast from 'react-hot-toast'
-import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw } from 'lucide-react'
+import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw, Gift } from 'lucide-react'
 import { teamsService } from '../services/teams.service'
+import { TeamRewardsManager } from '../components/TeamRewardsManager'
 import pb from '../lib/pocketbase' // Keep for pb.files.getUrl usage in AvatarImage
 
 export function TeamSettings() {
@@ -20,6 +21,7 @@ export function TeamSettings() {
     const [receivedInvitations, setReceivedInvitations] = useState([]) // Invites TO the user
     const [createTeamName, setCreateTeamName] = useState('')
     const [inviteEmail, setInviteEmail] = useState('')
+    const [activeView, setActiveView] = useState('members') // 'members', 'rewards', 'settings'
 
     // Load teams on mount
     useEffect(() => {
@@ -252,79 +254,141 @@ export function TeamSettings() {
                             <div className="card-body p-0">
                                 <div className="p-4 border-b border-base-300 flex justify-between items-center bg-base-200/50">
                                     <h2 className="font-bold text-xl">{currentTeam.name}</h2>
-                                    <div className="join join-horizontal bg-base-100 p-0.5 border border-base-300">
-                                        <button className={`join-item btn btn-xs ${!loading ? 'btn-primary' : 'btn-ghost'}`}>Membres</button>
-                                        <button className={`join-item btn btn-xs btn-ghost`} onClick={() => handleDeleteTeam()}>Paramètres</button>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'members' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                                            onClick={() => setActiveView('members')}
+                                        >
+                                            <Users className="w-3 h-3 mr-1.5" />
+                                            Membres
+                                        </button>
+                                        {currentTeam.myRole === 'owner' && (
+                                            <button
+                                                className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'rewards' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                                                onClick={() => setActiveView('rewards')}
+                                            >
+                                                <Gift className="w-3 h-3 mr-1.5" />
+                                                Récompenses
+                                            </button>
+                                        )}
+                                        <button
+                                            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'settings' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
+                                            onClick={() => setActiveView('settings')}
+                                        >
+                                            <Settings className="w-3 h-3 mr-1.5" />
+                                            Paramètres
+                                        </button>
                                     </div>
                                 </div>
 
                                 <div className="p-6">
-                                    {/* Invite Form */}
-                                    <div data-tour="team-invite" className="bg-base-200/50 p-4 rounded-3xl border border-base-300 mb-8">
-                                        <div className="flex flex-col md:flex-row gap-4 items-end">
-                                            <div className="form-control flex-1 w-full">
-                                                <label className="label">
-                                                    <span className="label-text font-bold">Inviter un collaborateur</span>
-                                                </label>
-                                                <input
-                                                    type="email"
-                                                    className="input input-bordered w-full"
-                                                    placeholder="nom@entreprise.com"
-                                                    value={inviteEmail}
-                                                    onChange={e => setInviteEmail(e.target.value)}
-                                                    required
-                                                />
+                                    {/* Members View */}
+                                    {activeView === 'members' && (
+                                        <>
+                                            {/* Invite Form */}
+                                            <div data-tour="team-invite" className="bg-base-200/50 p-4 rounded-3xl border border-base-300 mb-8">
+                                                <div className="flex flex-col md:flex-row gap-4 items-end">
+                                                    <div className="form-control flex-1 w-full">
+                                                        <label className="label">
+                                                            <span className="label-text font-bold">Inviter un collaborateur</span>
+                                                        </label>
+                                                        <input
+                                                            type="email"
+                                                            className="input input-bordered w-full"
+                                                            placeholder="nom@entreprise.com"
+                                                            value={inviteEmail}
+                                                            onChange={e => setInviteEmail(e.target.value)}
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <button className="btn btn-primary gap-2" onClick={handleInvite} disabled={loading}>
+                                                        <Mail className="w-4 h-4" />
+                                                        Envoyer l'invitation
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <button className="btn btn-primary gap-2" onClick={handleInvite} disabled={loading}>
-                                                <Mail className="w-4 h-4" />
-                                                Envoyer l'invitation
-                                            </button>
-                                        </div>
-                                    </div>
 
-                                    {/* Members List */}
-                                    <div className="space-y-4">
-                                        <h3 className="font-bold flex items-center gap-2 opacity-60 text-sm uppercase px-2">
-                                            <Users className="w-4 h-4" />
-                                            Membres de l'équipe ({members.length})
-                                        </h3>
-                                        <div className="grid gap-3">
-                                            {members.map(member => (
-                                                <div key={member.id} className="flex items-center justify-between p-4 bg-base-200/30 rounded-2xl hover:bg-base-200/50 transition-colors border border-transparent hover:border-base-300">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="avatar">
-                                                            <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
-                                                                {member.expand?.user_id?.avatar ? (
-                                                                    <img src={pb.files.getUrl(member.expand.user_id, member.expand.user_id.avatar)} alt="avatar" />
-                                                                ) : (
-                                                                    <span className="text-xl font-bold text-primary">{(member.expand?.user_id?.name || 'U')[0].toUpperCase()}</span>
-                                                                )}
+                                            {/* Members List */}
+                                            <div className="space-y-4">
+                                                <h3 className="font-bold flex items-center gap-2 opacity-60 text-sm uppercase px-2">
+                                                    <Users className="w-4 h-4" />
+                                                    Membres de l'équipe ({members.length})
+                                                </h3>
+                                                <div className="grid gap-3">
+                                                    {members.map(member => (
+                                                        <div key={member.id} className="flex items-center justify-between p-4 bg-base-200/30 rounded-2xl hover:bg-base-200/50 transition-colors border border-transparent hover:border-base-300">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="avatar">
+                                                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                                                                        {member.expand?.user_id?.avatar ? (
+                                                                            <img src={pb.files.getUrl(member.expand.user_id, member.expand.user_id.avatar)} alt="avatar" />
+                                                                        ) : (
+                                                                            <span className="text-xl font-bold text-primary">{(member.expand?.user_id?.name || 'U')[0].toUpperCase()}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-bold">{member.expand?.user_id?.name || member.expand?.user_id?.email || 'Utilisateur inconnu'}</div>
+                                                                    <div className="badge badge-sm badge-ghost opacity-60 capitalize">{member.role}</div>
+                                                                </div>
                                                             </div>
+                                                            {currentTeam.myRole === 'owner' && member.role !== 'owner' && (
+                                                                <button className="btn btn-error btn-ghost btn-xs" onClick={() => handleRemoveMember(member.id)}>Retirer</button>
+                                                            )}
                                                         </div>
-                                                        <div>
-                                                            <div className="font-bold">{member.expand?.user_id?.name || member.expand?.user_id?.email || 'Utilisateur inconnu'}</div>
-                                                            <div className="badge badge-sm badge-ghost opacity-60 capitalize">{member.role}</div>
-                                                        </div>
-                                                    </div>
-                                                    {currentTeam.myRole === 'owner' && member.role !== 'owner' && (
-                                                        <button className="btn btn-error btn-ghost btn-xs" onClick={() => handleRemoveMember(member.id)}>Retirer</button>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                    ))}
 
-                                            {invitations.map(inv => (
-                                                <div key={inv.id} className="flex items-center justify-between p-4 bg-base-200/10 rounded-2xl border border-dashed border-base-300 italic opacity-60">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-full border border-dashed border-base-300 flex items-center justify-center">
-                                                            <Mail className="w-4 h-4" />
+                                                    {invitations.map(inv => (
+                                                        <div key={inv.id} className="flex items-center justify-between p-4 bg-base-200/10 rounded-2xl border border-dashed border-base-300 italic opacity-60">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 rounded-full border border-dashed border-base-300 flex items-center justify-center">
+                                                                    <Mail className="w-4 h-4" />
+                                                                </div>
+                                                                <span>{inv.email}</span>
+                                                            </div>
+                                                            <span className="badge badge-sm badge-ghost">En attente</span>
                                                         </div>
-                                                        <span>{inv.email}</span>
-                                                    </div>
-                                                    <span className="badge badge-sm badge-ghost">En attente</span>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Rewards View */}
+                                    {activeView === 'rewards' && (
+                                        <TeamRewardsManager
+                                            teamId={currentTeam.id}
+                                            isLeader={currentTeam.myRole === 'owner'}
+                                        />
+                                    )}
+
+                                    {/* Settings View */}
+                                    {activeView === 'settings' && (
+                                        <div className="space-y-6">
+                                            <div className="bg-error/10 p-6 rounded-2xl border border-error/20">
+                                                <h3 className="font-bold text-error mb-2 flex items-center gap-2">
+                                                    <Settings className="w-5 h-5" />
+                                                    Zone Dangereuse
+                                                </h3>
+                                                <p className="text-sm text-muted-foreground mb-4">
+                                                    La suppression de cette équipe est irréversible. Tous les membres seront retirés.
+                                                </p>
+                                                <button
+                                                    className="btn btn-error gap-2"
+                                                    onClick={handleDeleteTeam}
+                                                    disabled={loading || currentTeam.myRole !== 'owner'}
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Supprimer l'équipe
+                                                </button>
+                                                {currentTeam.myRole !== 'owner' && (
+                                                    <p className="text-xs text-error/70 mt-2">
+                                                        Seul le propriétaire peut supprimer l'équipe
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

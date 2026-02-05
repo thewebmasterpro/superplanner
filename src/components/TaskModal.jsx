@@ -41,7 +41,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const archiveTask = useArchiveTask()
-  const { workspaces, activeWorkspaceId, getActiveWorkspace } = useWorkspaceStore()
+  const { workspaces, activeWorkspaceId, defaultWorkspaceId, getActiveWorkspace } = useWorkspaceStore()
   const { currentTeam } = useUserStore()
   const { data: contactsList = [] } = useContactsList()
 
@@ -148,7 +148,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         type: task?.type || 'task',
         agenda: '',
         campaign_id: '',
-        context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? '' : (activeWorkspaceId || ''),
+        context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
         team_id: currentTeam ? currentTeam.id : '',
         assigned_to: ''

@@ -308,7 +308,7 @@ export function Tasks() {
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Statut</span></label>
             <div className="flex flex-wrap gap-1">
               {[{v:'all',l:'Tous'},{v:'todo',l:'À faire'},{v:'in_progress',l:'En cours'},{v:'blocked',l:'Bloqué'},{v:'done',l:'Fait'},{v:'cancelled',l:'Annulé'}].map(opt => (
-                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${statusFilter === opt.v ? 'bg-primary text-primary-content' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setStatusFilter(opt.v)}>
+                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer hover:scale-105 ${statusFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setStatusFilter(opt.v)}>
                   {opt.l}
                 </button>
               ))}
@@ -319,7 +319,7 @@ export function Tasks() {
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Priorité</span></label>
             <div className="flex flex-wrap gap-1">
               {[{v:'all',l:'Toutes'},{v:'high',l:'Haute'},{v:'medium',l:'Moy.'},{v:'low',l:'Basse'}].map(opt => (
-                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${priorityFilter === opt.v ? 'bg-primary text-primary-content' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setPriorityFilter(opt.v)}>
+                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer hover:scale-105 ${priorityFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setPriorityFilter(opt.v)}>
                   {opt.l}
                 </button>
               ))}

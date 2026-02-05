@@ -26,7 +26,7 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }) {
     const isEditing = !!campaign
     const [loading, setLoading] = useState(false)
-    const { workspaces, activeWorkspaceId, getActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
+    const { workspaces, activeWorkspaceId, defaultWorkspaceId, getActiveWorkspace, loadWorkspaces } = useWorkspaceStore()
 
     const [formData, setFormData] = useState({
         name: '',
@@ -58,7 +58,7 @@ export function CampaignModal({ open, onOpenChange, campaign = null, onSuccess }
                     description: '',
                     start_date: new Date().toISOString().split('T')[0],
                     end_date: '',
-                    context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? '' : (activeWorkspaceId || ''),
+                    context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
                     priority: 3,
                     status: 'draft'
                 })
