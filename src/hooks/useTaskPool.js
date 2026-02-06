@@ -17,7 +17,7 @@ export function useTeamPool(teamId) {
       // PocketBase relation filters can be inconsistent with certain field types
       const allTasks = await pb.collection('tasks').getFullList({
         sort: '-created',
-        expand: 'category_id,project_id,tags'
+        expand: 'category_id,project_id'
       })
 
       // Filter for team pool tasks
