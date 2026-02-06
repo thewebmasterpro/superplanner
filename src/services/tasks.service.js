@@ -85,7 +85,29 @@ class TasksService {
     if (!sanitized.user_id) sanitized.user_id = user.id
     if (!sanitized.status) sanitized.status = 'todo'
 
+    // Debug log for pool tasks
+    if (sanitized.team_id) {
+      console.log('🏊 [TaskService] Creating team task:', {
+        team_id: sanitized.team_id,
+        assigned_to: sanitized.assigned_to,
+        status: sanitized.status,
+        title: sanitized.title,
+        isPoolTask: sanitized.assigned_to === null && sanitized.status === 'unassigned'
+      })
+    }
+
     const createdTask = await pb.collection('tasks').create(sanitized)
+
+    // Debug log after creation
+    if (createdTask.team_id) {
+      console.log('✅ [TaskService] Team task created:', {
+        id: createdTask.id,
+        team_id: createdTask.team_id,
+        assigned_to: createdTask.assigned_to,
+        status: createdTask.status,
+        title: createdTask.title
+      })
+    }
 
     // Trigger automation for critical tasks
     // We import locally to update circular deps or just clean structure

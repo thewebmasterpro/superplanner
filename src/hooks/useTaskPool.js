@@ -13,10 +13,22 @@ export function useTeamPool(teamId) {
     queryFn: async () => {
       if (!teamId) return []
 
+      console.log('🏊 [useTeamPool] Fetching pool tasks for team:', teamId)
+
       const tasks = await pb.collection('tasks').getFullList({
-        filter: `team_id = "${teamId}" && (assigned_to = "" || assigned_to = null) && status = "unassigned" && (deleted_at = "" || deleted_at = null) && (archived_at = "" || archived_at = null)`,
+        filter: `team_id = "${teamId}" && assigned_to = "" && status = "unassigned" && deleted_at = "" && archived_at = ""`,
         sort: '-priority,-due_date',
         expand: 'category_id,project_id,tags'
+      })
+
+      console.log('🏊 [useTeamPool] Found pool tasks:', {
+        count: tasks.length,
+        tasks: tasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          assigned_to: t.assigned_to,
+          status: t.status
+        }))
       })
 
       return tasks
