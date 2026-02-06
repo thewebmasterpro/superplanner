@@ -1,0 +1,64 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { tasksService } from '../services/tasks.service'
+import toast from 'react-hot-toast'
+import pb from '../lib/pocketbase'
+
+/**
+ * Get team pool tasks (unassigned team tasks)
+ * @param {string} teamId - Team ID
+ */
+export function useTeamPool(teamId) {
+  return useQuery({
+    queryKey: ['tasks', 'pool', teamId],
+    queryFn: async () => {
+      if (!teamId) return []
+
+      const tasks = await pb.collection('tasks').getFullList({
+        filter: `team_id = "${teamId}" && (assigned_to = "" || assigned_to = null) && status = "unassigned" && (deleted_at = "" || deleted_at = null) && (archived_at = "" || archived_at = null)`,
+        sort: '-priority,-due_date',
+        expand: 'category_id,project_id,tags'
+      })
+
+      return tasks
+    },
+    enabled: !!teamId,
+  })
+}
+
+/**
+ * Claim a task from the pool
+ */
+export function useClaimTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (taskId) => tasksService.claimTask(taskId),
+    onSuccess: (task) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('🎯 Tâche prise avec succès!', { icon: '⚡' })
+    },
+    onError: (error) => {
+      console.error('Error claiming task:', error)
+      toast.error(error.message || 'Erreur lors de la prise de la tâche')
+    },
+  })
+}
+
+/**
+ * Release a task back to the pool
+ */
+export function useReleaseTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, reason }) => tasksService.releaseTask(taskId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success('📤 Tâche libérée et retournée au pool', { icon: '✅' })
+    },
+    onError: (error) => {
+      console.error('Error releasing task:', error)
+      toast.error(error.message || 'Erreur lors de la libération de la tâche')
+    },
+  })
+}

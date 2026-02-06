@@ -54,6 +54,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const [loading, setLoading] = useState(false)
   const [campaigns, setCampaigns] = useState([])
 
+  const [assignmentMode, setAssignmentMode] = useState('individual') // 'individual' or 'team'
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -76,6 +78,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     end_time: '',
     location: '',
     meeting_link: '',
+    // Task Pool fields
+    claimed_at: '',
+    claimed_by: '',
+    claim_deadline: '',
     campaign_id: '',   // Link to campaign
     context_id: '',    // Link to workspace (auto-filled from activeWorkspaceId)
     contact_id: '',    // Link to client/contact
@@ -115,6 +121,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   useEffect(() => {
     if (task?.id) {
       // Editing existing task - populate from task data
+      // Determine assignment mode based on task data
+      const isTeamTask = task.team_id && !task.assigned_to && task.status === 'unassigned'
+      setAssignmentMode(isTeamTask ? 'team' : 'individual')
+
       setFormData({
         title: task.title || '',
         description: task.description || '',
@@ -139,6 +149,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         end_time: task.end_time ? task.end_time.substring(0, 16) : '',
         location: task.location || '',
         meeting_link: task.meeting_link || '',
+        // Task Pool fields
+        claimed_at: task.claimed_at || '',
+        claimed_by: task.claimed_by || '',
+        claim_deadline: task.claim_deadline ? task.claim_deadline.substring(0, 10) : '',
         campaign_id: task.campaign_id || '',
         context_id: task.context_id || '',
         contact_id: task.contact_id || '',
@@ -147,6 +161,8 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       })
     } else {
       // Creating new task/meeting - use defaults + type from task prop if provided
+      setAssignmentMode('individual')
+
       setFormData({
         title: '',
         description: '',
@@ -169,6 +185,10 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         end_time: task?.end_time || '',
         location: '',
         meeting_link: '',
+        // Task Pool fields
+        claimed_at: '',
+        claimed_by: '',
+        claim_deadline: '',
         campaign_id: '',
         context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
@@ -563,43 +583,93 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                   Liens
                 </summary>
                 <div className="pb-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="contact">Client</Label>
-                      <Select value={formData.contact_id || 'none'} onValueChange={(value) => setFormData({ ...formData, contact_id: value === 'none' ? null : value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {contactsList.map((contact) => (
-                            <SelectItem key={contact.id} value={contact.id}>
-                              {contact.name} {contact.company && `(${contact.company})`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {teamMembers.length > 0 && (
-                      <div className="space-y-2">
-                        <Label htmlFor="assigned_to">Assigned To</Label>
-                        <Select value={formData.assigned_to || 'none'} onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? null : value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Unassigned" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Unassigned</SelectItem>
-                            {teamMembers.map((member) => (
-                              <SelectItem key={member.user_id} value={member.user_id}>
-                                {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                  <div className="space-y-2">
+                    <Label htmlFor="contact">Client</Label>
+                    <Select value={formData.contact_id || 'none'} onValueChange={(value) => setFormData({ ...formData, contact_id: value === 'none' ? null : value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select client" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {contactsList.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.name} {contact.company && `(${contact.company})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {/* Assignment Mode Selection */}
+                  {currentTeam && teamMembers.length > 0 && (
+                    <div className="space-y-4 p-4 rounded-xl bg-base-200/30 dark:bg-white/5">
+                      <Label>Mode d'assignation</Label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="assignmentMode"
+                            value="individual"
+                            checked={assignmentMode === 'individual'}
+                            onChange={(e) => {
+                              setAssignmentMode(e.target.value)
+                              setFormData({ ...formData, assigned_to: '', status: 'todo' })
+                            }}
+                            className="radio radio-sm radio-primary"
+                          />
+                          <span className="text-sm">Assigner à un membre</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="assignmentMode"
+                            value="team"
+                            checked={assignmentMode === 'team'}
+                            onChange={(e) => {
+                              setAssignmentMode(e.target.value)
+                              setFormData({ ...formData, assigned_to: null, status: 'unassigned' })
+                            }}
+                            className="radio radio-sm radio-primary"
+                          />
+                          <span className="text-sm">Assigner à l'équipe (Pool)</span>
+                        </label>
+                      </div>
+
+                      {assignmentMode === 'individual' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="assigned_to">Membre assigné</Label>
+                          <Select value={formData.assigned_to || 'none'} onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? null : value })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Non assigné" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Non assigné</SelectItem>
+                              {teamMembers.map((member) => (
+                                <SelectItem key={member.user_id} value={member.user_id}>
+                                  {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {assignmentMode === 'team' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="claim_deadline">Date limite pour prendre la tâche (optionnel)</Label>
+                          <Input
+                            id="claim_deadline"
+                            type="date"
+                            value={formData.claim_deadline}
+                            onChange={(e) => setFormData({ ...formData, claim_deadline: e.target.value })}
+                          />
+                          <p className="text-xs opacity-60">
+                            ⚡ Cette tâche sera disponible dans le pool de l'équipe. Les membres pourront la prendre librement.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Workspace Selector */}
                   {(!activeWorkspaceId || activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (

@@ -332,6 +332,77 @@ class TasksService {
     return tasks.length
   }
 
+  /**
+   * Claim a team task (member takes ownership)
+   * @param {string} taskId - Task ID
+   * @returns {Promise<Object>} Updated task
+   */
+  async claimTask(taskId) {
+    const user = pb.authStore.model
+    if (!user) throw new Error('Not authenticated')
+
+    const task = await pb.collection('tasks').getOne(taskId)
+
+    // Verify it's a team task and unassigned
+    if (!task.team_id || task.assigned_to || task.status !== 'unassigned') {
+      throw new Error('Task is not available in the pool')
+    }
+
+    // Claim the task
+    return await pb.collection('tasks').update(taskId, {
+      assigned_to: user.id,
+      user_id: user.id,
+      claimed_at: new Date().toISOString(),
+      claimed_by: user.id,
+      status: 'todo'
+    })
+  }
+
+  /**
+   * Release a claimed task back to the pool
+   * @param {string} taskId - Task ID
+   * @param {string} reason - Optional reason for releasing
+   * @returns {Promise<Object>} Updated task
+   */
+  async releaseTask(taskId, reason = '') {
+    const user = pb.authStore.model
+    if (!user) throw new Error('Not authenticated')
+
+    const task = await pb.collection('tasks').getOne(taskId)
+
+    // Verify user owns this task
+    if (task.assigned_to !== user.id) {
+      throw new Error('You can only release tasks assigned to you')
+    }
+
+    // Verify it's a team task
+    if (!task.team_id) {
+      throw new Error('Only team tasks can be released to the pool')
+    }
+
+    // Release back to pool
+    const updates = {
+      assigned_to: null,
+      user_id: null,
+      status: 'unassigned'
+    }
+
+    // Add release reason as a comment if provided
+    if (reason) {
+      try {
+        await pb.collection('task_comments').create({
+          task_id: taskId,
+          user_id: user.id,
+          content: `📤 Tâche libérée: ${reason}`
+        })
+      } catch (e) {
+        console.warn('Failed to add release comment:', e)
+      }
+    }
+
+    return await pb.collection('tasks').update(taskId, updates)
+  }
+
   // ==================== PRIVATE HELPERS ====================
 
   /**

@@ -16,7 +16,8 @@ import {
     Globe,
     ChevronDown,
     Check,
-    Trophy
+    Trophy,
+    Hand
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { GlobalSearch } from '../v3/GlobalSearch'
@@ -60,6 +61,7 @@ export default function SidebarV3() {
         { icon: Contact, label: 'Contacts', path: '/contacts' },
         { icon: Layers, label: 'Projets', path: '/campaigns' },
         { icon: Users, label: 'Équipe', path: '/team' },
+        { icon: Hand, label: 'Pool Équipe', path: '/team/pool' },
         { icon: BarChart, label: 'Statistiques', path: '/stats' },
         { icon: Trophy, label: 'Récompenses', path: '/gamification' },
         { icon: Archive, label: 'Archives', path: '/archive' },
