@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react'
 import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
-import { CheckCircle2, TrendingUp, AlertCircle, LayoutDashboard } from 'lucide-react'
+import { CheckCircle2, TrendingUp, LayoutDashboard } from 'lucide-react'
 import WeeklyChart from '../../components/v3/WeeklyChart'
 import { useTasks } from '../../hooks/useTasks'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { StatsCard, StatsCardGroup } from '@/components/ui/StatsCard'
 
 export default function StatsPageV3() {
-    const { data: tasks = [], isLoading } = useTasks()
+    const { data: tasks = [] } = useTasks()
 
     // Calculate Extended Stats
     const totalTasks = tasks.length
@@ -20,47 +21,36 @@ export default function StatsPageV3() {
     return (
         <DashboardLayoutV3>
             <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-                <div>
-                    <h1 className="text-3xl font-bold font-display flex items-center gap-2">
-                        <TrendingUp className="w-8 h-8 text-primary" />
-                        Statistiques
-                    </h1>
-                    <p className="text-muted-foreground">Analyse détaillée de votre productivité.</p>
-                </div>
+                <PageHeader
+                    icon={TrendingUp}
+                    title="Statistiques"
+                    description="Analyse détaillée de votre productivité."
+                />
 
                 {/* KPI Grid */}
-                <div data-tour="stats-kpis" className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-stagger-fast">
-                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
-                        <div className="stat">
-                            <div className="stat-figure text-primary">
-                                <LayoutDashboard className="w-8 h-8 opacity-20" />
-                            </div>
-                            <div className="stat-title">Total Tâches</div>
-                            <div className="stat-value text-primary font-display">{totalTasks}</div>
-                        </div>
-                    </div>
-                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
-                        <div className="stat">
-                            <div className="stat-figure text-secondary">
-                                <CheckCircle2 className="w-8 h-8 opacity-20" />
-                            </div>
-                            <div className="stat-title">Complétées</div>
-                            <div className="stat-value text-secondary font-display">{completedTasks}</div>
-                        </div>
-                    </div>
-                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
-                        <div className="stat">
-                            <div className="stat-figure text-accent">
-                                <TrendingUp className="w-8 h-8 opacity-20" />
-                            </div>
-                            <div className="stat-title">Productivité</div>
-                            <div className="stat-value text-accent font-display">{productivity}%</div>
-                        </div>
-                    </div>
-                </div>
+                <StatsCardGroup cols={3} data-tour="stats-kpis">
+                    <StatsCard
+                        title="Total Tâches"
+                        value={totalTasks}
+                        className="text-primary"
+                        icon={<LayoutDashboard className="w-8 h-8 opacity-20" />}
+                    />
+                    <StatsCard
+                        title="Complétées"
+                        value={completedTasks}
+                        className="text-secondary"
+                        icon={<CheckCircle2 className="w-8 h-8 opacity-20" />}
+                    />
+                    <StatsCard
+                        title="Productivité"
+                        value={`${productivity}%`}
+                        className="text-accent"
+                        icon={<TrendingUp className="w-8 h-8 opacity-20" />}
+                    />
+                </StatsCardGroup>
 
                 {/* Chart Section */}
-                <div data-tour="stats-chart" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all animate-slide-up delay-200">
+                <div data-tour="stats-chart" className="card card-glass animate-slide-up delay-200">
                     <div className="card-body">
                         <h2 className="card-title">Tendance Hebdomadaire</h2>
                         {tasks.length > 0 ? <WeeklyChart tasks={tasks} /> : <div className="skeleton h-[300px] w-full"></div>}
@@ -69,7 +59,7 @@ export default function StatsPageV3() {
 
                 {/* Breakdown Section */}
                 <div data-tour="stats-breakdown" className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up delay-300">
-                    <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
+                    <div className="card card-glass">
                         <div className="card-body">
                             <h2 className="card-title">Par Priorité</h2>
                             <div className="space-y-4 mt-4">

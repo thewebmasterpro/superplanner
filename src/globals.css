@@ -220,6 +220,48 @@
   .tap-target {
     @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
   }
+
+  /* Glass morphism card styles */
+  .card-glass {
+    @apply bg-base-100 shadow-xl rounded-2xl
+      border border-base-300
+      transition-all;
+  }
+
+  .card-glass:hover {
+    border-color: color-mix(in oklch, var(--color-primary) 30%, transparent);
+  }
+
+  :is(.dark, [data-theme="dark"], [data-theme="synthwave"], [data-theme="night"], [data-theme="dracula"], [data-theme="halloween"], [data-theme="forest"], [data-theme="black"], [data-theme="luxury"], [data-theme="business"], [data-theme="coffee"], [data-theme="dim"], [data-theme="sunset"]) .card-glass {
+    @apply backdrop-blur-xl;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  :is(.dark, [data-theme="dark"], [data-theme="synthwave"], [data-theme="night"], [data-theme="dracula"], [data-theme="halloween"], [data-theme="forest"], [data-theme="black"], [data-theme="luxury"], [data-theme="business"], [data-theme="coffee"], [data-theme="dim"], [data-theme="sunset"]) .card-glass:hover {
+    border-color: rgba(168, 85, 247, 0.5);
+  }
+
+  /* Glass stat card */
+  .stat-glass {
+    @apply stats shadow bg-base-100
+      border border-base-300
+      transition-all;
+  }
+
+  .stat-glass:hover {
+    border-color: color-mix(in oklch, var(--color-primary) 30%, transparent);
+  }
+
+  :is(.dark, [data-theme="dark"], [data-theme="synthwave"], [data-theme="night"], [data-theme="dracula"], [data-theme="halloween"], [data-theme="forest"], [data-theme="black"], [data-theme="luxury"], [data-theme="business"], [data-theme="coffee"], [data-theme="dim"], [data-theme="sunset"]) .stat-glass {
+    @apply backdrop-blur-xl;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  :is(.dark, [data-theme="dark"], [data-theme="synthwave"], [data-theme="night"], [data-theme="dracula"], [data-theme="halloween"], [data-theme="forest"], [data-theme="black"], [data-theme="luxury"], [data-theme="business"], [data-theme="coffee"], [data-theme="dim"], [data-theme="sunset"]) .stat-glass:hover {
+    border-color: rgba(168, 85, 247, 0.5);
+  }
 }
 
 /* React Big Calendar custom styles */

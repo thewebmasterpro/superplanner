@@ -3,9 +3,12 @@ import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
 import { useUserStore } from '../../stores/userStore'
 import { useTeamPool, useClaimTask } from '../../hooks/useTaskPool'
 import { useUIStore } from '../../stores/uiStore'
-import { Hand, Calendar, AlertCircle, Inbox, Clock, Flag } from 'lucide-react'
+import { Hand, Calendar, AlertCircle, Inbox, Clock, Flag, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { StatsCard, StatsCardGroup } from '@/components/ui/StatsCard'
 
 function TeamPoolPageContent() {
   const { currentTeam } = useUserStore()
@@ -61,49 +64,37 @@ function TeamPoolPageContent() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div data-tour="pool-header" className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
-            <Hand className="w-8 h-8" />
-            Pool de Tâches
-          </h1>
-          <p className="text-muted-foreground">
-            Tâches disponibles pour l'équipe <strong>{currentTeam.name}</strong>
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        dataTour="pool-header"
+        icon={Hand}
+        title="Pool de Tâches"
+        description={<>Tâches disponibles pour l'équipe <strong>{currentTeam.name}</strong></>}
+      />
 
       {/* Stats */}
-      <div data-tour="pool-stats" className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-stagger-fast">
-        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
-          <div className="stat">
-            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Disponibles</div>
-            <div className="stat-value text-primary font-black">{poolTasks.length}</div>
-          </div>
-        </div>
-        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
-          <div className="stat">
-            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Priorité haute</div>
-            <div className="stat-value text-error font-black">
-              {poolTasks.filter(t => t.priority === 'high').length}
-            </div>
-          </div>
-        </div>
-        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
-          <div className="stat">
-            <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Urgentes</div>
-            <div className="stat-value text-warning font-black">
-              {poolTasks.filter(t => {
-                if (!t.due_date && !t.claim_deadline) return false
-                const deadline = new Date(t.claim_deadline || t.due_date)
-                const now = new Date()
-                const diff = deadline - now
-                return diff < 3 * 24 * 60 * 60 * 1000 && diff > 0
-              }).length}
-            </div>
-          </div>
-        </div>
-      </div>
+      <StatsCardGroup cols={3} data-tour="pool-stats">
+        <StatsCard
+          title="Disponibles"
+          value={poolTasks.length}
+          className="text-primary"
+        />
+        <StatsCard
+          title="Priorité haute"
+          value={poolTasks.filter(t => t.priority === 'high').length}
+          className="text-error"
+        />
+        <StatsCard
+          title="Urgentes"
+          value={poolTasks.filter(t => {
+            if (!t.due_date && !t.claim_deadline) return false
+            const deadline = new Date(t.claim_deadline || t.due_date)
+            const now = new Date()
+            const diff = deadline - now
+            return diff < 3 * 24 * 60 * 60 * 1000 && diff > 0
+          }).length}
+          className="text-warning"
+        />
+      </StatsCardGroup>
 
       {/* Tasks List */}
       <div data-tour="pool-tasks" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
@@ -194,20 +185,21 @@ function TeamPoolPageContent() {
                           )}
                         </td>
                         <td className="text-right">
-                          <button
+                          <Button
+                            size="sm"
                             onClick={() => handleClaim(task)}
                             disabled={claimingId === task.id}
-                            className="btn btn-primary btn-sm gap-2 shadow-lg transition-transform hover:scale-105 active:scale-95"
+                            className="gap-2 shadow-lg transition-transform hover:scale-105 active:scale-95"
                           >
                             {claimingId === task.id ? (
-                              <span className="loading loading-spinner loading-xs"></span>
+                              <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <>
                                 <Hand className="w-4 h-4" />
                                 <span className="hidden md:inline">Prendre</span>
                               </>
                             )}
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     )

@@ -69,6 +69,27 @@ export const useUserStore = create(
         }
       },
 
+      loadTeams: async () => {
+        try {
+          const { teamsService } = await import('../services/teams.service')
+          const membersData = await teamsService.MyMemberships()
+          const processedTeams = membersData.map(m => ({
+            ...m.expand.team_id,
+            myRole: m.role
+          }))
+          set((state) => {
+            const newState = { teams: processedTeams }
+            // Set currentTeam if not set and teams available
+            if (!state.currentTeam && processedTeams.length > 0) {
+              newState.currentTeam = processedTeams[0]
+            }
+            return newState
+          })
+        } catch (e) {
+          console.error('Failed to load teams', e)
+        }
+      },
+
       // Teams
       teams: [],
       currentTeam: null,

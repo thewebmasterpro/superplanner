@@ -13,25 +13,20 @@ export function useTeamPool(teamId) {
     queryFn: async () => {
       if (!teamId) return []
 
-      console.log('🏊 [useTeamPool] Fetching pool tasks for team:', teamId)
-
-      const tasks = await pb.collection('tasks').getFullList({
-        filter: `team_id = "${teamId}" && assigned_to = "" && status = "unassigned"`,
-        sort: '-priority,-due_date',
+      // Fetch all tasks and filter client-side for maximum compatibility
+      // PocketBase relation filters can be inconsistent with certain field types
+      const allTasks = await pb.collection('tasks').getFullList({
+        sort: '-created',
         expand: 'category_id,project_id,tags'
       })
 
-      console.log('🏊 [useTeamPool] Found pool tasks:', {
-        count: tasks.length,
-        tasks: tasks.map(t => ({
-          id: t.id,
-          title: t.title,
-          assigned_to: t.assigned_to,
-          status: t.status
-        }))
-      })
-
-      return tasks
+      // Filter for team pool tasks
+      return allTasks.filter(t =>
+        t.team_id === teamId &&
+        t.status === 'unassigned' &&
+        !t.deleted_at &&
+        !t.archived_at
+      )
     },
     enabled: !!teamId,
   })

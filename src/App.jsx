@@ -37,20 +37,24 @@ function AppContent() {
   const [showLogin, setShowLogin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { setUser, loadPreferences } = useUserStore()
+  const { setUser, loadPreferences, loadTeams } = useUserStore()
 
   useEffect(() => {
     if (pb.authStore.isValid) {
       setSession(pb.authStore.token)
       setUser(pb.authStore.model)
       loadPreferences()
+      loadTeams()
     }
     setLoading(false)
 
     const removeListener = pb.authStore.onChange((token, model) => {
       setSession(token)
       setUser(model)
-      if (token) loadPreferences()
+      if (token) {
+        loadPreferences()
+        loadTeams()
+      }
     })
 
     return () => removeListener()

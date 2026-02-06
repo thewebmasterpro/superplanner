@@ -10,6 +10,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Loader2, Archive, Trash2, ChevronRight } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -17,15 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, AlertCircle, Archive, Trash2, ChevronRight } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TaskNotes } from './TaskNotes'
 import { TaskComments } from './TaskComments'
 import { BlockerManager } from './BlockerManager'
 import { MeetingAgendaManager } from './MeetingAgendaManager'
-import { ReminderPicker } from './pickers/ReminderPicker'
+import { TaskModalScheduling } from './TaskModal/TaskModalScheduling'
+import { TaskModalOrganisation } from './TaskModal/TaskModalOrganisation'
+import { TaskModalAssignment } from './TaskModal/TaskModalAssignment'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
@@ -43,7 +44,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
   const deleteTask = useDeleteTask()
   const archiveTask = useArchiveTask()
   const { workspaces, activeWorkspaceId, defaultWorkspaceId, getActiveWorkspace } = useWorkspaceStore()
-  const { currentTeam } = useUserStore()
+  const { currentTeam, teams } = useUserStore()
   const { data: contactsList = [] } = useContactsList()
 
   const [categories, setCategories] = useState([])
@@ -192,7 +193,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         campaign_id: '',
         context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
-        team_id: currentTeam ? currentTeam.id : '',
+        team_id: '',  // Will be set when user selects team mode
         assigned_to: ''
       })
     }
@@ -255,17 +256,6 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       const payload = {
         ...formData,
         tags: selectedTags
-      }
-
-      // Debug log for team task creation
-      if (formData.team_id) {
-        console.log('📝 [TaskModal] Submitting team task:', {
-          assignmentMode,
-          team_id: payload.team_id,
-          assigned_to: payload.assigned_to,
-          status: payload.status,
-          title: payload.title
-        })
       }
 
       if (isEditing) {
@@ -370,359 +360,39 @@ export function TaskModal({ open, onOpenChange, task = null }) {
               </div>
 
               {/* Section: Planification */}
-              <details className="group">
-                <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
-                  <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
-                  Planification
-                </summary>
-                <div className="pb-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Hide status selector when creating team pool task */}
-                    {!(assignmentMode === 'team' && !isEditing) && (
-                      <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
-                        <Select value={formData.status || 'todo'} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="todo">To Do</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="blocked">Blocked</SelectItem>
-                            <SelectItem value="done">Done</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            {formData.status === 'unassigned' && <SelectItem value="unassigned">Unassigned (Pool)</SelectItem>}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="priority">Priority</Label>
-                      <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {formData.status === 'blocked' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="blocked_reason">Blocked Reason</Label>
-                      <Input
-                        id="blocked_reason"
-                        value={formData.blocked_reason}
-                        onChange={(e) => setFormData({ ...formData, blocked_reason: e.target.value })}
-                        placeholder="Why is this task blocked?"
-                      />
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="due_date">Due Date</Label>
-                      <Input
-                        id="due_date"
-                        type="date"
-                        value={formData.due_date}
-                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="duration">Duration (min)</Label>
-                      <Input
-                        id="duration"
-                        type="number"
-                        value={formData.duration}
-                        onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                        min="5"
-                        step="5"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="scheduled_time">Scheduled Time</Label>
-                    <Input
-                      id="scheduled_time"
-                      type="datetime-local"
-                      value={formData.scheduled_time}
-                      onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-                    />
-                  </div>
-
-                  <ReminderPicker
-                    value={formData.reminder_minutes}
-                    onChange={(value) => setFormData({ ...formData, reminder_minutes: value })}
-                  />
-
-                  {/* Meeting-specific fields */}
-                  {formData.type === 'meeting' && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="start_time">Start Time</Label>
-                          <Input
-                            id="start_time"
-                            type="datetime-local"
-                            value={formData.start_time}
-                            onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="end_time">End Time</Label>
-                          <Input
-                            id="end_time"
-                            type="datetime-local"
-                            value={formData.end_time}
-                            onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                          id="location"
-                          value={formData.location}
-                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                          placeholder="Meeting location or address..."
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="meeting_link">Meeting Link</Label>
-                        <Input
-                          id="meeting_link"
-                          type="url"
-                          value={formData.meeting_link}
-                          onChange={(e) => setFormData({ ...formData, meeting_link: e.target.value })}
-                          placeholder="https://zoom.us/j/..."
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              </details>
+              <TaskModalScheduling
+                formData={formData}
+                setFormData={setFormData}
+                assignmentMode={assignmentMode}
+                isEditing={isEditing}
+              />
 
               {/* Section: Organisation */}
-              <details className="group">
-                <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
-                  <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
-                  Organisation
-                </summary>
-                <div className="pb-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Select value={formData.category_id || undefined} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="project">Département</Label>
-                      <Select value={formData.project_id || undefined} onValueChange={(value) => setFormData({ ...formData, project_id: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un département" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {projects.map((proj) => (
-                            <SelectItem key={proj.id} value={proj.id}>{proj.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Tags</Label>
-                    <div className="flex flex-wrap gap-2 rounded-xl bg-base-200/30 p-3 min-h-[2.5rem]">
-                      {tags.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">No tags available</p>
-                      ) : (
-                        tags.map(tag => {
-                          const isSelected = selectedTags.includes(tag.id)
-                          return (
-                            <Badge
-                              key={tag.id}
-                              variant={isSelected ? "default" : "outline"}
-                              className="cursor-pointer select-none transition-all hover:scale-105 rounded-lg"
-                              style={isSelected ? { backgroundColor: tag.color, color: 'white' } : { borderColor: tag.color, color: tag.color }}
-                              onClick={() => {
-                                setSelectedTags(prev =>
-                                  isSelected ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
-                                )
-                              }}
-                            >
-                              {tag.name}
-                            </Badge>
-                          )
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="campaign">Projet</Label>
-                    <Select value={formData.campaign_id || 'none'} onValueChange={(value) => setFormData({ ...formData, campaign_id: value === 'none' ? null : value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un projet" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {campaigns.map((camp) => (
-                          <SelectItem key={camp.id} value={camp.id}>{camp.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </details>
+              <TaskModalOrganisation
+                formData={formData}
+                setFormData={setFormData}
+                categories={categories}
+                projects={projects}
+                tags={tags}
+                selectedTags={selectedTags}
+                setSelectedTags={setSelectedTags}
+                campaigns={campaigns}
+              />
 
               {/* Section: Liens */}
-              <details className="group">
-                <summary className="flex items-center gap-2 cursor-pointer py-3 border-t border-base-200 text-xs font-bold uppercase tracking-widest opacity-50 hover:opacity-80 transition-opacity select-none">
-                  <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
-                  Liens
-                </summary>
-                <div className="pb-4 space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="contact">Client</Label>
-                    <Select value={formData.contact_id || 'none'} onValueChange={(value) => setFormData({ ...formData, contact_id: value === 'none' ? null : value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {contactsList.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
-                            {contact.name} {contact.company && `(${contact.company})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Assignment Mode Selection */}
-                  {currentTeam && teamMembers.length > 0 && (
-                    <div className="space-y-4 p-4 rounded-xl bg-base-200/30 dark:bg-white/5">
-                      <Label>Mode d'assignation</Label>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="assignmentMode"
-                            value="individual"
-                            checked={assignmentMode === 'individual'}
-                            onChange={(e) => {
-                              setAssignmentMode(e.target.value)
-                              setFormData({ ...formData, assigned_to: '', status: 'todo' })
-                            }}
-                            className="radio radio-sm radio-primary"
-                          />
-                          <span className="text-sm">Assigner à un membre</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="assignmentMode"
-                            value="team"
-                            checked={assignmentMode === 'team'}
-                            onChange={(e) => {
-                              setAssignmentMode(e.target.value)
-                              setFormData({ ...formData, assigned_to: null, status: 'unassigned' })
-                            }}
-                            className="radio radio-sm radio-primary"
-                          />
-                          <span className="text-sm">Assigner à l'équipe (Pool)</span>
-                        </label>
-                      </div>
-
-                      {assignmentMode === 'individual' && (
-                        <div className="space-y-2">
-                          <Label htmlFor="assigned_to">Membre assigné</Label>
-                          <Select value={formData.assigned_to || 'none'} onValueChange={(value) => setFormData({ ...formData, assigned_to: value === 'none' ? null : value })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Non assigné" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Non assigné</SelectItem>
-                              {teamMembers.map((member) => (
-                                <SelectItem key={member.user_id} value={member.user_id}>
-                                  {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-
-                      {assignmentMode === 'team' && (
-                        <div className="space-y-2">
-                          <Label htmlFor="claim_deadline">Date limite pour prendre la tâche (optionnel)</Label>
-                          <Input
-                            id="claim_deadline"
-                            type="date"
-                            value={formData.claim_deadline}
-                            onChange={(e) => setFormData({ ...formData, claim_deadline: e.target.value })}
-                          />
-                          <p className="text-xs opacity-60">
-                            ⚡ Cette tâche sera disponible dans le pool de l'équipe. Les membres pourront la prendre librement.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Workspace Selector */}
-                  {(!activeWorkspaceId || activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (
-                    <div className="space-y-2 p-3 rounded-xl bg-base-200/30">
-                      <Label htmlFor="context" className="flex items-center gap-2">
-                        <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                        Workspace *
-                      </Label>
-                      <Select
-                        value={formData.context_id || 'none'}
-                        onValueChange={(value) => setFormData({ ...formData, context_id: value === 'none' ? '' : value })}
-                      >
-                        <SelectTrigger className={!formData.context_id ? 'border-amber-500' : ''}>
-                          <SelectValue placeholder="Select a workspace" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none" disabled>Select a workspace...</SelectItem>
-                          {workspaces.map((w) => (
-                            <SelectItem key={w.id} value={w.id}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: w.color || '#6366f1' }} />
-                                {w.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Creating in:</span>
-                      <Badge variant="outline" className="rounded-lg" style={{ borderColor: getActiveWorkspace()?.color, color: getActiveWorkspace()?.color }}>
-                        {getActiveWorkspace()?.name || 'Unknown Workspace'}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-              </details>
+              <TaskModalAssignment
+                formData={formData}
+                setFormData={setFormData}
+                contactsList={contactsList}
+                currentTeam={currentTeam}
+                teams={teams}
+                teamMembers={teamMembers}
+                assignmentMode={assignmentMode}
+                setAssignmentMode={setAssignmentMode}
+                workspaces={workspaces}
+                activeWorkspaceId={activeWorkspaceId}
+                getActiveWorkspace={getActiveWorkspace}
+              />
 
               {/* Section: Recurrence (only when relevant) */}
               {(formData.recurrence || isEditing) && (
