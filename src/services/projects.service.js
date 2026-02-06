@@ -127,7 +127,7 @@ class ProjectsService {
     _buildFilters(workspaceId, status, search, userId) {
         const filters = []
 
-        filters.push(`user_id = "${userId}"`)
+        // user_id filter removed - field doesn't exist in projects collection
 
         if (workspaceId && workspaceId !== 'all') {
             // MIGRATION FIX: Include projects with NO workspace so they don't disappear
