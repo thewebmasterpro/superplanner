@@ -377,21 +377,25 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                 </summary>
                 <div className="pb-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
-                      <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todo">To Do</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="blocked">Blocked</SelectItem>
-                          <SelectItem value="done">Done</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Hide status selector when creating team pool task */}
+                    {!(assignmentMode === 'team' && !isEditing) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select value={formData.status || 'todo'} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todo">To Do</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
+                            <SelectItem value="done">Done</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            {formData.status === 'unassigned' && <SelectItem value="unassigned">Unassigned (Pool)</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="priority">Priority</Label>
                       <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
