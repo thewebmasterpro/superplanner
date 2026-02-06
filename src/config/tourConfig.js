@@ -340,4 +340,39 @@ export const tourConfig = {
     ],
   },
 
+  '/team/pool': {
+    pageTitle: 'Pool d\'Equipe',
+    steps: [
+      {
+        element: '[data-tour="pool-header"]',
+        popover: {
+          title: 'Pool de Taches',
+          description: 'Toutes les taches assignees a l\'equipe que vous pouvez prendre pour vous.',
+          side: 'bottom',
+        },
+      },
+      {
+        element: '[data-tour="pool-stats"]',
+        popover: {
+          title: 'Statistiques du Pool',
+          description: 'Nombre de taches disponibles, prioritaires et urgentes a prendre.',
+        },
+      },
+      {
+        element: '[data-tour="pool-tasks"]',
+        popover: {
+          title: 'Taches Disponibles',
+          description: 'Cliquez sur "Prendre" pour vous assigner une tache. Les taches avec une deadline de claim proche sont marquees d\'un drapeau.',
+        },
+      },
+      {
+        element: '[data-tour="pool-help"]',
+        popover: {
+          title: 'Aide & Astuces',
+          description: 'Decouvrez comment utiliser le pool de taches efficacement.',
+        },
+      },
+    ],
+  },
+
 }

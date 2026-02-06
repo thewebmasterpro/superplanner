@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
 import { useUserStore } from '../../stores/userStore'
 import { useTeamPool, useClaimTask } from '../../hooks/useTaskPool'
 import { useUIStore } from '../../stores/uiStore'
@@ -6,7 +7,7 @@ import { Hand, Calendar, AlertCircle, Inbox, Clock, Flag } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
-export default function TeamPoolPage() {
+function TeamPoolPageContent() {
   const { currentTeam } = useUserStore()
   const { setModalTask, setTaskModalOpen } = useUIStore()
   const { data: poolTasks = [], isLoading } = useTeamPool(currentTeam?.id)
@@ -60,7 +61,7 @@ export default function TeamPoolPage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div data-tour="pool-header" className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold font-display flex items-center gap-2 text-primary">
             <Hand className="w-8 h-8" />
@@ -73,7 +74,7 @@ export default function TeamPoolPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-stagger-fast">
+      <div data-tour="pool-stats" className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-stagger-fast">
         <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Disponibles</div>
@@ -105,7 +106,7 @@ export default function TeamPoolPage() {
       </div>
 
       {/* Tasks List */}
-      <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
+      <div data-tour="pool-tasks" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
         <div className="card-body p-0">
           {isLoading ? (
             <div className="flex items-center justify-center p-20">
@@ -219,7 +220,7 @@ export default function TeamPoolPage() {
       </div>
 
       {/* Help Card */}
-      <div className="card bg-info/10 border border-info/20 shadow-sm">
+      <div data-tour="pool-help" className="card bg-info/10 border border-info/20 shadow-sm">
         <div className="card-body p-6">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-info shrink-0 mt-0.5" />
@@ -236,5 +237,13 @@ export default function TeamPoolPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TeamPoolPage() {
+  return (
+    <DashboardLayoutV3>
+      <TeamPoolPageContent />
+    </DashboardLayoutV3>
   )
 }
