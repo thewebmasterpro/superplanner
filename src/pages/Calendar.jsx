@@ -45,19 +45,28 @@ export function Calendar() {
 
     const taskEvents = expandedTasks
       .filter(task => {
-        // Accept if it has EITHER scheduled_time OR due_date
-        return task.scheduled_time || task.due_date;
+        // Accept if it has scheduled_time, start_time, OR due_date
+        return task.scheduled_time || task.start_time || task.due_date;
       })
       .map(task => {
         let start, end, isAllDay = false;
 
-        if (task.scheduled_time) {
+        // For meetings with explicit start_time and end_time
+        if (task.start_time && task.end_time) {
+          const startStr = task.start_time.replace(/\+00:00$/, '').replace('Z', '')
+          const endStr = task.end_time.replace(/\+00:00$/, '').replace('Z', '')
+          start = new Date(startStr)
+          end = new Date(endStr)
+        }
+        // For tasks with scheduled_time + duration
+        else if (task.scheduled_time) {
           // Strip timezone to avoid day shifts (parse as local time)
           const timeStr = task.scheduled_time.replace(/\+00:00$/, '').replace('Z', '')
           start = new Date(timeStr)
           end = new Date(start.getTime() + (task.duration || 60) * 60000) // duration in minutes
-        } else if (task.due_date) {
-          // Fallback to due_date as All Day event
+        }
+        // Fallback to due_date as All Day event
+        else if (task.due_date) {
           const dateOnly = task.due_date.substring(0, 10);
           const [year, month, day] = dateOnly.split('-').map(Number);
 

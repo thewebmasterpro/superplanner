@@ -462,13 +462,21 @@ class TasksService {
         due_date: newDueDate,
         duration: task.duration,
         scheduled_time: newScheduledTime,
+        reminder_minutes: task.reminder_minutes,
         category_id: task.category_id,
         project_id: task.project_id,
         context_id: task.context_id,
         recurrence: task.recurrence,
         recurrence_end: task.recurrence_end,
+        recurrence_rule: task.recurrence_rule,
         type: task.type,
-        agenda: task.agenda
+        agenda: task.agenda,
+        // Meeting-specific fields
+        location: task.location,
+        meeting_link: task.meeting_link,
+        // Note: start_time and end_time need to be shifted like scheduled_time
+        start_time: task.start_time ? `${newDueDate}T${task.start_time.split('T')[1]}` : null,
+        end_time: task.end_time ? `${newDueDate}T${task.end_time.split('T')[1]}` : null,
       }
 
       const nextTaskRecord = await pb.collection('tasks').create(newTask)

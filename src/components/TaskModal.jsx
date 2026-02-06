@@ -25,6 +25,7 @@ import { TaskNotes } from './TaskNotes'
 import { TaskComments } from './TaskComments'
 import { BlockerManager } from './BlockerManager'
 import { MeetingAgendaManager } from './MeetingAgendaManager'
+import { ReminderPicker } from './pickers/ReminderPicker'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useUserStore } from '../stores/userStore'
 import { useContactsList } from '../hooks/useContacts'
@@ -61,13 +62,20 @@ export function TaskModal({ open, onOpenChange, task = null }) {
     due_date: '',
     duration: 60,
     scheduled_time: '',
+    reminder_minutes: null,
     category_id: '',
     project_id: '',
     blocked_reason: '',
     recurrence: '',
     recurrence_end: '',
+    recurrence_rule: '',
     type: 'task',    // 'task' or 'meeting'
     agenda: '',       // for meetings (deprecated, replaced by agendaItems)
+    // Meeting-specific fields
+    start_time: '',
+    end_time: '',
+    location: '',
+    meeting_link: '',
     campaign_id: '',   // Link to campaign
     context_id: '',    // Link to workspace (auto-filled from activeWorkspaceId)
     contact_id: '',    // Link to client/contact
@@ -117,13 +125,20 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         duration: task.duration || 60,
         // scheduled_time is datetime-local, needs YYYY-MM-DDTHH:mm
         scheduled_time: task.scheduled_time ? task.scheduled_time.substring(0, 16) : '',
+        reminder_minutes: task.reminder_minutes ?? null,
         category_id: task.category_id || '',
         project_id: task.project_id || '',
         blocked_reason: task.blocked_reason || '',
         recurrence: task.recurrence || '',
         recurrence_end: task.recurrence_end ? task.recurrence_end.substring(0, 10) : '',
+        recurrence_rule: task.recurrence_rule || '',
         type: task.type || 'task',
         agenda: task.agenda || '',
+        // Meeting-specific fields
+        start_time: task.start_time ? task.start_time.substring(0, 16) : '',
+        end_time: task.end_time ? task.end_time.substring(0, 16) : '',
+        location: task.location || '',
+        meeting_link: task.meeting_link || '',
         campaign_id: task.campaign_id || '',
         context_id: task.context_id || '',
         contact_id: task.contact_id || '',
@@ -138,15 +153,22 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         status: 'todo',
         priority: 'medium',
         due_date: '',
-        duration: 60,
-        scheduled_time: '',
+        duration: task?.type === 'meeting' ? 30 : 60,
+        scheduled_time: task?.scheduled_time || '',
+        reminder_minutes: null,
         category_id: '',
         project_id: '',
         blocked_reason: '',
         recurrence: '',
         recurrence_end: '',
+        recurrence_rule: '',
         type: task?.type || 'task',
         agenda: '',
+        // Meeting-specific fields
+        start_time: task?.start_time || '',
+        end_time: task?.end_time || '',
+        location: '',
+        meeting_link: '',
         campaign_id: '',
         context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
@@ -398,6 +420,58 @@ export function TaskModal({ open, onOpenChange, task = null }) {
                       onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
                     />
                   </div>
+
+                  <ReminderPicker
+                    value={formData.reminder_minutes}
+                    onChange={(value) => setFormData({ ...formData, reminder_minutes: value })}
+                  />
+
+                  {/* Meeting-specific fields */}
+                  {formData.type === 'meeting' && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="start_time">Start Time</Label>
+                          <Input
+                            id="start_time"
+                            type="datetime-local"
+                            value={formData.start_time}
+                            onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="end_time">End Time</Label>
+                          <Input
+                            id="end_time"
+                            type="datetime-local"
+                            value={formData.end_time}
+                            onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          value={formData.location}
+                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                          placeholder="Meeting location or address..."
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="meeting_link">Meeting Link</Label>
+                        <Input
+                          id="meeting_link"
+                          type="url"
+                          value={formData.meeting_link}
+                          onChange={(e) => setFormData({ ...formData, meeting_link: e.target.value })}
+                          placeholder="https://zoom.us/j/..."
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </details>
 
