@@ -16,7 +16,7 @@ export function useTeamPool(teamId) {
       console.log('🏊 [useTeamPool] Fetching pool tasks for team:', teamId)
 
       const tasks = await pb.collection('tasks').getFullList({
-        filter: `team_id = "${teamId}" && assigned_to = "" && status = "unassigned" && deleted_at = "" && archived_at = ""`,
+        filter: `team_id = "${teamId}" && assigned_to = "" && status = "unassigned"`,
         sort: '-priority,-due_date',
         expand: 'category_id,project_id,tags'
       })

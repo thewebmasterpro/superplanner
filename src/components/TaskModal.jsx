@@ -257,6 +257,17 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         tags: selectedTags
       }
 
+      // Debug log for team task creation
+      if (formData.team_id) {
+        console.log('📝 [TaskModal] Submitting team task:', {
+          assignmentMode,
+          team_id: payload.team_id,
+          assigned_to: payload.assigned_to,
+          status: payload.status,
+          title: payload.title
+        })
+      }
+
       if (isEditing) {
         await updateTask.mutateAsync({
           id: task.id,
