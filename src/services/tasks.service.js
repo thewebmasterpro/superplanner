@@ -85,32 +85,21 @@ class TasksService {
     if (!sanitized.user_id) sanitized.user_id = user.id
     if (!sanitized.status) sanitized.status = 'todo'
 
-    // Debug log for pool tasks
-    if (sanitized.team_id) {
-      console.log('🏊 [TaskService] Creating team task:', {
-        team_id: sanitized.team_id,
-        assigned_to: sanitized.assigned_to,
-        status: sanitized.status,
-        title: sanitized.title,
-        isPoolTask: sanitized.assigned_to === null && sanitized.status === 'unassigned'
-      })
-    }
+    // Extract relation fields that PocketBase may silently reject during create
+    const teamId = sanitized.team_id
+    delete sanitized.team_id
 
-    const createdTask = await pb.collection('tasks').create(sanitized)
+    // Step 1: Create task without relation fields
+    let createdTask = await pb.collection('tasks').create(sanitized)
 
-    // Debug log after creation
-    if (createdTask.team_id) {
-      console.log('✅ [TaskService] Team task created:', {
-        id: createdTask.id,
-        team_id: createdTask.team_id,
-        assigned_to: createdTask.assigned_to,
-        status: createdTask.status,
-        title: createdTask.title
+    // Step 2: Update with relation fields if provided
+    if (teamId) {
+      createdTask = await pb.collection('tasks').update(createdTask.id, {
+        team_id: teamId
       })
     }
 
     // Trigger automation for critical tasks
-    // We import locally to update circular deps or just clean structure
     try {
       const { automationService } = await import('./automation.service')
       automationService.notifyCriticalTask(createdTask)
@@ -150,30 +139,16 @@ class TasksService {
 
     const updatedTask = await pb.collection('tasks').update(id, sanitized)
 
-    // Handle Recurrence Logic if task is done
-    console.log('🔍 [TaskService] Task updated:', {
-      id: updatedTask.id,
-      status: updatedTask.status,
-      sanitizedStatus: sanitized.status,
-      shouldTriggerGamification: sanitized.status === 'done' || updatedTask.status === 'done',
-    })
-
+    // Handle Recurrence Logic and Gamification if task is done
     if (sanitized.status === 'done' || updatedTask.status === 'done') {
       await this._handleRecurrence(updatedTask)
 
       // Gamification hook - award points for task completion
-      console.log('🎮 [TaskService] Triggering gamification for task completion')
       try {
         const { gamificationService } = await import('./gamification.service')
-        console.log('🎮 [TaskService] gamificationService imported:', gamificationService)
         await gamificationService.onTaskCompleted(updatedTask.id, updatedTask.user_id)
-        console.log('🎮 [TaskService] gamification hook completed successfully')
       } catch (e) {
-        console.error('❌ [TaskService] Gamification failed:', e)
-        console.error('❌ [TaskService] Error details:', {
-          message: e.message,
-          stack: e.stack,
-        })
+        console.error('Gamification failed:', e)
       }
     }
 
@@ -257,13 +232,9 @@ class TasksService {
     const user = pb.authStore.model
     if (!user) throw new Error('Not authenticated')
 
-    console.log('🔍 [TaskService] bulkUpdate called for', ids.length, 'tasks with updates:', updates)
-
     // Use this.update() for each task to trigger gamification hooks
     const promises = ids.map(id => this.update(id, updates))
     await Promise.all(promises)
-
-    console.log('🔍 [TaskService] bulkUpdate completed')
   }
 
   /**
@@ -572,11 +543,9 @@ class TasksService {
         end_time: task.end_time ? `${newDueDate}T${task.end_time.split('T')[1]}` : null,
       }
 
-      const nextTaskRecord = await pb.collection('tasks').create(newTask)
-      return nextTaskRecord
+      return await pb.collection('tasks').create(newTask)
     } catch (error) {
-      console.error('❌ Recurrence handling error:', error)
-      // Don't throw - recurrence failure shouldn't fail the update
+      console.error('Recurrence handling error:', error)
       return null
     }
   }

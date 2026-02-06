@@ -249,6 +249,12 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       return
     }
 
+    // Validate team selection when in team mode
+    if (assignmentMode === 'team' && !formData.team_id) {
+      toast.error('Veuillez sélectionner une équipe')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -256,6 +262,12 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       const payload = {
         ...formData,
         tags: selectedTags
+      }
+
+      // Ensure pool task has correct status
+      if (assignmentMode === 'team' && formData.team_id) {
+        payload.status = 'unassigned'
+        payload.assigned_to = null
       }
 
       if (isEditing) {
