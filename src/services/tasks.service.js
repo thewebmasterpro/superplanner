@@ -29,7 +29,7 @@ class TasksService {
     try {
       const options = {
         sort: '-id',
-        expand: 'category_id,project_id,context_id,tags',
+        expand: 'category_id,project_id,context_id',
         requestKey: null // Disable auto-cancellation for reliable fetching
       }
 
@@ -65,7 +65,7 @@ class TasksService {
    */
   async getOne(id) {
     return await pb.collection('tasks').getOne(id, {
-      expand: 'category_id,project_id,context_id,tags'
+      expand: 'category_id,project_id,context_id'
     })
   }
 
