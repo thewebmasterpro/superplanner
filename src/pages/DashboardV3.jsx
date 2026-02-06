@@ -355,7 +355,7 @@ export default function DashboardV3() {
                                 const widget = WIDGET_MAP[activeDragId]
                                 if (!widget) return null
                                 return (
-                                    <div className="card bg-base-100 border border-primary/20">
+                                    <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-primary/20 dark:border-white/20 shadow-xl">
                                         <div className="card-body p-5">
                                             <h2 className="card-title text-sm font-bold opacity-70 mb-2 gap-2 uppercase tracking-tight">
                                                 {widget.icon} {widget.title}

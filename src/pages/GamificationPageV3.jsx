@@ -138,7 +138,7 @@ export default function GamificationPageV3() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Points */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-6">
+        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:backdrop-blur-xl dark:bg-black/30 border border-purple-500/20 dark:border-purple-500/30 rounded-lg p-6 transition-all hover:shadow-lg dark:hover:shadow-purple-500/20">
           <div className="flex items-center gap-3 mb-2">
             <Zap className="w-6 h-6 text-purple-400" />
             <span className="text-base-content/70 text-sm font-medium">Points</span>
@@ -152,7 +152,7 @@ export default function GamificationPageV3() {
         </div>
 
         {/* Level */}
-        <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-6">
+        <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 dark:backdrop-blur-xl dark:bg-black/30 border border-yellow-500/20 dark:border-yellow-500/30 rounded-lg p-6 transition-all hover:shadow-lg dark:hover:shadow-yellow-500/20">
           <div className="flex items-center gap-3 mb-2">
             <Trophy className="w-6 h-6 text-yellow-500" />
             <span className="text-base-content/70 text-sm font-medium">Niveau</span>
@@ -174,7 +174,7 @@ export default function GamificationPageV3() {
         </div>
 
         {/* Streak */}
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg p-6">
+        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 dark:backdrop-blur-xl dark:bg-black/30 border border-orange-500/20 dark:border-orange-500/30 rounded-lg p-6 transition-all hover:shadow-lg dark:hover:shadow-orange-500/20">
           <div className="flex items-center gap-3 mb-2">
             <Flame className="w-6 h-6 text-orange-500" />
             <span className="text-base-content/70 text-sm font-medium">Série</span>
@@ -188,7 +188,7 @@ export default function GamificationPageV3() {
         </div>
 
         {/* Rank */}
-        <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-lg p-6">
+        <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 dark:backdrop-blur-xl dark:bg-black/30 border border-blue-500/20 dark:border-blue-500/30 rounded-lg p-6 transition-all hover:shadow-lg dark:hover:shadow-blue-500/20">
           <div className="flex items-center gap-3 mb-2">
             <Crown className="w-6 h-6 text-blue-400" />
             <span className="text-base-content/70 text-sm font-medium">Classement</span>
@@ -281,7 +281,7 @@ function OverviewTab({ userPoints }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* How to Earn Points */}
-        <div className="bg-base-100 border border-base-300 rounded-lg p-6">
+        <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 rounded-lg p-6 transition-all hover:shadow-lg dark:hover:shadow-purple-500/20">
           <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
             <Zap className="w-5 h-5 text-purple-400" />
             Comment gagner des points
@@ -304,7 +304,7 @@ function OverviewTab({ userPoints }) {
         </div>
 
         {/* Streak Bonus */}
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg p-6">
+        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 dark:backdrop-blur-xl dark:bg-black/30 border border-orange-500/20 dark:border-orange-500/30 rounded-lg p-6 transition-all hover:shadow-lg dark:hover:shadow-orange-500/20">
           <h3 className="text-lg font-semibold text-base-content mb-4 flex items-center gap-2">
             <Flame className="w-5 h-5 text-orange-500" />
             Bonus de série
@@ -312,7 +312,7 @@ function OverviewTab({ userPoints }) {
           <p className="text-base-content/80 text-sm mb-4">
             Connectez-vous tous les jours pour maintenir votre série et gagner un multiplicateur de points!
           </p>
-          <div className="bg-base-100 rounded-lg p-4">
+          <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 rounded-lg p-4">
             <div className="text-center">
               <div className="text-3xl font-bold text-orange-500">
                 {userPoints?.streak_days || 0} jours
@@ -410,15 +410,15 @@ function ChallengesTab({ challenges, loading, onClaim }) {
       <div className="flex items-center justify-between">
         {/* Stats Cards */}
         <div className="flex gap-3">
-          <div className="bg-base-200/50 rounded-xl px-4 py-3 text-center">
+          <div className="bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl px-4 py-3 text-center border border-transparent dark:border-white/10">
             <div className="text-2xl font-bold text-primary">{stats.total}</div>
             <div className="text-xs text-muted-foreground">Total</div>
           </div>
-          <div className="bg-green-500/10 rounded-xl px-4 py-3 text-center">
+          <div className="bg-green-500/10 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl px-4 py-3 text-center border border-green-500/20 dark:border-green-500/30">
             <div className="text-2xl font-bold text-green-400">{stats.completed}</div>
             <div className="text-xs text-muted-foreground">Complétés</div>
           </div>
-          <div className="bg-blue-500/10 rounded-xl px-4 py-3 text-center">
+          <div className="bg-blue-500/10 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl px-4 py-3 text-center border border-blue-500/20 dark:border-blue-500/30">
             <div className="text-2xl font-bold text-blue-400">{stats.inProgress}</div>
             <div className="text-xs text-muted-foreground">En cours</div>
           </div>
@@ -431,7 +431,7 @@ function ChallengesTab({ challenges, loading, onClaim }) {
             className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
               activeFilter === 'all'
                 ? 'bg-primary text-primary-content shadow-sm'
-                : 'bg-base-200/60 hover:bg-base-300/80'
+                : 'bg-base-200/60 dark:backdrop-blur-xl dark:bg-black/30 hover:bg-base-300/80 dark:hover:bg-black/40 dark:border dark:border-white/10'
             }`}
           >
             <Target className="w-3 h-3 mr-1.5" />
@@ -442,7 +442,7 @@ function ChallengesTab({ challenges, loading, onClaim }) {
             className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
               activeFilter === 'daily'
                 ? 'bg-blue-500 text-white shadow-sm'
-                : 'bg-base-200/60 hover:bg-base-300/80'
+                : 'bg-base-200/60 dark:backdrop-blur-xl dark:bg-black/30 hover:bg-base-300/80 dark:hover:bg-black/40 dark:border dark:border-white/10'
             }`}
           >
             <Clock className="w-3 h-3 mr-1.5" />
@@ -453,7 +453,7 @@ function ChallengesTab({ challenges, loading, onClaim }) {
             className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
               activeFilter === 'weekly'
                 ? 'bg-purple-500 text-white shadow-sm'
-                : 'bg-base-200/60 hover:bg-base-300/80'
+                : 'bg-base-200/60 dark:backdrop-blur-xl dark:bg-black/30 hover:bg-base-300/80 dark:hover:bg-black/40 dark:border dark:border-white/10'
             }`}
           >
             <TrendingUp className="w-3 h-3 mr-1.5" />
@@ -464,7 +464,7 @@ function ChallengesTab({ challenges, loading, onClaim }) {
             className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:scale-105 ${
               activeFilter === 'monthly'
                 ? 'bg-amber-500 text-white shadow-sm'
-                : 'bg-base-200/60 hover:bg-base-300/80'
+                : 'bg-base-200/60 dark:backdrop-blur-xl dark:bg-black/30 hover:bg-base-300/80 dark:hover:bg-black/40 dark:border dark:border-white/10'
             }`}
           >
             <Trophy className="w-3 h-3 mr-1.5" />
@@ -475,7 +475,7 @@ function ChallengesTab({ challenges, loading, onClaim }) {
 
       {/* Challenges Grid */}
       {filteredChallenges.length === 0 ? (
-        <div className="bg-base-200/50 rounded-xl p-12 text-center">
+        <div className="bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl p-12 text-center border border-transparent dark:border-white/10">
           <Target className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-muted-foreground mb-2">
             Aucun défi disponible
@@ -500,10 +500,10 @@ function ChallengesTab({ challenges, loading, onClaim }) {
             return (
               <div
                 key={uc.id}
-                className={`bg-base-200/50 rounded-xl p-5 border-2 transition-all hover:shadow-lg ${
+                className={`bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl p-5 border-2 transition-all hover:shadow-lg ${
                   isCompleted
-                    ? 'border-green-500/50 bg-green-500/5'
-                    : 'border-base-300 hover:border-primary/50'
+                    ? 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10'
+                    : 'border-base-300 dark:border-white/20 hover:border-primary/50 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/20'
                 }`}
               >
                 {/* Header */}
@@ -643,8 +643,8 @@ function ShopTab({ items, purchases, userPoints, loading, onPurchase }) {
         return (
           <div
             key={item.id}
-            className={`bg-base-100 border rounded-lg p-6 ${
-              purchased ? 'border-purple-500/50' : 'border-base-300'
+            className={`bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border rounded-lg p-6 transition-all hover:shadow-lg ${
+              purchased ? 'border-purple-500/50 dark:border-purple-500/50' : 'border-base-300 dark:border-white/20 hover:border-purple-500/30 dark:hover:shadow-purple-500/20'
             }`}
           >
             <div className="text-4xl mb-3">{item.icon || '🎁'}</div>
@@ -697,7 +697,7 @@ function LeaderboardTab({ leaderboard, teamLeaderboard, currentUserId, loading, 
       {/* View Toggle & Visibility */}
       <div className="flex flex-col md:flex-row gap-4">
         {/* View Toggle */}
-        <div className="bg-base-100 border border-base-300 rounded-lg p-4 flex-1">
+        <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 rounded-lg p-4 flex-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Users className="w-5 h-5 text-purple-400" />
@@ -735,7 +735,7 @@ function LeaderboardTab({ leaderboard, teamLeaderboard, currentUserId, loading, 
 
         {/* Visibility Toggle (only for individual view) */}
         {leaderboardView === 'individual' && (
-          <div className="bg-base-100 border border-base-300 rounded-lg p-4 flex-1">
+          <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 rounded-lg p-4 flex-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="w-5 h-5 text-purple-400" />
@@ -769,10 +769,10 @@ function LeaderboardTab({ leaderboard, teamLeaderboard, currentUserId, loading, 
             <p>Aucun joueur dans le classement</p>
           </div>
         ) : (
-          <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
+          <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-base-200">
+          <thead className="bg-base-200 dark:bg-black/30">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase">Rang</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase">Joueur</th>
@@ -844,10 +844,10 @@ function LeaderboardTab({ leaderboard, teamLeaderboard, currentUserId, loading, 
             <p>Aucune équipe dans le classement</p>
           </div>
         ) : (
-          <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
+          <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-base-200">
+                <thead className="bg-base-200 dark:bg-black/30">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase">Rang</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase">Équipe</th>
@@ -935,10 +935,10 @@ function HistoryTab({ history, loading }) {
   }
 
   return (
-    <div className="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
+    <div className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-base-200">
+          <thead className="bg-base-200 dark:bg-black/30">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-base-content/70 uppercase">Action</th>

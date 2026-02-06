@@ -30,7 +30,7 @@ export default function StatsPageV3() {
 
                 {/* KPI Grid */}
                 <div data-tour="stats-kpis" className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-stagger-fast">
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat">
                             <div className="stat-figure text-primary">
                                 <LayoutDashboard className="w-8 h-8 opacity-20" />
@@ -39,7 +39,7 @@ export default function StatsPageV3() {
                             <div className="stat-value text-primary font-display">{totalTasks}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat">
                             <div className="stat-figure text-secondary">
                                 <CheckCircle2 className="w-8 h-8 opacity-20" />
@@ -48,7 +48,7 @@ export default function StatsPageV3() {
                             <div className="stat-value text-secondary font-display">{completedTasks}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat">
                             <div className="stat-figure text-accent">
                                 <TrendingUp className="w-8 h-8 opacity-20" />
@@ -60,7 +60,7 @@ export default function StatsPageV3() {
                 </div>
 
                 {/* Chart Section */}
-                <div data-tour="stats-chart" className="card bg-base-100 shadow-xl border border-base-300 animate-slide-up delay-200">
+                <div data-tour="stats-chart" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all animate-slide-up delay-200">
                     <div className="card-body">
                         <h2 className="card-title">Tendance Hebdomadaire</h2>
                         {tasks.length > 0 ? <WeeklyChart tasks={tasks} /> : <div className="skeleton h-[300px] w-full"></div>}
@@ -69,7 +69,7 @@ export default function StatsPageV3() {
 
                 {/* Breakdown Section */}
                 <div data-tour="stats-breakdown" className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up delay-300">
-                    <div className="card bg-base-100 shadow-xl border border-base-300">
+                    <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="card-body">
                             <h2 className="card-title">Par Priorité</h2>
                             <div className="space-y-4 mt-4">

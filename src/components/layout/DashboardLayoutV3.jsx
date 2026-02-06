@@ -14,12 +14,20 @@ export default function DashboardLayoutV3({ children }) {
 
     return (
         <div className="drawer md:drawer-open relative bg-base-200 dark:bg-slate-950">
-            {/* Animated gradient background - DARK MODE ONLY */}
+            {/* Animated gradient background - DARK MODE */}
             <div className="hidden dark:block fixed inset-0 z-0 pointer-events-none">
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900"></div>
                 <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-600/30 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-blue-600/25 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 <div className="absolute top-1/3 left-1/3 w-[600px] h-[600px] bg-fuchsia-600/20 rounded-full blur-3xl"></div>
+            </div>
+
+            {/* Animated gradient background - LIGHT MODE */}
+            <div className="block dark:hidden fixed inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50"></div>
+                <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-200/40 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-blue-200/35 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute top-1/3 left-1/3 w-[600px] h-[600px] bg-fuchsia-200/30 rounded-full blur-3xl"></div>
             </div>
 
             <GlobalTimerHandler />

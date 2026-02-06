@@ -227,13 +227,13 @@ export function Meetings() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center animate-stagger-fast">
-        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all overflow-hidden">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">À venir</div>
             <div className="stat-value text-2xl text-primary">{filteredTasks.length}</div>
           </div>
         </div>
-        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all overflow-hidden">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Prioritaires</div>
             <div className="stat-value text-2xl text-error">
@@ -244,7 +244,7 @@ export function Meetings() {
             </div>
           </div>
         </div>
-        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all overflow-hidden">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Aujourd'hui</div>
             <div className="stat-value text-2xl text-info">
@@ -252,7 +252,7 @@ export function Meetings() {
             </div>
           </div>
         </div>
-        <div className="stats shadow bg-base-100 border border-base-300 overflow-hidden">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all overflow-hidden">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Complétées</div>
             <div className="stat-value text-2xl text-success">{tasks.filter(t => t.type === 'meeting' && t.status === 'done').length}</div>
@@ -261,14 +261,14 @@ export function Meetings() {
       </div>
 
       {/* Main Action Bar */}
-      <div data-tour="meetings-search" className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-base-100 p-3 rounded-2xl border border-base-300 shadow-sm">
+      <div data-tour="meetings-search" className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 p-3 rounded-2xl border border-base-300 dark:border-white/20 shadow-sm">
         <div className="flex flex-wrap gap-2 items-center flex-1 w-full">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
             <input
               type="text"
               placeholder="Rechercher une réunion..."
-              className="input input-sm input-ghost w-full pl-9 focus:bg-base-200"
+              className="input input-sm w-full pl-9 bg-transparent dark:bg-transparent border-transparent focus:border-primary/30 dark:focus:border-purple-500/30 focus:outline-none transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -294,7 +294,7 @@ export function Meetings() {
 
       {/* Expanded Filters Panel */}
       {showFilters && (
-        <div className="p-4 bg-base-200/50 rounded-2xl border border-base-300 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="p-4 bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-2xl border border-base-300 dark:border-white/20 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Statut</span></label>
             <div className="flex flex-wrap gap-1">
@@ -319,7 +319,7 @@ export function Meetings() {
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Workspace</span></label>
-            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)}>
               <option value="all">Tous</option>
               <option value="none">Sans</option>
               {workspaces.map(w => (
@@ -330,7 +330,7 @@ export function Meetings() {
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Échéance</span></label>
-            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={dueDateFilter} onChange={e => setDueDateFilter(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={dueDateFilter} onChange={e => setDueDateFilter(e.target.value)}>
               <option value="all">Toutes</option>
               <option value="overdue">En retard</option>
               <option value="today">Aujourd'hui</option>
@@ -341,7 +341,7 @@ export function Meetings() {
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Tri</span></label>
-            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
               <option value="created_desc">Plus récent</option>
               <option value="created_asc">Plus ancien</option>
               <option value="priority_desc">Priorité haute</option>
@@ -353,7 +353,7 @@ export function Meetings() {
 
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Client</span></label>
-            <select className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
+            <select className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors" value={clientFilter} onChange={e => setClientFilter(e.target.value)}>
               <option value="all">Tous</option>
               {contactsList.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -383,7 +383,7 @@ export function Meetings() {
           />
         </div>
       ) : (
-        <div data-tour="meetings-list" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+        <div data-tour="meetings-list" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all flex-1 overflow-hidden">
           <div className="card-body p-0 overflow-auto">
             {filteredTasks.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
@@ -399,20 +399,20 @@ export function Meetings() {
               </div>
             ) : (
               <table className="table table-zebra table-pin-rows">
-                <thead className="bg-base-200">
+                <thead className="bg-base-200 dark:bg-black/30">
                   <tr>
-                    <th className="w-12">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
-                        checked={isAllSelected}
-                        onChange={toggleSelectAll}
-                      />
-                    </th>
                     <th>Réunion</th>
                     <th>Statut</th>
                     <th>Échéance</th>
                     <th>Priorité</th>
+                    <th className="w-12 text-right">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
+                        checked={isAllSelected}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -502,14 +502,6 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
       className={`hover cursor-pointer group transition-all ${isSelected ? 'active' : ''}`}
       onClick={onClick}
     >
-      <td onClick={(e) => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
-          checked={isSelected}
-          onChange={onSelect}
-        />
-      </td>
       <td>
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -566,6 +558,14 @@ function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick
           <div className={`w-3 h-3 rounded-full ${priorityColors[String(task.priority).toLowerCase()] || 'bg-base-300'} shadow-sm`} />
           <span className="text-[10px] font-bold opacity-50 uppercase">P{task.priority || 0}</span>
         </div>
+      </td>
+      <td className="text-right" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
+          checked={isSelected}
+          onChange={onSelect}
+        />
       </td>
     </tr>
   )

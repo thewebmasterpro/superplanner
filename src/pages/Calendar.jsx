@@ -243,13 +243,13 @@ export function Calendar() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger-fast">
-        <div className="stats shadow bg-base-100 border border-base-300">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Événements</div>
             <div className="stat-value text-primary font-black">{events.length}</div>
           </div>
         </div>
-        <div className="stats shadow bg-base-100 border border-base-300">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Cette Semaine</div>
             <div className="stat-value text-secondary font-black">
@@ -262,7 +262,7 @@ export function Calendar() {
             </div>
           </div>
         </div>
-        <div className="stats shadow bg-base-100 border border-base-300">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">Terminés</div>
             <div className="stat-value text-success font-black">
@@ -270,7 +270,7 @@ export function Calendar() {
             </div>
           </div>
         </div>
-        <div className="stats shadow bg-base-100 border border-base-300">
+        <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
           <div className="stat">
             <div className="stat-title text-[10px] uppercase font-bold opacity-50 tracking-widest">En cours</div>
             <div className="stat-value text-warning font-black">
@@ -281,7 +281,7 @@ export function Calendar() {
       </div>
 
       {/* Calendar */}
-      <div data-tour="calendar-view" className="card bg-base-100 shadow-xl border border-base-300 rounded-2xl overflow-hidden">
+      <div data-tour="calendar-view" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all rounded-2xl overflow-hidden">
         <div className="card-body p-0">
           <div style={{ height: '700px' }} className="p-4">
             <BigCalendar
@@ -323,7 +323,7 @@ export function Calendar() {
 
       {/* Legend & Help */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card bg-base-100 shadow-sm border border-base-300 rounded-2xl">
+        <div className="lg:col-span-2 card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-sm border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all rounded-2xl">
           <div className="card-body p-6">
             <div className="flex items-center gap-2 mb-4">
               <Info className="w-4 h-4 text-primary" />
@@ -375,7 +375,7 @@ export function Calendar() {
           className="fixed z-50 animate-in fade-in zoom-in-95 duration-150"
           style={{ top: slotPopup.y, left: slotPopup.x, transform: 'translate(-50%, -50%)' }}
         >
-          <div className="flex flex-col gap-1 p-2 rounded-xl bg-base-100 border border-base-300 shadow-xl">
+          <div className="flex flex-col gap-1 p-2 rounded-xl bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 shadow-xl">
             <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-1">Ajouter</span>
             <div className="flex gap-1">
             <button

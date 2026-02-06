@@ -92,7 +92,7 @@ export function Trash() {
             </div>
 
             {/* Content */}
-            <div data-tour="trash-table" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+            <div data-tour="trash-table" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all flex-1 overflow-hidden">
                 <div className="card-body p-0 overflow-auto">
                     {tasks.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
@@ -104,32 +104,24 @@ export function Trash() {
                         </div>
                     ) : (
                         <table className="table table-zebra table-pin-rows">
-                            <thead className="bg-base-200">
+                            <thead className="bg-base-200 dark:bg-black/30">
                                 <tr>
-                                    <th className="w-12">
+                                    <th>Élément</th>
+                                    <th>Date de suppression</th>
+                                    <th className="text-right">Actions</th>
+                                    <th className="w-12 text-right">
                                         <input
                                             type="checkbox"
-                                            className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                            className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
                                             checked={isAllSelected}
                                             onChange={toggleSelectAll}
                                         />
                                     </th>
-                                    <th>Élément</th>
-                                    <th>Date de suppression</th>
-                                    <th className="text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {tasks.map(task => (
                                     <tr key={task.id} className="hover group transition-colors">
-                                        <td>
-                                            <input
-                                                type="checkbox"
-                                                className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
-                                                checked={selectedIds.includes(task.id)}
-                                                onChange={() => toggleSelect(task.id)}
-                                            />
-                                        </td>
                                         <td>
                                             <div className="flex flex-col gap-1">
                                                 <span className="font-bold line-through opacity-50 group-hover:opacity-80 transition-opacity">{task.title}</span>
@@ -164,6 +156,14 @@ export function Trash() {
                                                 </button>
                                             </div>
                                         </td>
+                                        <td className="text-right">
+                                            <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                                checked={selectedIds.includes(task.id)}
+                                                onChange={() => toggleSelect(task.id)}
+                                            />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -174,7 +174,7 @@ export function Trash() {
 
             {/* Bulk Actions Floating Bar */}
             {selectedIds.length > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-base-100 border border-base-300 shadow-2xl rounded-2xl px-6 py-3 flex items-center gap-6 animate-in slide-in-from-bottom-4">
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 shadow-2xl rounded-2xl px-6 py-3 flex items-center gap-6 animate-in slide-in-from-bottom-4">
                     <span className="text-xs font-black uppercase tracking-widest border-r border-base-300 pr-6">{selectedIds.length} sélectionnés</span>
 
                     <button className="btn btn-primary btn-sm gap-2 shadow-lg" onClick={handleBulkRestore}>

@@ -57,7 +57,7 @@ export function GlobalSearch() {
         <>
             <button
                 onClick={() => setOpen(true)}
-                className="btn btn-ghost gap-2 font-normal text-muted-foreground hidden md:flex"
+                className="btn btn-ghost gap-2 font-normal text-muted-foreground hidden md:flex bg-base-200/30 dark:backdrop-blur-xl dark:bg-white/10 border border-transparent dark:border-white/10 hover:bg-base-200/50 dark:hover:bg-white/15"
             >
                 <span className="text-sm">Rechercher...</span>
                 <kbd className="kbd kbd-sm font-mono text-[10px] bg-muted">⌘K</kbd>
@@ -69,8 +69,8 @@ export function GlobalSearch() {
             </button>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="p-0 overflow-hidden max-w-lg bg-base-100 border-base-300">
-                    <div className="flex items-center border-b p-4 gap-3 bg-base-200/50">
+                <DialogContent className="p-0 overflow-hidden max-w-lg bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border-base-300 dark:border-white/20">
+                    <div className="flex items-center border-b border-base-300 dark:border-white/20 p-4 gap-3 bg-base-200/30 dark:bg-white/5">
                         <Command className="w-5 h-5 opacity-50" />
                         <input
                             className="flex-1 bg-transparent outline-none text-lg"

@@ -182,7 +182,7 @@ export function TeamSettings() {
             <div className="grid gap-6 lg:grid-cols-[280px_1fr] items-start">
                 {/* Sidebar: List of Teams */}
                 <aside className="flex flex-col gap-6">
-                    <div className="card bg-base-100 shadow-xl border border-base-300">
+                    <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="card-body p-4">
                             <h2 className="text-xs font-bold uppercase opacity-50 mb-2 px-2">Vos Équipes</h2>
                             <div className="flex flex-col gap-1">
@@ -200,7 +200,7 @@ export function TeamSettings() {
                                 ))}
 
                                 {teams.length === 0 && (
-                                    <div className="text-xs text-muted-foreground text-center py-8 bg-base-200/50 rounded-xl">
+                                    <div className="text-xs text-muted-foreground text-center py-8 bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl border border-transparent dark:border-white/10">
                                         Aucune équipe. Créez-en une !
                                     </div>
                                 )}
@@ -217,7 +217,7 @@ export function TeamSettings() {
                                 </h2>
                                 <div className="flex flex-col gap-2">
                                     {receivedInvitations.map(inv => (
-                                        <div key={inv.id} className="bg-base-100 p-3 rounded-xl shadow-sm border border-primary/20">
+                                        <div key={inv.id} className="bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 p-3 rounded-xl shadow-sm border border-primary/20 dark:border-primary/30">
                                             <p className="text-[10px] font-bold mb-2">Rejoindre <span className="underline">{inv.expand?.team_id?.name || 'Inconnue'}</span></p>
                                             <button className="btn btn-primary btn-xs w-full" onClick={() => handleAcceptInvite(inv, inv.id)} disabled={loading}>
                                                 Accepter
@@ -229,7 +229,7 @@ export function TeamSettings() {
                         </div>
                     )}
 
-                    <div className="card bg-base-100 shadow-xl border border-base-300">
+                    <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="card-body p-4">
                             <h2 className="text-xs font-bold uppercase opacity-50 mb-4 px-2 tracking-widest">Nouvelle Équipe</h2>
                             <form onSubmit={handleCreateTeam} className="form-control gap-2">
@@ -251,9 +251,9 @@ export function TeamSettings() {
                 {/* Main Content */}
                 <main data-tour="team-members" className="flex flex-col gap-6">
                     {currentTeam ? (
-                        <div className="card bg-base-100 shadow-xl border border-base-300 overflow-hidden">
+                        <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all overflow-hidden">
                             <div className="card-body p-0">
-                                <div className="p-4 border-b border-base-300 flex justify-between items-center bg-base-200/50">
+                                <div className="p-4 border-b border-base-300 dark:border-white/20 flex justify-between items-center bg-base-200/50 dark:bg-black/30">
                                     <h2 className="font-bold text-xl">{currentTeam.name}</h2>
                                     <div className="flex items-center gap-1">
                                         <button
@@ -296,7 +296,7 @@ export function TeamSettings() {
                                     {activeView === 'members' && (
                                         <>
                                             {/* Invite Form */}
-                                            <div data-tour="team-invite" className="bg-base-200/50 p-4 rounded-3xl border border-base-300 mb-8">
+                                            <div data-tour="team-invite" className="bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 p-4 rounded-3xl border border-base-300 dark:border-white/20 mb-8">
                                                 <div className="flex flex-col md:flex-row gap-4 items-end">
                                                     <div className="form-control flex-1 w-full">
                                                         <label className="label">
@@ -326,7 +326,7 @@ export function TeamSettings() {
                                                 </h3>
                                                 <div className="grid gap-3">
                                                     {members.map(member => (
-                                                        <div key={member.id} className="flex items-center justify-between p-4 bg-base-200/30 rounded-2xl hover:bg-base-200/50 transition-colors border border-transparent hover:border-base-300">
+                                                        <div key={member.id} className="flex items-center justify-between p-4 bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 rounded-2xl hover:bg-base-200/50 dark:hover:bg-black/40 transition-colors border border-transparent hover:border-base-300 dark:border-white/10 dark:hover:border-white/20">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="avatar">
                                                                     <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
@@ -349,7 +349,7 @@ export function TeamSettings() {
                                                     ))}
 
                                                     {invitations.map(inv => (
-                                                        <div key={inv.id} className="flex items-center justify-between p-4 bg-base-200/10 rounded-2xl border border-dashed border-base-300 italic opacity-60">
+                                                        <div key={inv.id} className="flex items-center justify-between p-4 bg-base-200/10 dark:backdrop-blur-xl dark:bg-black/20 rounded-2xl border border-dashed border-base-300 dark:border-white/20 italic opacity-60">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-12 h-12 rounded-full border border-dashed border-base-300 flex items-center justify-center">
                                                                     <Mail className="w-4 h-4" />
@@ -410,7 +410,7 @@ export function TeamSettings() {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center p-20 text-center bg-base-100 rounded-3xl border border-dashed border-base-300 min-h-[400px]">
+                        <div className="flex-1 flex flex-col items-center justify-center p-20 text-center bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 rounded-3xl border border-dashed border-base-300 dark:border-white/20 min-h-[400px]">
                             <div className="w-24 h-24 bg-base-200 rounded-full flex items-center justify-center mb-6">
                                 <Users className="w-12 h-12 opacity-10" />
                             </div>

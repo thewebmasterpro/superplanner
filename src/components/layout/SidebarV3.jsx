@@ -87,7 +87,7 @@ export default function SidebarV3() {
                 <div className="px-2 mb-4 relative" ref={wsRef}>
                     <button
                         onClick={() => setWsOpen(!wsOpen)}
-                        className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-base-200/40 hover:bg-base-200/70 transition-colors text-sm"
+                        className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-white/10 border border-transparent dark:border-white/10 hover:bg-base-200/50 dark:hover:bg-white/15 transition-all text-sm"
                     >
                         {activeWs ? (
                             <div
@@ -107,7 +107,7 @@ export default function SidebarV3() {
                     </button>
 
                     {wsOpen && (
-                        <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-xl border border-base-300 bg-base-100 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-xl border border-base-300 dark:border-white/20 bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                             <div className="p-1">
                                 <button
                                     onClick={() => { setActiveWorkspace(null); setWsOpen(false) }}
@@ -145,7 +145,7 @@ export default function SidebarV3() {
                     )}
                 </div>
 
-                <ul className="menu bg-base-100 w-full p-0 gap-2">
+                <ul className="menu bg-transparent w-full p-0 gap-2">
                     {menuItems.map((item) => {
                         const Icon = item.icon
                         const isActive = location.pathname === item.path
@@ -167,7 +167,7 @@ export default function SidebarV3() {
                     })}
                 </ul>
 
-                <div className="mt-auto pt-4 border-t border-base-200">
+                <div className="mt-auto pt-4 border-t border-base-200 dark:border-white/10">
                     <button className="btn btn-error btn-ghost btn-block justify-start gap-3" onClick={handleLogout}>
                         <LogOut className="w-5 h-5" />
                         Déconnexion

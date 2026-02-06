@@ -67,7 +67,7 @@ export default function SettingsPageV3() {
         setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
     }
 
-    const themes = ["light", "dark", "cupcake", "bumblebee", "emerald", "corporate", "synthwave", "retro", "cyberpunk", "valentine", "halloween", "garden", "forest", "aqua", "lofi", "pastel", "fantasy", "wireframe", "black", "luxury", "dracula", "cmyk", "autumn", "business", "acid", "lemonade", "night", "coffee", "winter", "dim", "nord", "sunset"]
+    const themes = ["light", "dark"]
 
     const handleTestTelegram = async () => {
         const result = await sendTestNotification()
@@ -170,7 +170,7 @@ export default function SettingsPageV3() {
                 </div>
 
                 {/* Tabs: Profil > Apparence > Configuration > Dashboard > Préférences > Données */}
-                <div data-tour="settings-tabs" className="bg-base-200 p-1 mb-2 rounded-xl flex overflow-x-auto gap-1">
+                <div data-tour="settings-tabs" className="bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 p-1 mb-2 rounded-xl flex overflow-x-auto gap-1">
                     <button
                         className={`btn btn-sm flex-1 gap-2 ${activeTab === 'profil' ? 'btn-primary' : 'btn-ghost'}`}
                         onClick={() => setActiveTab('profil')}
@@ -214,7 +214,7 @@ export default function SettingsPageV3() {
                     {/* ─── Tab 0: Profil ─── */}
                     {activeTab === 'profil' && (
                         <div className="space-y-6 animate-stagger">
-                            <div className="card bg-base-100 shadow-xl border border-base-300">
+                            <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title flex gap-2">
                                         <User className="w-5 h-5 text-primary" /> Informations du Profil
@@ -285,7 +285,7 @@ export default function SettingsPageV3() {
                             </div>
 
                             {/* Account Info */}
-                            <div className="card bg-base-100 shadow-xl border border-primary/10">
+                            <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-primary/10 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title flex gap-2">
                                         <Info className="w-5 h-5 text-info" /> Informations du Compte
@@ -316,7 +316,7 @@ export default function SettingsPageV3() {
                     {/* ─── Tab 1: Apparence ─── */}
                     {activeTab === 'apparence' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-stagger">
-                            <div data-tour="settings-theme" className="card bg-base-100 shadow-xl border border-base-300">
+                            <div data-tour="settings-theme" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title flex gap-2">
                                         <Moon className="w-5 h-5 text-secondary" /> Thème Visuel
@@ -352,7 +352,7 @@ export default function SettingsPageV3() {
                                 </div>
                             </div>
 
-                            <div className="card bg-base-100 shadow-xl border border-primary/10">
+                            <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-primary/10 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title flex gap-2">
                                         <Info className="w-5 h-5 text-primary" /> Version V3
@@ -448,7 +448,7 @@ export default function SettingsPageV3() {
 
                     {/* ─── Tab 3: Dashboard / Widgets ─── */}
                     {activeTab === 'widgets' && (
-                        <div className="card bg-base-100 shadow-xl border border-base-300">
+                        <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                             <div className="card-body">
                                 <h2 className="card-title">📊 Visibilité des Widgets</h2>
                                 <p className="text-sm opacity-70 mb-4">Affichez ou masquez les éléments du Dashboard.</p>
@@ -507,7 +507,7 @@ export default function SettingsPageV3() {
                     {activeTab === 'preferences' && (
                         <div className="space-y-6 animate-stagger">
                             {/* Prayer Times */}
-                            <div className="card bg-base-100 shadow-xl border border-base-300">
+                            <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title">🕌 Localisation Prières</h2>
                                     <p className="text-sm opacity-70">Configurez votre ville pour des horaires de prière précis.</p>
@@ -548,7 +548,7 @@ export default function SettingsPageV3() {
                             </div>
 
                             {/* Telegram */}
-                            <div className="card bg-base-100 shadow-xl border border-base-300">
+                            <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title">📱 Notifications Telegram</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
@@ -620,7 +620,7 @@ export default function SettingsPageV3() {
                             </div>
 
                             {/* External Tools (Spotify & World Clock) */}
-                            <div className="card bg-base-100 shadow-xl border border-base-300">
+                            <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 transition-all">
                                 <div className="card-body">
                                     <h2 className="card-title">🌐 Outils Externes</h2>
                                     <div className="space-y-6 mt-4">
@@ -758,7 +758,7 @@ export default function SettingsPageV3() {
                         <div className="space-y-6 animate-stagger">
                             <DataBackupSettings />
 
-                            <div className="card bg-error/5 border border-error/20 shadow-xl">
+                            <div className="card bg-error/5 dark:backdrop-blur-xl dark:bg-error/10 border border-error/20 dark:border-error/30 shadow-xl">
                                 <div className="card-body">
                                     <h2 className="card-title text-error flex gap-2">
                                         <AlertTriangle className="w-5 h-5" /> Zone de Danger
@@ -776,7 +776,7 @@ export default function SettingsPageV3() {
             </div>
 
             {/* Sticky Mobile Save */}
-            <div className="fixed bottom-0 left-0 right-0 bg-base-100/80 backdrop-blur-md p-4 flex justify-center md:hidden border-t border-base-300 z-50">
+            <div className="fixed bottom-0 left-0 right-0 bg-base-100/80 dark:backdrop-blur-xl dark:bg-black/40 backdrop-blur-md p-4 flex justify-center md:hidden border-t border-base-300 dark:border-white/20 z-50">
                 <button
                     onClick={savePreferences}
                     className="btn btn-primary btn-sm btn-block shadow-lg gap-2"

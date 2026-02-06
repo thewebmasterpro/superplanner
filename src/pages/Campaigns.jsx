@@ -140,13 +140,13 @@ export function Campaigns() {
 
       {/* Filters */}
       {view === 'list' && (
-        <div data-tour="campaigns-filters" className="flex flex-wrap gap-2 items-center bg-base-100 p-3 rounded-2xl shadow-sm border border-base-300">
+        <div data-tour="campaigns-filters" className="flex flex-wrap gap-2 items-center bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 p-3 rounded-2xl shadow-sm border border-base-300 dark:border-white/20">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
             <input
               type="text"
               placeholder="Rechercher un projet..."
-              className="input input-sm input-ghost w-full pl-9 focus:bg-base-200"
+              className="input input-sm w-full pl-9 bg-transparent dark:bg-transparent border-transparent focus:border-primary/30 dark:focus:border-purple-500/30 focus:outline-none transition-all"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -172,7 +172,7 @@ export function Campaigns() {
           <p className="mt-4 text-muted-foreground font-medium">Chargement des projets...</p>
         </div>
       ) : filteredCampaigns.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-20 bg-base-100 rounded-3xl border border-dashed border-base-300">
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-20 bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 rounded-3xl border border-dashed border-base-300 dark:border-white/20">
           <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center mb-6">
             <Layers className="w-10 h-10 opacity-20" />
           </div>
@@ -181,7 +181,7 @@ export function Campaigns() {
           <button className="btn btn-primary shadow-lg" onClick={() => { setEditingCampaign(null); setIsModalOpen(true); }}>Créer un Projet</button>
         </div>
       ) : view === 'gantt' ? (
-        <div className="card bg-base-100 shadow-xl border border-base-300 overflow-hidden flex-1 min-h-0">
+        <div className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all overflow-hidden flex-1 min-h-0">
           <div className="card-body p-0 overflow-auto">
             <CampaignGantt
               campaigns={filteredCampaigns}
@@ -194,7 +194,7 @@ export function Campaigns() {
           {filteredCampaigns.map(campaign => (
             <div
               key={campaign.id}
-              className="card bg-base-100 shadow-xl border border-base-300 hover:shadow-2xl transition-all cursor-pointer group hover:-translate-y-1"
+              className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:shadow-2xl hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all cursor-pointer group hover:-translate-y-1"
               onClick={() => handleOpenDetails(campaign.id)}
             >
               <div className="card-body p-6">
@@ -213,7 +213,7 @@ export function Campaigns() {
                     <label tabIndex={0} className="btn btn-ghost btn-xs btn-square">
                       <MoreVertical className="w-4 h-4 opacity-50" />
                     </label>
-                    <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 rounded-box w-32 border border-base-300">
+                    <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 rounded-box w-32 border border-base-300 dark:border-white/20">
                       <li><a onClick={() => { setEditingCampaign(campaign); setIsModalOpen(true) }}><Edit2 className="w-4 h-4" /> Éditer</a></li>
                       <li><a onClick={() => handleArchive(campaign.id, campaign.status)}><Archive className="w-4 h-4" /> {campaign.status === 'archived' ? 'Restaurer' : 'Archiver'}</a></li>
                       <div className="divider my-1"></div>

@@ -32,7 +32,7 @@ export default function TopBar() {
   }
 
   return (
-    <div className="md:sticky md:top-0 z-20 bg-base-100/80 backdrop-blur-md border-b border-base-300">
+    <div className="md:sticky md:top-0 z-20 bg-base-100/80 dark:backdrop-blur-xl dark:bg-black/40 backdrop-blur-md border-b border-base-300 dark:border-white/20">
       <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1 md:gap-2 flex-wrap" data-tour="topbar-actions">
           <button

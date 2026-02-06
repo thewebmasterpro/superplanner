@@ -176,25 +176,25 @@ export function Contacts({ initialView = 'list' }) {
             {/* Stats */}
             {viewMode === 'list' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-stagger-fast">
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat">
                             <div className="stat-title text-xs font-bold uppercase opacity-50">Total</div>
                             <div className="stat-value text-2xl tracking-tight">{stats.all}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat">
                             <div className="stat-title text-xs font-bold uppercase opacity-50 text-success">Clients</div>
                             <div className="stat-value text-success text-2xl tracking-tight">{stats.clients}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat">
                             <div className="stat-title text-xs font-bold uppercase opacity-50 text-info">Prospects</div>
                             <div className="stat-value text-info text-2xl tracking-tight">{stats.prospects}</div>
                         </div>
                     </div>
-                    <div className="stats shadow bg-base-100 border border-base-300">
+                    <div className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
                         <div className="stat overflow-visible">
                             <div className="stat-title text-xs font-bold uppercase opacity-50 text-warning">En Pipeline</div>
                             <div className="stat-value text-warning text-2xl tracking-tight flex items-center gap-2">
@@ -210,13 +210,13 @@ export function Contacts({ initialView = 'list' }) {
             )}
 
             {/* Filters */}
-            <div data-tour="contacts-search" className="flex flex-wrap gap-2 items-center bg-base-100 p-3 rounded-2xl shadow-sm border border-base-300">
+            <div data-tour="contacts-search" className="flex flex-wrap gap-2 items-center bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 p-3 rounded-2xl shadow-sm border border-base-300 dark:border-white/20">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
                     <input
                         type="text"
                         placeholder="Rechercher un contact..."
-                        className="input input-sm input-ghost w-full pl-9 focus:bg-base-200"
+                        className="input input-sm w-full pl-9 bg-transparent dark:bg-transparent border-transparent focus:border-primary/30 dark:focus:border-purple-500/30 focus:outline-none transition-all"
                         value={searchQuery}
                         onChange={(e) => useUIStore.setState({ searchQuery: e.target.value })}
                     />
@@ -225,7 +225,7 @@ export function Contacts({ initialView = 'list' }) {
                     <>
                         <div className="divider divider-horizontal m-0 py-2"></div>
                         <select
-                            className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
+                            className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
                             value={statusFilter}
                             onChange={e => setStatusFilter(e.target.value)}
                         >
@@ -238,7 +238,7 @@ export function Contacts({ initialView = 'list' }) {
                 )}
                 <div className="divider divider-horizontal m-0 py-2"></div>
                 <select
-                    className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
+                    className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
                     value={workspaceFilter}
                     onChange={e => setWorkspaceFilter(e.target.value)}
                 >
@@ -265,7 +265,7 @@ export function Contacts({ initialView = 'list' }) {
                     />
                 </div>
             ) : (
-                <div data-tour="contacts-table" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+                <div data-tour="contacts-table" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all flex-1 overflow-hidden">
                     <div className="card-body p-0 overflow-auto">
                         {contacts.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
@@ -278,21 +278,21 @@ export function Contacts({ initialView = 'list' }) {
                             </div>
                         ) : (
                             <table className="table table-zebra table-pin-rows">
-                                <thead className="bg-base-200">
+                                <thead className="bg-base-200 dark:bg-black/30">
                                     <tr>
-                                        <th className="w-12">
-                                            <input
-                                                type="checkbox"
-                                                className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
-                                                checked={contacts.length > 0 && selectedIds.length === contacts.length}
-                                                onChange={toggleSelectAll}
-                                            />
-                                        </th>
                                         <th>Contact</th>
                                         <th>Statut</th>
                                         <th>Workspaces</th>
                                         <th>Coordonnées</th>
                                         <th className="text-right">Actions</th>
+                                        <th className="w-12 text-right">
+                                            <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                                checked={contacts.length > 0 && selectedIds.length === contacts.length}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -302,14 +302,6 @@ export function Contacts({ initialView = 'list' }) {
                                             className={`hover cursor-pointer group ${selectedIds.includes(contact.id) ? 'active' : ''}`}
                                             onClick={() => handleEdit(contact)}
                                         >
-                                            <td onClick={(e) => e.stopPropagation()}>
-                                                <input
-                                                    type="checkbox"
-                                                    className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
-                                                    checked={selectedIds.includes(contact.id)}
-                                                    onChange={() => toggleSelection(contact.id)}
-                                                />
-                                            </td>
                                             <td>
                                                 <div className="flex items-center gap-3">
                                                     <div className="avatar placeholder">
@@ -390,12 +382,20 @@ export function Contacts({ initialView = 'list' }) {
                                                         <label tabIndex={0} className="btn btn-ghost btn-xs btn-square">
                                                             <MoreHorizontal className="w-3.5 h-3.5" />
                                                         </label>
-                                                        <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 rounded-box w-32 border border-base-300">
+                                                        <ul tabIndex={0} className="dropdown-content z-[20] menu p-2 shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 rounded-box w-32 border border-base-300 dark:border-white/20">
                                                             <li><a onClick={() => handleEdit(contact)}><Edit2 className="w-4 h-4" /> Éditer</a></li>
                                                             <li><a onClick={() => setDeleteConfirm(contact)} className="text-error"><Trash2 className="w-4 h-4" /> Supprimer</a></li>
                                                         </ul>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
+                                                    checked={selectedIds.includes(contact.id)}
+                                                    onChange={() => toggleSelection(contact.id)}
+                                                />
                                             </td>
                                         </tr>
                                     ))}

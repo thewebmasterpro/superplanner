@@ -247,7 +247,7 @@ export function Tasks() {
             color: 'text-warning',
           },
         ].map((stat) => (
-          <div key={stat.label} className="stats shadow bg-base-100 border border-base-300">
+          <div key={stat.label} className="stats shadow bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all">
             <div className="stat">
               <div className={`stat-figure ${stat.color}`}>{stat.icon}</div>
               <div className="stat-title">{stat.label}</div>
@@ -264,14 +264,14 @@ export function Tasks() {
           <input
             type="text"
             placeholder="Rechercher une tâche..."
-            className="input input-bordered input-sm w-full pl-9"
+            className="input input-sm w-full pl-9 bg-base-100/50 dark:backdrop-blur-xl dark:bg-white/10 border border-base-300 dark:border-white/20 focus:border-primary/50 dark:focus:border-purple-500/50 focus:outline-none transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         <select
-          className="select select-sm rounded-xl bg-base-200/30 border border-base-300 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
+          className="select select-sm rounded-xl bg-base-200/30 dark:backdrop-blur-xl dark:bg-black/30 border border-base-300 dark:border-white/20 font-bold text-xs pl-4 focus:border-primary/50 focus:outline-none transition-colors"
           value={sortOrder}
           onChange={e => setSortOrder(e.target.value)}
         >
@@ -303,12 +303,12 @@ export function Tasks() {
 
       {/* Expanded Filters Panel */}
       {showFilters && (
-        <div className="p-4 bg-base-200/50 rounded-2xl border border-base-300 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="p-4 bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-2xl border border-base-300 dark:border-white/20 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="form-control">
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Statut</span></label>
             <div className="flex flex-wrap gap-1">
               {[{v:'all',l:'Tous'},{v:'todo',l:'À faire'},{v:'in_progress',l:'En cours'},{v:'blocked',l:'Bloqué'},{v:'done',l:'Fait'},{v:'cancelled',l:'Annulé'}].map(opt => (
-                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer hover:scale-105 ${statusFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setStatusFilter(opt.v)}>
+                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer hover:scale-105 ${statusFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 dark:backdrop-blur-xl dark:bg-black/30 hover:bg-base-300/80 dark:hover:bg-black/40 dark:border dark:border-white/10'}`} onClick={() => setStatusFilter(opt.v)}>
                   {opt.l}
                 </button>
               ))}
@@ -319,7 +319,7 @@ export function Tasks() {
             <label className="label py-1"><span className="label-text text-[10px] font-bold uppercase opacity-50">Priorité</span></label>
             <div className="flex flex-wrap gap-1">
               {[{v:'all',l:'Toutes'},{v:'high',l:'Haute'},{v:'medium',l:'Moy.'},{v:'low',l:'Basse'}].map(opt => (
-                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer hover:scale-105 ${priorityFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`} onClick={() => setPriorityFilter(opt.v)}>
+                <button key={opt.v} type="button" className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer hover:scale-105 ${priorityFilter === opt.v ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 dark:backdrop-blur-xl dark:bg-black/30 hover:bg-base-300/80 dark:hover:bg-black/40 dark:border dark:border-white/10'}`} onClick={() => setPriorityFilter(opt.v)}>
                   {opt.l}
                 </button>
               ))}
@@ -380,7 +380,7 @@ export function Tasks() {
           />
         </div>
       ) : (
-        <div data-tour="tasks-table" className="card bg-base-100 shadow-xl border border-base-300 flex-1 overflow-hidden">
+        <div data-tour="tasks-table" className="card bg-base-100 dark:backdrop-blur-xl dark:bg-black/40 shadow-xl border border-base-300 dark:border-white/20 hover:border-primary/30 dark:hover:border-purple-500/50 dark:hover:shadow-purple-500/30 transition-all flex-1 overflow-hidden">
           <div className="card-body p-0 overflow-auto">
             {filteredTasks.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
@@ -396,18 +396,18 @@ export function Tasks() {
               </div>
             ) : (
               <table className="table table-sm table-pin-rows">
-                <thead className="bg-base-200">
+                <thead className="bg-base-200 dark:bg-black/30">
                   <tr>
-                    <th className="w-12">
+                    <th>Tâche</th>
+                    <th className="w-28 text-right">Échéance</th>
+                    <th className="w-12 text-right">
                       <input
                         type="checkbox"
-                        className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
+                        className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
                         checked={isAllSelected}
                         onChange={toggleSelectAll}
                       />
                     </th>
-                    <th>Tâche</th>
-                    <th className="w-28 text-right">Échéance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -503,17 +503,9 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue }) {
 
   return (
     <tr
-      className={`cursor-pointer group transition-colors hover:bg-base-200/50 border-l-4 ${borderClass} ${isSelected ? 'bg-base-200/30' : ''}`}
+      className={`cursor-pointer group transition-colors hover:bg-base-200/50 dark:hover:bg-white/5 border-l-4 ${borderClass} ${isSelected ? 'bg-base-200/30 dark:bg-white/5' : ''}`}
       onClick={onClick}
     >
-      <td onClick={(e) => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          className="checkbox checkbox-sm border-base-300 bg-base-200 checked:border-primary checked:bg-primary checked:text-primary-content"
-          checked={isSelected}
-          onChange={onSelect}
-        />
-      </td>
       <td>
         <div className="flex flex-col gap-0.5 py-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -558,6 +550,14 @@ function TaskRow({ task, isSelected, onSelect, onClick, isOverdue }) {
         ) : (
           <span className="text-xs opacity-20">—</span>
         )}
+      </td>
+      <td className="text-right" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="checkbox"
+          className="checkbox checkbox-sm border-base-300 dark:border-white/30 bg-base-100 dark:bg-white/10 checked:border-primary checked:bg-primary checked:text-primary-content"
+          checked={isSelected}
+          onChange={onSelect}
+        />
       </td>
     </tr>
   )
