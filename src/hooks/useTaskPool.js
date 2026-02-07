@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksService } from '../services/tasks.service'
 import toast from 'react-hot-toast'
+import pb from '../lib/pocketbase'
 
 /**
  * Get team pool tasks (unassigned team tasks)
@@ -9,27 +10,23 @@ import toast from 'react-hot-toast'
 export function useTeamPool(teamId) {
   return useQuery({
     queryKey: ['tasks', 'pool', teamId],
-    queryFn: () => tasksService.getPoolTasks(teamId),
+    queryFn: async () => {
+      if (!teamId) return []
+
+      // Fetch all tasks and filter client-side for maximum compatibility
+      const allTasks = await pb.collection('tasks').getFullList({
+        sort: '-created'
+      })
+
+      // Filter for team pool tasks
+      return allTasks.filter(t =>
+        t.team_id === teamId &&
+        t.status === 'unassigned' &&
+        !t.deleted_at &&
+        !t.archived_at
+      )
+    },
     enabled: !!teamId,
-  })
-}
-
-/**
- * Create a pool task (team task with unassigned status)
- */
-export function useCreatePoolTask() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({ data, teamId }) => tasksService.createPoolTask(data, teamId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Tâche ajoutée au pool!', { icon: '🎯' })
-    },
-    onError: (error) => {
-      console.error('Pool task creation failed:', error)
-      toast.error(`Erreur: ${error.message}`)
-    },
   })
 }
 
@@ -41,9 +38,9 @@ export function useClaimTask() {
 
   return useMutation({
     mutationFn: (taskId) => tasksService.claimTask(taskId),
-    onSuccess: () => {
+    onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Tâche prise avec succès!', { icon: '⚡' })
+      toast.success('🎯 Tâche prise avec succès!', { icon: '⚡' })
     },
     onError: (error) => {
       console.error('Error claiming task:', error)
@@ -62,7 +59,7 @@ export function useReleaseTask() {
     mutationFn: ({ taskId, reason }) => tasksService.releaseTask(taskId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      toast.success('Tâche libérée et retournée au pool', { icon: '📤' })
+      toast.success('📤 Tâche libérée et retournée au pool', { icon: '✅' })
     },
     onError: (error) => {
       console.error('Error releasing task:', error)

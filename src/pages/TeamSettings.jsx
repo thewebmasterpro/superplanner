@@ -8,12 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import toast from 'react-hot-toast'
-import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw, Gift, Target, Hand } from 'lucide-react'
+import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw, Gift, Target } from 'lucide-react'
 import { teamsService } from '../services/teams.service'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { TeamRewardsManager } from '../components/TeamRewardsManager'
 import TeamChallengesManager from '../components/TeamChallengesManager'
-import { TeamPoolManager } from '../components/TeamPoolManager'
 import pb from '../lib/pocketbase' // Keep for pb.files.getUrl usage in AvatarImage
 
 export function TeamSettings() {
@@ -25,7 +24,7 @@ export function TeamSettings() {
     const [receivedInvitations, setReceivedInvitations] = useState([]) // Invites TO the user
     const [createTeamName, setCreateTeamName] = useState('')
     const [inviteEmail, setInviteEmail] = useState('')
-    const [activeView, setActiveView] = useState('members') // 'members', 'pool', 'rewards', 'challenges', 'settings'
+    const [activeView, setActiveView] = useState('members') // 'members', 'rewards', 'challenges', 'settings'
 
     // Load teams on mount and when workspace changes
     useEffect(() => {
@@ -277,13 +276,6 @@ export function TeamSettings() {
                                             <Users className="w-3 h-3 mr-1.5" />
                                             Membres
                                         </button>
-                                        <button
-                                            className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${activeView === 'pool' ? 'bg-primary text-primary-content shadow-sm' : 'bg-base-200/60 hover:bg-base-300/80'}`}
-                                            onClick={() => setActiveView('pool')}
-                                        >
-                                            <Hand className="w-3 h-3 mr-1.5" />
-                                            Pool
-                                        </button>
                                         {currentTeam.myRole === 'owner' && (
                                             <>
                                                 <button
@@ -383,14 +375,6 @@ export function TeamSettings() {
                                                 </div>
                                             </div>
                                         </>
-                                    )}
-
-                                    {/* Pool View */}
-                                    {activeView === 'pool' && (
-                                        <TeamPoolManager
-                                            teamId={currentTeam.id}
-                                            teamName={currentTeam.name}
-                                        />
                                     )}
 
                                     {/* Rewards View */}

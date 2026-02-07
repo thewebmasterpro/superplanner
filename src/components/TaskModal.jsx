@@ -162,13 +162,12 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       })
     } else {
       // Creating new task/meeting - use defaults + type from task prop if provided
-      // Auto-detect pool context when team_id is passed (e.g. from TeamPoolPage)
-      setAssignmentMode(task?.team_id ? 'team' : 'individual')
+      setAssignmentMode('individual')
 
       setFormData({
         title: '',
         description: '',
-        status: task?.team_id ? 'unassigned' : 'todo',
+        status: 'todo',
         priority: 'medium',
         due_date: '',
         duration: task?.type === 'meeting' ? 30 : 60,
@@ -194,7 +193,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         campaign_id: '',
         context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
-        team_id: task?.team_id || '',
+        team_id: '',  // Will be set when user selects team mode
         assigned_to: ''
       })
     }
