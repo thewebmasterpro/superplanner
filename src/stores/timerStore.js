@@ -16,6 +16,7 @@ export const useTimerStore = create(
                 selectedTaskId: '',
                 isRunning: false,
                 seconds: 0,
+                activeLogId: null,
             },
 
             // Actions

@@ -75,9 +75,14 @@ export const validateTasksImport = (tasks) => {
         let status = task.status ? task.status.toLowerCase().replace(' ', '_') : 'todo'
         if (!validStatuses.includes(status)) status = 'todo' // Default or error? Let's default for safety
 
-        // Normalize priority
-        let priority = parseInt(task.priority)
-        if (isNaN(priority) || priority < 1 || priority > 5) priority = 3
+        // Normalize priority (system uses string values: 'low', 'medium', 'high', 'urgent')
+        const validPriorities = ['low', 'medium', 'high', 'urgent']
+        let priority = task.priority ? String(task.priority).toLowerCase().trim() : 'medium'
+        if (!validPriorities.includes(priority)) {
+            // Handle numeric priorities from legacy imports
+            const numericMap = { '1': 'low', '2': 'low', '3': 'medium', '4': 'high', '5': 'urgent' }
+            priority = numericMap[priority] || 'medium'
+        }
 
         // Construct valid object
         validTasks.push({

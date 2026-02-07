@@ -13,16 +13,24 @@ import { escapeFilterValue } from '../lib/filterUtils'
 class TeamsService {
     /**
      * Get all team memberships for current user
+     * @param {string|null} workspaceId - Optional workspace filter
      * @returns {Promise<Array>}
      */
-    async MyMemberships() {
+    async MyMemberships(workspaceId = null) {
         const user = pb.authStore.model
         if (!user) return []
 
-        return await pb.collection('team_members').getFullList({
+        const results = await pb.collection('team_members').getFullList({
             filter: `user_id = "${user.id}"`,
-            expand: 'team_id'
+            expand: 'team_id',
+            skipTotal: false,
         })
+
+        if (!workspaceId || workspaceId === 'all') return results
+
+        return results.filter(m =>
+            m.expand?.team_id?.context_id === workspaceId || !m.expand?.team_id?.context_id
+        )
     }
 
     /**
@@ -35,7 +43,8 @@ class TeamsService {
 
         return await pb.collection('team_invitations').getFullList({
             filter: `email = "${user.email}" && status = "pending"`,
-            expand: 'team_id'
+            expand: 'team_id',
+            skipTotal: false,
         })
     }
 
@@ -76,13 +85,15 @@ class TeamsService {
             const filter = teamIdOrIds.map(id => `team_id = "${id}"`).join(' || ')
             return await pb.collection('team_members').getFullList({
                 filter: `(${filter})`,
-                expand: 'user_id'
+                expand: 'user_id',
+                skipTotal: false,
             })
         } else {
             const escapedId = escapeFilterValue(teamIdOrIds)
             return await pb.collection('team_members').getFullList({
                 filter: `team_id = "${escapedId}"`,
-                expand: 'user_id'
+                expand: 'user_id',
+                skipTotal: false,
             })
         }
     }
@@ -95,23 +106,33 @@ class TeamsService {
     async getTeamInvitations(teamId) {
         const escapedId = escapeFilterValue(teamId)
         return await pb.collection('team_invitations').getFullList({
-            filter: `team_id = "${escapedId}" && status = "pending"`
+            filter: `team_id = "${escapedId}" && status = "pending"`,
+            skipTotal: false,
         })
     }
 
     /**
      * Create a new team
-     * @param {string} name 
+     * @param {string} name
+     * @param {string|null} contextId - Workspace ID
      * @returns {Promise<Object>} Created team
      */
-    async createTeam(name) {
+    async createTeam(name, contextId = null) {
         const user = pb.authStore.model
         if (!user) throw new Error('Not authenticated')
 
-        const team = await pb.collection('teams').create({
+        // Step 1: Create team without relation fields
+        let team = await pb.collection('teams').create({
             name: name,
             owner_id: user.id
         })
+
+        // Step 2: Update with context_id relation if provided
+        if (contextId) {
+            team = await pb.collection('teams').update(team.id, {
+                context_id: contextId
+            })
+        }
 
         // Add owner as member
         await pb.collection('team_members').create({
@@ -162,7 +183,8 @@ class TeamsService {
      */
     async getAllUsers() {
         return await pb.collection('users').getFullList({
-            sort: 'name'
+            sort: 'name',
+            skipTotal: false,
         })
     }
 }

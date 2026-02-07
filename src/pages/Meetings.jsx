@@ -67,10 +67,11 @@ export function Meetings() {
   const filteredTasks = useMemo(() => {
     const query = searchQuery.toLowerCase()
     const result = tasks.filter((task) => {
+      const workspace = task.context_id ? workspaces.find(w => w.id === task.context_id) : null
       const matchesSearch = !query ||
         task.title?.toLowerCase().includes(query) ||
         task.description?.toLowerCase().includes(query) ||
-        task.expand?.context_id?.name?.toLowerCase()?.includes(query)
+        workspace?.name?.toLowerCase()?.includes(query)
 
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter
       const matchesPriority = priorityFilter === 'all' || String(task.priority).toLowerCase() === priorityFilter
@@ -79,8 +80,7 @@ export function Meetings() {
       const matchesCampaign = campaignFilter === 'all' ||
         (campaignFilter === 'none' ? !task.campaign_id : task.campaign_id === campaignFilter)
       const matchesType = typeFilter === 'all' || (task.type || 'task') === typeFilter
-      const matchesTag = tagFilter === 'all' ||
-        task.expand?.tags?.some(tag => tag.id === tagFilter) || task.tags?.includes(tagFilter)
+      const matchesTag = tagFilter === 'all' || task.tags?.includes(tagFilter)
 
       const matchesClient = clientFilter === 'all' || task.contact_id === clientFilter
 
@@ -423,6 +423,9 @@ export function Meetings() {
                       isSelected={selectedIds.includes(task.id)}
                       isCompleting={completingTaskId === task.id}
                       onSelect={() => toggleSelect(task.id)}
+                      workspaces={workspaces}
+                      campaigns={campaigns}
+                      allTags={tags}
                       onComplete={async () => {
                         setCompletingTaskId(task.id)
                         await updateTaskMutation.mutateAsync({ id: task.id, updates: { status: 'done' } })
@@ -473,10 +476,10 @@ export function Meetings() {
   )
 }
 
-function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue }) {
-  const context = task.expand?.context_id
-  const campaign = task.expand?.campaign_id
-  const tags = task.expand?.tags || []
+function TaskRow({ task, isSelected, isCompleting, onSelect, onComplete, onClick, isOverdue, workspaces = [], campaigns = [], allTags = [] }) {
+  const context = task.context_id ? workspaces.find(w => w.id === task.context_id) : null
+  const campaign = task.campaign_id ? campaigns.find(c => c.id === task.campaign_id) : null
+  const tags = (task.tags || []).map(id => allTags.find(t => t.id === id)).filter(Boolean)
 
   const priorityColors = {
     1: 'bg-blue-500',

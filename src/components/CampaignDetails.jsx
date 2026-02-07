@@ -35,19 +35,11 @@ export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
             // 1. Fetch Campaign Info
             const camp = await campaignsService.getOne(campaignId)
 
-            // 2. Fetch Tasks & Meetings
-            // Note: services should handle filtering. passing filter string.
-            const items = await tasksService.getAll({
-                filter: `campaign_id = "${campaignId}"`,
-                sort: 'due_date',
-                expand: 'category_id,tags'
-            })
+            // 2. Fetch Tasks & Meetings for this campaign
+            const items = await tasksService.getByCampaign(campaignId)
 
-            const tasksList = items.filter(i => i.type === 'task')
+            const tasksList = items.filter(i => i.type !== 'meeting')
             const meetingsList = items.filter(i => i.type === 'meeting')
-
-            setTasks(tasksList)
-            setMeetings(meetingsList)
 
             // 3. Calc Stats
             const total = tasksList.length
@@ -55,22 +47,9 @@ export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
             const progress = total > 0 ? Math.round((completed / total) * 100) : 0
             setStats({ total, completed, progress })
 
-            // Map expanded data to expected format if necessary for rendering
-            // The renderer uses task.category.color. In PB: task.expand.category_id.color
-            // I'll map it to keep JSX clean
-            setCampaign({
-                ...camp,
-                context: camp.expand?.context_id
-            })
-
-            const mapItems = (list) => list.map(item => ({
-                ...item,
-                category: item.expand?.category_id,
-                tags: item.expand?.tags
-            }))
-
-            setTasks(mapItems(tasksList))
-            setMeetings(mapItems(meetingsList))
+            setCampaign(camp)
+            setTasks(tasksList)
+            setMeetings(meetingsList)
 
         } catch (error) {
             console.error('Error loading campaign details:', error)
@@ -207,12 +186,11 @@ export function CampaignDetails({ campaignId, onBack, onEdit, lastUpdated }) {
                                             <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</p>
                                             <div className="flex gap-2 text-xs text-muted-foreground mt-0.5">
                                                 {task.due_date && <span>Due {format(new Date(task.due_date), 'MMM d')}</span>}
-                                                {task.category && <span style={{ color: task.category.color }}>• {task.category.name}</span>}
                                             </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {task.priority >= 4 && <Badge variant="destructive" className="text-[10px] h-5">High</Badge>}
+                                        {task.priority === 'high' && <Badge variant="destructive" className="text-[10px] h-5">High</Badge>}
                                         <Badge variant="secondary" className="capitalize text-[10px] h-5">{task.status.replace('_', ' ')}</Badge>
                                     </div>
                                 </div>

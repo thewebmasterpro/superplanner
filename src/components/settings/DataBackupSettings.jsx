@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { useTasks } from '@/hooks/useTasks'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import pb from '@/lib/pocketbase'
 import { generateCSV, generateJSON, downloadFile } from '@/lib/exportUtils'
 import { parseCSV, validateTasksImport } from '@/lib/importUtils'
@@ -15,6 +16,7 @@ import { backupService } from '@/services/backup.service'
 
 export function DataBackupSettings() {
     const { data: tasks = [] } = useTasks()
+    const { workspaces } = useWorkspaceStore()
     const [loading, setLoading] = useState(false)
 
     // Export State
@@ -48,10 +50,10 @@ export function DataBackupSettings() {
                 priority: t.priority,
                 due_date: t.due_date,
                 created: t.created,
-                // Flatten relations from expansions
-                context: t.expand?.context_id?.name || '',
-                campaign: t.expand?.campaign_id?.name || '',
-                project: t.expand?.project_id?.name || '',
+                // Flatten relations via store lookups
+                context: workspaces.find(w => w.id === t.context_id)?.name || '',
+                campaign: t.campaign_id || '',
+                project: t.project_id || '',
                 client: t.contact_id // MVP: just ID
             }))
 

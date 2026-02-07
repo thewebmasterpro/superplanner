@@ -96,6 +96,13 @@ export const useUserStore = create(
       setCurrentTeam: (team) => set({ currentTeam: team }),
       setTeams: (teams) => set({ teams }),
 
+      // Get teams filtered by workspace (call as useUserStore.getState().getWorkspaceTeams(wsId))
+      getWorkspaceTeams: (workspaceId) => {
+        const { teams } = useUserStore.getState()
+        if (!workspaceId) return teams
+        return teams.filter(t => t.context_id === workspaceId || !t.context_id)
+      },
+
       // Actions
       logout: () => set({ user: null, currentTeam: null, teams: [] }),
     }),

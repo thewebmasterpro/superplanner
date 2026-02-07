@@ -30,7 +30,8 @@ class CampaignsService {
       const options = {
         sort: '-start_date',
         expand: 'context_id',
-        requestKey: null
+        requestKey: null,
+        skipTotal: false, // Required for older PocketBase servers
       }
 
       if (filterString) {

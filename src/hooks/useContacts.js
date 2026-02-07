@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { contactsService } from '../services/contacts.service'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import toast from 'react-hot-toast'
 
 export function useContacts(filters = {}) {
@@ -61,6 +62,14 @@ export function useContacts(filters = {}) {
         }
     })
 
+    // Send email
+    const sendEmailMutation = useMutation({
+        mutationFn: (emailData) => contactsService.sendEmail(emailData),
+        onError: (error) => {
+            toast.error(error.message || 'Failed to send email')
+        }
+    })
+
     // Delete contact
     const deleteContact = useMutation({
         mutationFn: (id) => contactsService.delete(id),
@@ -80,14 +89,17 @@ export function useContacts(filters = {}) {
         createContact: createContact.mutate,
         updateContact: updateContact.mutate,
         deleteContact: deleteContact.mutate,
+        sendEmail: sendEmailMutation.mutateAsync,
         isCreating: createContact.isPending,
         isUpdating: updateContact.isPending
     }
 }
 
 export function useContactsList() {
+    const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
+
     return useQuery({
-        queryKey: ['contactsList'],
-        queryFn: () => contactsService.getAll()
+        queryKey: ['contactsList', activeWorkspaceId],
+        queryFn: () => contactsService.getAll({ workspaceId: activeWorkspaceId })
     })
 }

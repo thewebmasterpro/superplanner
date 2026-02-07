@@ -162,12 +162,13 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       })
     } else {
       // Creating new task/meeting - use defaults + type from task prop if provided
-      setAssignmentMode('individual')
+      // Auto-detect pool context when team_id is passed (e.g. from TeamPoolPage)
+      setAssignmentMode(task?.team_id ? 'team' : 'individual')
 
       setFormData({
         title: '',
         description: '',
-        status: 'todo',
+        status: task?.team_id ? 'unassigned' : 'todo',
         priority: 'medium',
         due_date: '',
         duration: task?.type === 'meeting' ? 30 : 60,
@@ -193,7 +194,7 @@ export function TaskModal({ open, onOpenChange, task = null }) {
         campaign_id: '',
         context_id: (activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive') ? (defaultWorkspaceId || '') : (activeWorkspaceId || defaultWorkspaceId || ''),
         contact_id: '',
-        team_id: '',  // Will be set when user selects team mode
+        team_id: task?.team_id || '',
         assigned_to: ''
       })
     }
@@ -243,16 +244,19 @@ export function TaskModal({ open, onOpenChange, task = null }) {
       return
     }
 
-    const isSpecialView = activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive'
-    if (!isEditing && (!activeWorkspaceId || isSpecialView) && !formData.context_id) {
-      toast.error('Please select a workspace before creating')
-      return
-    }
-
     // Validate team selection when in team mode
     if (assignmentMode === 'team' && !formData.team_id) {
       toast.error('Veuillez sélectionner une équipe')
       return
+    }
+
+    // Workspace validation (skip for team pool tasks)
+    if (assignmentMode !== 'team') {
+      const isSpecialView = activeWorkspaceId === 'trash' || activeWorkspaceId === 'archive'
+      if (!isEditing && (!activeWorkspaceId || isSpecialView) && !formData.context_id) {
+        toast.error('Please select a workspace before creating')
+        return
+      }
     }
 
     setLoading(true)

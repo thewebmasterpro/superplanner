@@ -4,7 +4,7 @@ import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useEffect, useState } from 'react'
 
 export function ArchivePage() {
-    const { setActiveWorkspace } = useWorkspaceStore()
+    const { setActiveWorkspace, workspaces } = useWorkspaceStore()
     const [selectedIds, setSelectedIds] = useState([])
     const [showEmptyConfirm, setShowEmptyConfirm] = useState(false)
 
@@ -122,16 +122,14 @@ export function ArchivePage() {
                                             <div className="flex flex-col gap-1">
                                                 <span className="font-bold text-base-content/80 group-hover:text-primary transition-colors">{task.title}</span>
                                                 <div className="flex flex-wrap gap-2">
-                                                    {task.expand?.project_id && (
-                                                        <span className="badge badge-xs text-[10px] bg-base-200 border-none font-bold uppercase tracking-widest text-base-content/60">
-                                                            {task.expand.project_id.name}
-                                                        </span>
-                                                    )}
-                                                    {task.expand?.context_id && (
-                                                        <span className="badge badge-xs text-[10px] border-none font-black uppercase tracking-widest" style={{ backgroundColor: `${task.expand.context_id.color}20`, color: task.expand.context_id.color }}>
-                                                            {task.expand.context_id.name}
-                                                        </span>
-                                                    )}
+                                                    {(() => {
+                                                        const ctx = task.context_id ? workspaces.find(w => w.id === task.context_id) : null
+                                                        return ctx ? (
+                                                            <span className="badge badge-xs text-[10px] border-none font-black uppercase tracking-widest" style={{ backgroundColor: `${ctx.color}20`, color: ctx.color }}>
+                                                                {ctx.name}
+                                                            </span>
+                                                        ) : null
+                                                    })()}
                                                 </div>
                                             </div>
                                         </td>

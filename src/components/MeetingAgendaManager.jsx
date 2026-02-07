@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMeetingAgenda, formatAgendaItem } from '../hooks/useMeetingAgenda'
-import pb from '../lib/pocketbase'
+import { tasksService } from '../services/tasks.service'
+import { campaignsService } from '../services/campaigns.service'
 
 /**
  * Component to manage the agenda of a meeting (add tasks + campaigns)

@@ -1,9 +1,5 @@
 import pb from '../lib/pocketbase'
 
-// 🚨🚨🚨 VERIFICATION CODE CHARGÉ 🚨🚨🚨
-console.log('🚨🚨🚨 GAMIFICATION SERVICE LOADED - VERSION 2.0 🚨🚨🚨')
-console.log('🚨 If you see this, the file is loading! 🚨')
-
 /**
  * Points configuration
  */
@@ -29,22 +25,26 @@ class GamificationService {
   /**
    * Get user's gamification points record
    * @param {string} userId - User ID
+   * @param {string|null} workspaceId - Workspace ID for scoping
    * @returns {Promise<Object>} User points record
    */
-  async getUserPoints(userId) {
-    console.log('🎮 [Gamification] getUserPoints called:', { userId })
+  async getUserPoints(userId, workspaceId = null) {
     try {
+      let filter = `user_id = "${userId}"`
+      if (workspaceId) {
+        filter += ` && (context_id = "${workspaceId}")`
+      } else {
+        filter += ` && (context_id = "" || context_id = null)`
+      }
+
       const records = await pb.collection('gamification_points').getFullList({
-        filter: `user_id = "${userId}"`,
+        filter,
       })
 
-      console.log('🎮 [Gamification] Records found:', records.length)
-
       if (records.length === 0) {
-        // Create initial record if doesn't exist
-        console.log('🎮 [Gamification] Creating initial record for user')
         const newRecord = await pb.collection('gamification_points').create({
           user_id: userId,
+          context_id: workspaceId || null,
           points: 0,
           total_earned: 0,
           total_spent: 0,
@@ -53,20 +53,12 @@ class GamificationService {
           last_activity_date: new Date().toISOString(),
           leaderboard_visible: false,
         })
-        console.log('🎮 [Gamification] Initial record created:', newRecord)
         return newRecord
       }
 
-      console.log('🎮 [Gamification] Returning existing record:', records[0])
       return records[0]
     } catch (error) {
-      console.error('❌ [Gamification] Error getting user points:', error)
-      console.error('❌ [Gamification] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        response: error.response,
-      })
+      console.error('Error getting user points:', error)
       throw error
     }
   }
@@ -80,9 +72,9 @@ class GamificationService {
    * @returns {Promise<Object>} Updated points record
    */
   async awardPoints(userId, actionType, points, metadata = {}) {
-    console.log('🎮 [Gamification] awardPoints called:', { userId, actionType, points, metadata })
     try {
-      const userPoints = await this.getUserPoints(userId)
+      const workspaceId = metadata.workspaceId || null
+      const userPoints = await this.getUserPoints(userId, workspaceId)
       const oldLevel = userPoints.level
 
       // Check for streak multiplier
@@ -90,26 +82,19 @@ class GamificationService {
       const hadStreakBonus = userPoints.streak_days > 0
       if (hadStreakBonus) {
         finalPoints = Math.round(points * POINTS_CONFIG.streak_multiplier)
-        console.log('🎮 [Gamification] Streak multiplier applied:', {
-          original: points,
-          final: finalPoints,
-          streak: userPoints.streak_days,
-        })
       }
 
-      console.log('🎮 [Gamification] Updating points record')
       // Update points
       const updatedPoints = await pb.collection('gamification_points').update(userPoints.id, {
         points: userPoints.points + finalPoints,
         total_earned: userPoints.total_earned + finalPoints,
         last_activity_date: new Date().toISOString(),
       })
-      console.log('🎮 [Gamification] Points updated:', updatedPoints)
 
-      console.log('🎮 [Gamification] Creating history entry')
       // Create history entry
       await pb.collection('points_history').create({
         user_id: userId,
+        context_id: workspaceId || null,
         action_type: actionType,
         points_change: finalPoints,
         related_task_id: metadata.taskId || null,
@@ -117,23 +102,17 @@ class GamificationService {
         related_item_id: metadata.itemId || null,
         reason: metadata.description || `${actionType}: +${finalPoints} points`,
       })
-      console.log('🎮 [Gamification] History entry created')
 
       // Check and update level
-      console.log('🎮 [Gamification] Checking level update')
-      const levelResult = await this.updateUserLevel(userId)
+      const levelResult = await this.updateUserLevel(userId, workspaceId)
       const newLevel = levelResult?.level || oldLevel
       const didLevelUp = newLevel > oldLevel
 
       // Check and update challenge progress
       if (actionType === 'task_completed') {
-        console.log('🎮 [Gamification] Updating task challenges')
         await this._updateTaskChallenges(userId)
       }
 
-      console.log('🎮 [Gamification] ✅ Points awarded successfully!')
-
-      // Return detailed result for notifications
       return {
         success: true,
         pointsAwarded: finalPoints,
@@ -144,14 +123,7 @@ class GamificationService {
         updatedPoints
       }
     } catch (error) {
-      console.error('❌ [Gamification] Error awarding points:', error)
-      console.error('❌ [Gamification] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        response: error.response,
-      })
-      // Don't throw - points are nice to have, not critical
+      console.error('Error awarding points:', error)
       return null
     }
   }
@@ -162,10 +134,15 @@ class GamificationService {
    * @param {number} limit - Max records to return
    * @returns {Promise<Array>} Points history
    */
-  async getPointsHistory(userId, limit = 100) {
+  async getPointsHistory(userId, limit = 100, workspaceId = null) {
     try {
+      let filter = `user_id = "${userId}"`
+      if (workspaceId) {
+        filter += ` && (context_id = "${workspaceId}" || context_id = "" || context_id = null)`
+      }
+
       return await pb.collection('points_history').getList(1, limit, {
-        filter: `user_id = "${userId}"`,
+        filter,
         sort: '-created_at',
       })
     } catch (error) {
@@ -179,9 +156,13 @@ class GamificationService {
    * @param {Object} options - Options { period, limit }
    * @returns {Promise<Array>} Leaderboard data
    */
-  async getLeaderboard({ period = 'all', limit = 10 } = {}) {
+  async getLeaderboard({ period = 'all', limit = 10, workspaceId = null } = {}) {
     try {
       let filter = 'leaderboard_visible = true'
+
+      if (workspaceId) {
+        filter += ` && (context_id = "${workspaceId}" || context_id = "" || context_id = null)`
+      }
 
       // Period filtering (for future implementation with time-based points)
       if (period === 'week' || period === 'month') {
@@ -220,16 +201,21 @@ class GamificationService {
    * @param {string} userId - User ID
    * @returns {Promise<number|null>} User's rank or null if not in leaderboard
    */
-  async getUserRank(userId) {
+  async getUserRank(userId, workspaceId = null) {
     try {
-      const userPoints = await this.getUserPoints(userId)
+      const userPoints = await this.getUserPoints(userId, workspaceId)
 
       if (!userPoints.leaderboard_visible) {
         return null
       }
 
+      let rankFilter = `total_earned > ${userPoints.total_earned} && leaderboard_visible = true`
+      if (workspaceId) {
+        rankFilter += ` && (context_id = "${workspaceId}" || context_id = "" || context_id = null)`
+      }
+
       const higherRanked = await pb.collection('gamification_points').getList(1, 1, {
-        filter: `total_earned > ${userPoints.total_earned} && leaderboard_visible = true`,
+        filter: rankFilter,
       })
 
       return higherRanked.totalItems + 1
@@ -245,16 +231,14 @@ class GamificationService {
    * @param {boolean} visible - Whether to show in leaderboard
    * @returns {Promise<Object>} Updated points record
    */
-  async updateLeaderboardVisibility(userId, visible) {
+  async updateLeaderboardVisibility(userId, visible, workspaceId = null) {
     try {
-      const userPoints = await this.getUserPoints(userId)
-      const updated = await pb.collection('gamification_points').update(userPoints.id, {
+      const userPoints = await this.getUserPoints(userId, workspaceId)
+      return await pb.collection('gamification_points').update(userPoints.id, {
         leaderboard_visible: visible,
       })
-      console.log('🎮 [Gamification] Leaderboard visibility updated:', { userId, visible })
-      return updated
     } catch (error) {
-      console.error('❌ [Gamification] Error updating leaderboard visibility:', error)
+      console.error('Error updating leaderboard visibility:', error)
       throw error
     }
   }
@@ -264,11 +248,16 @@ class GamificationService {
    * @param {Object} options - Options { limit }
    * @returns {Promise<Array>} Team leaderboard data
    */
-  async getTeamLeaderboard({ limit = 10 } = {}) {
+  async getTeamLeaderboard({ limit = 10, workspaceId = null } = {}) {
     try {
-      // Get all teams
+      // Get all teams (filtered by workspace if provided)
+      let teamFilter = undefined
+      if (workspaceId) {
+        teamFilter = `(context_id = "${workspaceId}" || context_id = "" || context_id = null)`
+      }
       const teams = await pb.collection('teams').getFullList({
         expand: 'owner_id',
+        ...(teamFilter ? { filter: teamFilter } : {}),
       })
 
       // Get all team members with their points
@@ -353,24 +342,19 @@ class GamificationService {
    * @returns {Promise<Object>} Created reward
    */
   async createTeamReward(teamId, rewardData) {
-    console.log('🎁 [TeamRewards] Creating reward:', { teamId, rewardData })
     try {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      // Check if user is team leader
-      console.log('🎁 [TeamRewards] Checking team ownership for user:', user.id)
       const membership = await pb.collection('team_members').getFullList({
         filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
       })
 
-      console.log('🎁 [TeamRewards] Membership check result:', membership)
       if (membership.length === 0) {
         throw new Error('Only team leaders can create rewards')
       }
 
-      console.log('🎁 [TeamRewards] Creating reward in database...')
-      const reward = await pb.collection('team_rewards').create({
+      return await pb.collection('team_rewards').create({
         team_id: teamId,
         name: rewardData.name,
         description: rewardData.description || '',
@@ -379,16 +363,8 @@ class GamificationService {
         end_date: rewardData.end_date || null,
         created_by: user.id,
       })
-
-      console.log('🎁 [TeamRewards] Reward created successfully:', reward)
-      return reward
     } catch (error) {
-      console.error('❌ [TeamRewards] Error creating reward:', error)
-      console.error('❌ [TeamRewards] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data
-      })
+      console.error('Error creating reward:', error)
       throw error
     }
   }
@@ -399,23 +375,13 @@ class GamificationService {
    * @returns {Promise<Array>} Team rewards
    */
   async getTeamRewards(teamId) {
-    console.log('🎁 [TeamRewards] Fetching rewards for team:', teamId)
     try {
-      // Sort by created_at (custom field) instead of created (system field)
-      const rewards = await pb.collection('team_rewards').getFullList({
+      return await pb.collection('team_rewards').getFullList({
         filter: `team_id = "${teamId}"`,
         sort: '-created_at',
       })
-      console.log('🎁 [TeamRewards] Rewards fetched:', rewards.length, 'rewards found')
-      console.log('🎁 [TeamRewards] Rewards data:', rewards)
-      return rewards
     } catch (error) {
-      console.error('❌ [TeamRewards] Error getting rewards:', error)
-      console.error('❌ [TeamRewards] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data
-      })
+      console.error('Error getting rewards:', error)
       return []
     }
   }
@@ -434,12 +400,10 @@ class GamificationService {
    * @returns {Promise<Object>} Updated reward
    */
   async updateTeamReward(teamId, rewardId, rewardData) {
-    console.log('🎁 [TeamRewards] Updating reward:', { teamId, rewardId, rewardData })
     try {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      // Check if user is team leader
       const membership = await pb.collection('team_members').getFullList({
         filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
       })
@@ -448,50 +412,35 @@ class GamificationService {
         throw new Error('Only team leaders can update rewards')
       }
 
-      const updated = await pb.collection('team_rewards').update(rewardId, {
+      return await pb.collection('team_rewards').update(rewardId, {
         name: rewardData.name,
         description: rewardData.description || '',
         points: rewardData.points,
         start_date: rewardData.start_date || '',
         end_date: rewardData.end_date || '',
       })
-
-      console.log('🎁 [TeamRewards] Reward updated successfully:', updated)
-      return updated
     } catch (error) {
-      console.error('❌ [TeamRewards] Error updating reward:', error)
+      console.error('Error updating reward:', error)
       throw error
     }
   }
 
   async deleteTeamReward(teamId, rewardId) {
-    console.log('🎁 [TeamRewards] Deleting reward:', { teamId, rewardId })
     try {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      // Check if user is team leader
-      console.log('🎁 [TeamRewards] Checking team ownership for user:', user.id)
       const membership = await pb.collection('team_members').getFullList({
         filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
       })
 
-      console.log('🎁 [TeamRewards] Membership check result:', membership)
       if (membership.length === 0) {
         throw new Error('Only team leaders can delete rewards')
       }
 
-      console.log('🎁 [TeamRewards] Deleting reward from database...')
       await pb.collection('team_rewards').delete(rewardId)
-
-      console.log('🎁 [TeamRewards] Reward deleted successfully')
     } catch (error) {
-      console.error('❌ [TeamRewards] Error deleting reward:', error)
-      console.error('❌ [TeamRewards] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data
-      })
+      console.error('Error deleting reward:', error)
       throw error
     }
   }
@@ -581,16 +530,13 @@ class GamificationService {
    * @returns {Promise<Array>} Team challenges
    */
   async getTeamChallenges(teamId) {
-    console.log('🎯 [Challenges] Fetching challenges for team:', teamId)
     try {
-      const challenges = await pb.collection('challenges').getFullList({
+      return await pb.collection('challenges').getFullList({
         filter: `team_id = "${teamId}"`,
         sort: '-created_at',
       })
-      console.log('🎯 [Challenges] Team challenges fetched:', challenges.length, 'challenges found')
-      return challenges
     } catch (error) {
-      console.error('❌ [Challenges] Error getting team challenges:', error)
+      console.error('Error getting team challenges:', error)
       return []
     }
   }
@@ -602,38 +548,22 @@ class GamificationService {
    * @returns {Promise<Object>} Created challenge
    */
   async createChallenge(challengeData, teamId = null) {
-    console.log('✨ NEW CODE ✨ Creating challenge:', { challengeData, teamId })
     try {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      console.log('🔍 User:', { userId: user.id, email: user.email })
-
       // Check team ownership
       if (teamId) {
-        console.log('🔍 Checking membership for:', { teamId, userId: user.id })
-        const filter = `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`
-        console.log('🔍 Filter query:', filter)
-
         const membership = await pb.collection('team_members').getFullList({
-          filter: filter,
+          filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
         })
 
-        console.log('🔍 Membership result:', membership)
-        console.log('🔍 Membership count:', membership.length)
-
         if (membership.length === 0) {
-          // Try without role filter to see if membership exists at all
-          const anyMembership = await pb.collection('team_members').getFullList({
-            filter: `team_id = "${teamId}" && user_id = "${user.id}"`,
-          })
-          console.log('🔍 Any membership (without role filter):', anyMembership)
           throw new Error('Only team leaders can create team challenges')
         }
       }
 
-      // STEP 1: Create challenge WITHOUT relations (to avoid PocketBase issues)
-      console.log('STEP 1: Creating challenge without relations...')
+      // Create challenge without relations first (PocketBase workaround)
       const challenge = await pb.collection('challenges').create({
         title: challengeData.title,
         description: challengeData.description || '',
@@ -646,24 +576,14 @@ class GamificationService {
         start_date: challengeData.start_date,
         end_date: challengeData.end_date,
       })
-      console.log('✅ Challenge created:', challenge.id)
 
-      // STEP 2: Immediately update with relations
-      console.log('STEP 2: Updating with team_id and created_by...')
-      const updated = await pb.collection('challenges').update(challenge.id, {
+      // Update with relations
+      return await pb.collection('challenges').update(challenge.id, {
         team_id: teamId,
         created_by: user.id
       })
-      console.log('✅ Relations added:', { team_id: updated.team_id, created_by: updated.created_by })
-
-      return updated
     } catch (error) {
-      console.error('❌ [Challenges] Error creating challenge:', error)
-      console.error('❌ [Challenges] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data
-      })
+      console.error('Error creating challenge:', error)
       throw error
     }
   }
@@ -676,12 +596,10 @@ class GamificationService {
    * @returns {Promise<Object>} Updated challenge
    */
   async updateChallenge(challengeId, challengeData, teamId = null) {
-    console.log('🎯 [Challenges] Updating challenge:', { challengeId, challengeData, teamId })
     try {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      // If teamId provided, check if user is team leader
       if (teamId) {
         const membership = await pb.collection('team_members').getFullList({
           filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
@@ -692,7 +610,7 @@ class GamificationService {
         }
       }
 
-      const updated = await pb.collection('challenges').update(challengeId, {
+      return await pb.collection('challenges').update(challengeId, {
         title: challengeData.title,
         description: challengeData.description || '',
         type: challengeData.type,
@@ -703,11 +621,8 @@ class GamificationService {
         start_date: challengeData.start_date,
         end_date: challengeData.end_date,
       })
-
-      console.log('🎯 [Challenges] Challenge updated successfully:', updated)
-      return updated
     } catch (error) {
-      console.error('❌ [Challenges] Error updating challenge:', error)
+      console.error('Error updating challenge:', error)
       throw error
     }
   }
@@ -719,12 +634,10 @@ class GamificationService {
    * @returns {Promise<void>}
    */
   async deleteChallenge(challengeId, teamId = null) {
-    console.log('🎯 [Challenges] Deleting challenge:', { challengeId, teamId })
     try {
       const user = pb.authStore.model
       if (!user) throw new Error('Not authenticated')
 
-      // If teamId provided, check if user is team leader
       if (teamId) {
         const membership = await pb.collection('team_members').getFullList({
           filter: `team_id = "${teamId}" && user_id = "${user.id}" && role = "owner"`,
@@ -736,9 +649,8 @@ class GamificationService {
       }
 
       await pb.collection('challenges').delete(challengeId)
-      console.log('🎯 [Challenges] Challenge deleted successfully')
     } catch (error) {
-      console.error('❌ [Challenges] Error deleting challenge:', error)
+      console.error('Error deleting challenge:', error)
       throw error
     }
   }
@@ -747,10 +659,14 @@ class GamificationService {
    * Get all active challenges
    * @returns {Promise<Array>} Active challenges
    */
-  async getActiveChallenges(userId = null) {
+  async getActiveChallenges(userId = null, workspaceId = null) {
     try {
       const now = new Date().toISOString()
       let filter = `is_active = true && start_date <= "${now}" && end_date >= "${now}"`
+
+      if (workspaceId) {
+        filter += ` && (context_id = "${workspaceId}" || context_id = "" || context_id = null)`
+      }
 
       // If userId provided, filter to include global challenges + user's team challenges
       if (userId) {
@@ -785,10 +701,15 @@ class GamificationService {
    * @param {string} userId - User ID
    * @returns {Promise<Array>} User challenges
    */
-  async getUserChallenges(userId) {
+  async getUserChallenges(userId, workspaceId = null) {
     try {
+      let filter = `user_id = "${userId}"`
+      if (workspaceId) {
+        filter += ` && (context_id = "${workspaceId}" || context_id = "" || context_id = null)`
+      }
+
       const userChallenges = await pb.collection('user_challenges').getFullList({
-        filter: `user_id = "${userId}"`,
+        filter,
         expand: 'challenge_id',
         sort: '-created_at',
       })
@@ -816,9 +737,9 @@ class GamificationService {
    * @param {string} userId - User ID
    * @returns {Promise<void>}
    */
-  async enrollUserInActiveChallenges(userId) {
+  async enrollUserInActiveChallenges(userId, workspaceId = null) {
     try {
-      const activeChallenges = await this.getActiveChallenges(userId)
+      const activeChallenges = await this.getActiveChallenges(userId, workspaceId)
       const existingEnrollments = await pb.collection('user_challenges').getFullList({
         filter: `user_id = "${userId}"`,
       })
@@ -977,7 +898,7 @@ class GamificationService {
    * @param {string} itemId - Item ID
    * @returns {Promise<Object>} Purchase record
    */
-  async purchaseItem(userId, itemId) {
+  async purchaseItem(userId, itemId, workspaceId = null) {
     try {
       // Get item details
       const item = await pb.collection('shop_items').getOne(itemId)
@@ -987,7 +908,7 @@ class GamificationService {
       }
 
       // Check if user has enough points
-      const userPoints = await this.getUserPoints(userId)
+      const userPoints = await this.getUserPoints(userId, workspaceId)
 
       if (userPoints.points < item.price) {
         throw new Error('Insufficient points')
@@ -1019,6 +940,7 @@ class GamificationService {
       // Create history entry
       await pb.collection('points_history').create({
         user_id: userId,
+        context_id: workspaceId || null,
         action_type: 'shop_purchase',
         points_change: -item.price,
         related_item_id: itemId,
@@ -1065,22 +987,17 @@ class GamificationService {
    * @returns {Promise<void>}
    */
   async onTaskCompleted(taskId, userId) {
-    console.log('🎮 [Gamification] onTaskCompleted called:', { taskId, userId })
     try {
-      // Get task details to determine points
       const task = await pb.collection('tasks').getOne(taskId)
-      console.log('🎮 [Gamification] Task retrieved:', task)
 
       let points = POINTS_CONFIG.task_completed
 
-      // Bonus for high priority
       if (task.priority === 'high') {
         points = POINTS_CONFIG.high_priority_task
       } else if (task.priority === 'medium') {
         points = POINTS_CONFIG.medium_priority_task
       }
 
-      // Bonus for early completion
       if (task.due_date) {
         const dueDate = new Date(task.due_date)
         const now = new Date()
@@ -1089,25 +1006,15 @@ class GamificationService {
         }
       }
 
-      console.log('🎮 [Gamification] Awarding points:', points)
-
-      // Award points
-      const result = await this.awardPoints(userId, 'task_completed', points, {
+      await this.awardPoints(userId, 'task_completed', points, {
         taskId,
+        workspaceId: task.context_id || null,
         description: `Task completed: ${task.title}`,
       })
 
-      console.log('🎮 [Gamification] Points awarded successfully:', result)
-
-      // Update task-based challenges
       await this._updateTaskChallenges(userId)
     } catch (error) {
-      console.error('❌ [Gamification] Error in onTaskCompleted:', error)
-      console.error('❌ [Gamification] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-      })
+      console.error('Error in onTaskCompleted:', error)
     }
   }
 
@@ -1117,39 +1024,21 @@ class GamificationService {
    * @returns {Promise<void>}
    */
   async onDailyLogin(userId) {
-    console.log('🎮 [Gamification] onDailyLogin called:', { userId })
     try {
       const userPoints = await this.getUserPoints(userId)
-      console.log('🎮 [Gamification] User points retrieved:', userPoints)
 
       const lastActivity = new Date(userPoints.last_activity_date)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       lastActivity.setHours(0, 0, 0, 0)
 
-      console.log('🎮 [Gamification] Date comparison:', {
-        lastActivity: lastActivity.toISOString(),
-        today: today.toISOString(),
-        shouldAward: lastActivity < today,
-      })
-
-      // Only award once per day
       if (lastActivity < today) {
-        console.log('🎮 [Gamification] Awarding daily login bonus')
-
         const result = await this.awardPoints(userId, 'daily_login', POINTS_CONFIG.daily_login, {
           description: 'Daily login bonus',
         })
 
-        // Update streak
-        console.log('🎮 [Gamification] Updating streak')
         const streakResult = await this.checkAndUpdateStreak(userId)
-
-        // Enroll in new challenges
-        console.log('🎮 [Gamification] Enrolling in challenges')
         await this.enrollUserInActiveChallenges(userId)
-
-        console.log('🎮 [Gamification] Daily login completed successfully')
 
         return {
           ...result,
@@ -1157,16 +1046,10 @@ class GamificationService {
           streakLost: streakResult?.lost || false
         }
       } else {
-        console.log('🎮 [Gamification] Daily login already awarded today')
         return { success: false, alreadyAwarded: true }
       }
     } catch (error) {
-      console.error('❌ [Gamification] Error in onDailyLogin:', error)
-      console.error('❌ [Gamification] Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-      })
+      console.error('Error in onDailyLogin:', error)
     }
   }
 
@@ -1186,9 +1069,9 @@ class GamificationService {
    * @param {string} userId - User ID
    * @returns {Promise<Object>} Updated points record
    */
-  async updateUserLevel(userId) {
+  async updateUserLevel(userId, workspaceId = null) {
     try {
-      const userPoints = await this.getUserPoints(userId)
+      const userPoints = await this.getUserPoints(userId, workspaceId)
       const newLevel = this.calculateLevel(userPoints.total_earned)
 
       if (newLevel !== userPoints.level) {

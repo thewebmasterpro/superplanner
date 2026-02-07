@@ -29,8 +29,7 @@ class TasksService {
     try {
       const options = {
         sort: '-id',
-        expand: 'category_id,project_id,context_id',
-        requestKey: null // Disable auto-cancellation for reliable fetching
+        requestKey: null,
       }
 
       if (filterString) {
@@ -39,21 +38,27 @@ class TasksService {
 
       return await pb.collection('tasks').getFullList(options)
     } catch (error) {
-      // Fallback: try without expand (relations may have issues)
-      try {
-        const options = {
-          sort: '-id',
-          requestKey: null
-        }
-        if (filterString) {
-          options.filter = filterString
-        }
+      console.error('Failed to fetch tasks:', error)
+      return []
+    }
+  }
 
-        return await pb.collection('tasks').getFullList(options)
-      } catch (fallbackError) {
-        console.error('Failed to fetch tasks:', fallbackError)
-        return []
-      }
+  /**
+   * Fetch tasks by campaign ID
+   *
+   * @param {string} campaignId - Campaign ID
+   * @returns {Promise<Array>} Array of task records
+   */
+  async getByCampaign(campaignId) {
+    try {
+      return await pb.collection('tasks').getFullList({
+        filter: `campaign_id = "${campaignId}" && (deleted_at = "" || deleted_at = null)`,
+        sort: 'due_date',
+        requestKey: null,
+      })
+    } catch (error) {
+      console.error('Failed to fetch campaign tasks:', error)
+      return []
     }
   }
 
@@ -64,9 +69,7 @@ class TasksService {
    * @returns {Promise<Object>} Task record
    */
   async getOne(id) {
-    return await pb.collection('tasks').getOne(id, {
-      expand: 'category_id,project_id,context_id'
-    })
+    return await pb.collection('tasks').getOne(id)
   }
 
   /**
@@ -323,6 +326,73 @@ class TasksService {
 
     await Promise.all(tasks.map(t => this.moveToTrash(t.id)))
     return tasks.length
+  }
+
+  /**
+   * Fetch pool tasks for a team (unassigned team tasks)
+   * @param {string} teamId - Team ID
+   * @returns {Promise<Array>} Array of unassigned team tasks
+   */
+  async getPoolTasks(teamId) {
+    if (!teamId) return []
+
+    try {
+      const results = await pb.collection('tasks').getFullList({
+        filter: `team_id = "${teamId}" && status = "unassigned" && (deleted_at = "" || deleted_at = null) && (archived_at = "" || archived_at = null)`,
+        sort: '-created',
+        requestKey: null,
+      })
+      return results
+    } catch (error) {
+      console.warn('Pool server filter failed:', error.message)
+      try {
+        const allTasks = await pb.collection('tasks').getFullList({
+          sort: '-created',
+          requestKey: null,
+        })
+        return allTasks.filter(t =>
+          t.team_id === teamId &&
+          t.status === 'unassigned' &&
+          !t.deleted_at &&
+          !t.archived_at
+        )
+      } catch (fallbackError) {
+        console.error('Pool fallback also failed:', fallbackError)
+        return []
+      }
+    }
+  }
+
+  /**
+   * Create a pool task (team task with unassigned status)
+   * @param {Object} data - Task data
+   * @param {string} teamId - Team ID
+   * @returns {Promise<Object>} Created pool task
+   */
+  async createPoolTask(data, teamId) {
+    const user = pb.authStore.model
+    if (!user) throw new Error('Not authenticated')
+    if (!teamId) throw new Error('Team ID is required for pool tasks')
+
+    const sanitized = this._sanitize(data)
+
+    // Pool-specific fields
+    sanitized.user_id = user.id
+    sanitized.status = 'unassigned'
+    sanitized.assigned_to = null
+
+    // Remove team_id from create payload (two-step pattern for relations)
+    delete sanitized.team_id
+
+    // Step 1: Create task without team_id relation
+    const createdTask = await pb.collection('tasks').create(sanitized)
+
+    // Step 2: Set team_id relation via update
+    const finalTask = await pb.collection('tasks').update(createdTask.id, {
+      team_id: teamId
+    })
+
+    return finalTask
   }
 
   /**

@@ -37,10 +37,10 @@ export const useGamificationStore = create((set) => ({
     }),
 
   // Fetch user points from service
-  fetchUserPoints: async (userId) => {
+  fetchUserPoints: async (userId, workspaceId = null) => {
     set({ loading: true, error: null })
     try {
-      const pointsData = await gamificationService.getUserPoints(userId)
+      const pointsData = await gamificationService.getUserPoints(userId, workspaceId)
       set({
         userPoints: pointsData,
         points: pointsData.points || 0,

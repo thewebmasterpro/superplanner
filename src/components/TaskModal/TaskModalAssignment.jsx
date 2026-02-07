@@ -113,7 +113,7 @@ export function TaskModalAssignment({
                     <SelectItem value="none">Non assigné</SelectItem>
                     {teamMembers.map((member) => (
                       <SelectItem key={member.user_id} value={member.user_id}>
-                        {member.auth_user?.email || `User ${member.user_id.slice(0, 8)}...`}
+                        {member.expand?.user_id?.email || member.auth_user?.email || member.expand?.user_id?.name || member.auth_user?.name || `User ${member.user_id.slice(0, 8)}...`}
                       </SelectItem>
                     ))}
                   </SelectContent>

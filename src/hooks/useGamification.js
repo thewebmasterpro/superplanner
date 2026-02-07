@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { gamificationService } from '../services/gamification.service'
 import { useGamificationStore } from '../stores/gamificationStore'
 import { useUserStore } from '../stores/userStore'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useEffect } from 'react'
 
 /**
@@ -10,16 +11,16 @@ import { useEffect } from 'react'
 export function useUserPoints() {
   const user = useUserStore((s) => s.user)
   const setPointsData = useGamificationStore((s) => s.setPointsData)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   const query = useQuery({
-    queryKey: ['gamification', 'points', user?.id],
-    queryFn: () => gamificationService.getUserPoints(user.id),
+    queryKey: ['gamification', 'points', user?.id, activeWorkspaceId],
+    queryFn: () => gamificationService.getUserPoints(user.id, activeWorkspaceId),
     enabled: !!user,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000,
+    refetchInterval: 60000,
   })
 
-  // Update store when data changes
   useEffect(() => {
     if (query.data) {
       setPointsData(query.data)
@@ -34,12 +35,13 @@ export function useUserPoints() {
  */
 export function usePointsHistory(limit = 100) {
   const user = useUserStore((s) => s.user)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   return useQuery({
-    queryKey: ['gamification', 'points-history', user?.id, limit],
-    queryFn: () => gamificationService.getPointsHistory(user.id, limit),
+    queryKey: ['gamification', 'points-history', user?.id, limit, activeWorkspaceId],
+    queryFn: () => gamificationService.getPointsHistory(user.id, limit, activeWorkspaceId),
     enabled: !!user,
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
   })
 }
 
@@ -47,10 +49,13 @@ export function usePointsHistory(limit = 100) {
  * Hook to get active challenges
  */
 export function useActiveChallenges() {
+  const user = useUserStore((s) => s.user)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
+
   return useQuery({
-    queryKey: ['gamification', 'challenges', 'active'],
-    queryFn: () => gamificationService.getActiveChallenges(),
-    staleTime: 300000, // 5 minutes
+    queryKey: ['gamification', 'challenges', 'active', activeWorkspaceId],
+    queryFn: () => gamificationService.getActiveChallenges(user?.id, activeWorkspaceId),
+    staleTime: 300000,
   })
 }
 
@@ -59,13 +64,14 @@ export function useActiveChallenges() {
  */
 export function useUserChallenges() {
   const user = useUserStore((s) => s.user)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   return useQuery({
-    queryKey: ['gamification', 'user-challenges', user?.id],
-    queryFn: () => gamificationService.getUserChallenges(user.id),
+    queryKey: ['gamification', 'user-challenges', user?.id, activeWorkspaceId],
+    queryFn: () => gamificationService.getUserChallenges(user.id, activeWorkspaceId),
     enabled: !!user,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // Refetch every minute for progress updates
+    staleTime: 30000,
+    refetchInterval: 60000,
   })
 }
 
@@ -79,10 +85,7 @@ export function useClaimReward() {
   return useMutation({
     mutationFn: ({ challengeId }) => gamificationService.claimReward(user.id, challengeId),
     onSuccess: () => {
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries(['gamification', 'points', user.id])
-      queryClient.invalidateQueries(['gamification', 'user-challenges', user.id])
-      queryClient.invalidateQueries(['gamification', 'points-history', user.id])
+      queryClient.invalidateQueries({ queryKey: ['gamification'] })
     },
   })
 }
@@ -91,10 +94,12 @@ export function useClaimReward() {
  * Hook to get leaderboard
  */
 export function useLeaderboard(period = 'all', limit = 10) {
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
+
   return useQuery({
-    queryKey: ['gamification', 'leaderboard', period, limit],
-    queryFn: () => gamificationService.getLeaderboard({ period, limit }),
-    staleTime: 60000, // 1 minute
+    queryKey: ['gamification', 'leaderboard', period, limit, activeWorkspaceId],
+    queryFn: () => gamificationService.getLeaderboard({ period, limit, workspaceId: activeWorkspaceId }),
+    staleTime: 60000,
   })
 }
 
@@ -104,15 +109,15 @@ export function useLeaderboard(period = 'all', limit = 10) {
 export function useUserRank() {
   const user = useUserStore((s) => s.user)
   const setRank = useGamificationStore((s) => s.setRank)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   const query = useQuery({
-    queryKey: ['gamification', 'rank', user?.id],
-    queryFn: () => gamificationService.getUserRank(user.id),
+    queryKey: ['gamification', 'rank', user?.id, activeWorkspaceId],
+    queryFn: () => gamificationService.getUserRank(user.id, activeWorkspaceId),
     enabled: !!user,
-    staleTime: 120000, // 2 minutes
+    staleTime: 120000,
   })
 
-  // Update store when data changes
   useEffect(() => {
     if (query.data !== undefined) {
       setRank(query.data)
@@ -129,7 +134,7 @@ export function useShopItems() {
   return useQuery({
     queryKey: ['gamification', 'shop', 'items'],
     queryFn: () => gamificationService.getShopItems(),
-    staleTime: 600000, // 10 minutes
+    staleTime: 600000,
   })
 }
 
@@ -143,7 +148,7 @@ export function useUserPurchases() {
     queryKey: ['gamification', 'purchases', user?.id],
     queryFn: () => gamificationService.getUserPurchases(user.id),
     enabled: !!user,
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
   })
 }
 
@@ -153,14 +158,12 @@ export function useUserPurchases() {
 export function usePurchaseItem() {
   const queryClient = useQueryClient()
   const user = useUserStore((s) => s.user)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   return useMutation({
-    mutationFn: ({ itemId }) => gamificationService.purchaseItem(user.id, itemId),
+    mutationFn: ({ itemId }) => gamificationService.purchaseItem(user.id, itemId, activeWorkspaceId),
     onSuccess: () => {
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries(['gamification', 'points', user.id])
-      queryClient.invalidateQueries(['gamification', 'purchases', user.id])
-      queryClient.invalidateQueries(['gamification', 'points-history', user.id])
+      queryClient.invalidateQueries({ queryKey: ['gamification'] })
     },
   })
 }
@@ -176,7 +179,7 @@ export function useActivateItem() {
     mutationFn: ({ purchaseId, active }) =>
       gamificationService.activateItem(user.id, purchaseId, active),
     onSuccess: () => {
-      queryClient.invalidateQueries(['gamification', 'purchases', user.id])
+      queryClient.invalidateQueries({ queryKey: ['gamification', 'purchases', user.id] })
     },
   })
 }
@@ -186,8 +189,9 @@ export function useActivateItem() {
  */
 export function useEnrollInChallenges() {
   const user = useUserStore((s) => s.user)
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
 
   return useMutation({
-    mutationFn: () => gamificationService.enrollUserInActiveChallenges(user.id),
+    mutationFn: () => gamificationService.enrollUserInActiveChallenges(user.id, activeWorkspaceId),
   })
 }

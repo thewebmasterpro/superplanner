@@ -200,8 +200,8 @@ export function ProjectManager() {
                             </p>
                         ) : (
                             projects.map((proj) => {
-                                const workspace = proj.expand?.context_id || workspaces.find(w => w.id === proj.context_id)
-                                const client = proj.expand?.contact_id || contacts.find(c => c.id === proj.contact_id)
+                                const workspace = workspaces.find(w => w.id === proj.context_id)
+                                const client = contacts.find(c => c.id === proj.contact_id)
                                 return (
                                     <div key={proj.id}
                                         className={`flex flex-col p-4 border rounded-lg transition-colors gap-2 ${editingId === proj.id ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'}`}

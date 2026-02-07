@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { projectsService } from '../services/projects.service'
-import pb from '../lib/pocketbase' // Still needed for useCategories for now
+import { useWorkspaceStore } from '../stores/workspaceStore'
 
 export const useProjects = (userId) => {
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
+
   return useQuery({
-    queryKey: ['projects', userId],
-    queryFn: () => projectsService.getAll(),
+    queryKey: ['projects', userId, activeWorkspaceId],
+    queryFn: () => projectsService.getAll({ workspaceId: activeWorkspaceId }),
     enabled: !!userId,
   })
 }
-
-// useCategories moved to src/hooks/useCategories.js

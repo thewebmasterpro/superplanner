@@ -24,7 +24,8 @@ class WorkspacesService {
       const records = await pb.collection('contexts').getFullList({
         filter: `user_id = "${user.id}"`,
         sort: 'name',
-        requestKey: null
+        requestKey: null,
+        skipTotal: false, // Required for older PocketBase servers
       })
 
       // Filter only active ones (status is falsy or 'active')

@@ -48,7 +48,6 @@ import { settingsService } from '@/services/settings.service'
 
 // Legacy Widgets
 import PrayerTimes from '@/components/PrayerTimes'
-import PrayerCountdown from '@/components/PrayerCountdown'
 import DailyInspiration from '@/components/DailyInspiration'
 import Pomodoro from '@/components/Pomodoro'
 import TaskTimer from '@/components/TaskTimer'
@@ -180,12 +179,7 @@ export default function DashboardV3() {
         prayerTimes: {
             title: 'Prières',
             icon: <Clock className="w-4 h-4" />,
-            component: (
-                <div className="space-y-4">
-                    <PrayerTimes />
-                    <PrayerCountdown />
-                </div>
-            )
+            component: <PrayerTimes />
         },
         quranVerse: {
             title: 'Inspiration',

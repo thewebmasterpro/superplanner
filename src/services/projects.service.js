@@ -28,10 +28,10 @@ class ProjectsService {
         const filterString = filters.join(' && ')
 
         try {
+            // Note: expand removed due to compatibility issues with older PocketBase
             const options = {
                 sort: '-created',
-                expand: 'context_id,contact_id',
-                requestKey: null
+                requestKey: null,
             }
 
             if (filterString) {
@@ -56,7 +56,7 @@ class ProjectsService {
         if (!user) throw new Error('Not authenticated')
 
         const record = await pb.collection('projects').getOne(id)
-        if (record.user_id !== user.id) {
+        if (record.created_by !== user.id) {
             throw new Error('Unauthorized: Cannot access this project')
         }
         return record
@@ -75,8 +75,7 @@ class ProjectsService {
         const sanitized = this._sanitize(data)
 
         return await pb.collection('projects').create({
-            ...sanitized,
-            user_id: user.id
+            ...sanitized
         })
     }
 
@@ -93,7 +92,7 @@ class ProjectsService {
 
         // Verify ownership
         const existing = await this.getOne(id)
-        if (existing.user_id !== user.id) {
+        if (existing.created_by !== user.id) {
             throw new Error('Unauthorized')
         }
 
@@ -112,7 +111,7 @@ class ProjectsService {
         if (!user) throw new Error('Not authenticated')
 
         const existing = await this.getOne(id)
-        if (existing.user_id !== user.id) {
+        if (existing.created_by !== user.id) {
             throw new Error('Unauthorized')
         }
 
@@ -127,7 +126,7 @@ class ProjectsService {
     _buildFilters(workspaceId, status, search, userId) {
         const filters = []
 
-        // user_id filter removed - field doesn't exist in projects collection
+        filters.push(`created_by = "${userId}"`)
 
         if (workspaceId && workspaceId !== 'all') {
             // MIGRATION FIX: Include projects with NO workspace so they don't disappear

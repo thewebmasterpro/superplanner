@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { useGamificationStore } from '../stores/gamificationStore'
 import { gamificationService, POINTS_CONFIG } from '../services/gamification.service'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import DashboardLayoutV3 from '../components/layout/DashboardLayoutV3'
 import pb from '../lib/pocketbase'
 import toast from 'react-hot-toast'
@@ -21,21 +22,22 @@ export default function GamificationPageV3() {
   const [leaderboardView, setLeaderboardView] = useState('individual') // 'individual' or 'team'
 
   const { userPoints, fetchUserPoints, updateLeaderboardVisibility, leaderboardVisible } = useGamificationStore()
+  const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
   const user = pb.authStore.model
 
   useEffect(() => {
     if (user) {
       loadData()
     }
-  }, [user?.id, activeTab])
+  }, [user?.id, activeTab, activeWorkspaceId])
 
   const loadData = async () => {
     setLoading(true)
     try {
-      await fetchUserPoints(user.id)
+      await fetchUserPoints(user.id, activeWorkspaceId)
 
       if (activeTab === 'challenges') {
-        const userChallenges = await gamificationService.getUserChallenges(user.id)
+        const userChallenges = await gamificationService.getUserChallenges(user.id, activeWorkspaceId)
         setChallenges(userChallenges)
       } else if (activeTab === 'shop') {
         const items = await gamificationService.getShopItems()
@@ -43,12 +45,12 @@ export default function GamificationPageV3() {
         setShopItems(items)
         setPurchases(userPurchases)
       } else if (activeTab === 'leaderboard') {
-        const board = await gamificationService.getLeaderboard({ limit: 20 })
-        const teamBoard = await gamificationService.getTeamLeaderboard({ limit: 20 })
+        const board = await gamificationService.getLeaderboard({ limit: 20, workspaceId: activeWorkspaceId })
+        const teamBoard = await gamificationService.getTeamLeaderboard({ limit: 20, workspaceId: activeWorkspaceId })
         setLeaderboard(board)
         setTeamLeaderboard(teamBoard)
       } else if (activeTab === 'history') {
-        const history = await gamificationService.getPointsHistory(user.id, 50)
+        const history = await gamificationService.getPointsHistory(user.id, 50, activeWorkspaceId)
         setPointsHistory(history.items || [])
       }
     } catch (error) {

@@ -10,12 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import toast from 'react-hot-toast'
 import { Users, Mail, Plus, Settings, LogOut, Check, RefreshCw, Gift, Target } from 'lucide-react'
 import { teamsService } from '../services/teams.service'
+import { useWorkspaceStore } from '../stores/workspaceStore'
 import { TeamRewardsManager } from '../components/TeamRewardsManager'
 import TeamChallengesManager from '../components/TeamChallengesManager'
 import pb from '../lib/pocketbase' // Keep for pb.files.getUrl usage in AvatarImage
 
 export function TeamSettings() {
-    const { user, teams, setTeams, currentTeam, setCurrentTeam } = useUserStore()
+    const { user, teams, setTeams, currentTeam, setCurrentTeam, getWorkspaceTeams } = useUserStore()
+    const activeWorkspaceId = useWorkspaceStore(state => state.activeWorkspaceId)
     const [loading, setLoading] = useState(false)
     const [members, setMembers] = useState([])
     const [invitations, setInvitations] = useState([])
@@ -24,11 +26,11 @@ export function TeamSettings() {
     const [inviteEmail, setInviteEmail] = useState('')
     const [activeView, setActiveView] = useState('members') // 'members', 'rewards', 'challenges', 'settings'
 
-    // Load teams on mount
+    // Load teams on mount and when workspace changes
     useEffect(() => {
         loadTeams()
         loadReceivedInvitations()
-    }, [])
+    }, [activeWorkspaceId])
 
     // Load members when currentTeam changes
     useEffect(() => {
@@ -48,8 +50,19 @@ export function TeamSettings() {
 
             setTeams(processedTeams)
 
-            if (!currentTeam && processedTeams.length > 0) {
-                setCurrentTeam(processedTeams[0])
+            // Auto-select first team in current workspace
+            const wsTeams = activeWorkspaceId
+                ? processedTeams.filter(t => t.context_id === activeWorkspaceId || !t.context_id)
+                : processedTeams
+
+            if (!currentTeam && wsTeams.length > 0) {
+                setCurrentTeam(wsTeams[0])
+            } else if (currentTeam && activeWorkspaceId) {
+                // If current team doesn't belong to this workspace, switch
+                const belongsToWs = currentTeam.context_id === activeWorkspaceId || !currentTeam.context_id
+                if (!belongsToWs) {
+                    setCurrentTeam(wsTeams.length > 0 ? wsTeams[0] : null)
+                }
             }
         } catch (error) {
             console.error('Error loading teams:', error)
@@ -103,7 +116,7 @@ export function TeamSettings() {
 
         setLoading(true)
         try {
-            await teamsService.createTeam(createTeamName)
+            await teamsService.createTeam(createTeamName, activeWorkspaceId)
 
             toast.success('Team created!')
             setCreateTeamName('')
@@ -186,7 +199,7 @@ export function TeamSettings() {
                         <div className="card-body p-4">
                             <h2 className="text-xs font-bold uppercase opacity-50 mb-2 px-2">Vos Équipes</h2>
                             <div className="flex flex-col gap-1">
-                                {teams.map(team => (
+                                {getWorkspaceTeams(activeWorkspaceId).map(team => (
                                     <div
                                         key={team.id}
                                         className={`group p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all ${currentTeam?.id === team.id ? 'bg-primary text-primary-content shadow-lg' : 'hover:bg-base-200'}`}
@@ -199,7 +212,7 @@ export function TeamSettings() {
                                     </div>
                                 ))}
 
-                                {teams.length === 0 && (
+                                {getWorkspaceTeams(activeWorkspaceId).length === 0 && (
                                     <div className="text-xs text-muted-foreground text-center py-8 bg-base-200/50 dark:backdrop-blur-xl dark:bg-black/30 rounded-xl border border-transparent dark:border-white/10">
                                         Aucune équipe. Créez-en une !
                                     </div>

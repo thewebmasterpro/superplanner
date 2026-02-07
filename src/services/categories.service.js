@@ -18,16 +18,17 @@ class CategoriesService {
      * @param {string} options.search - Search term
      * @returns {Promise<Array>} Array of category records
      */
-    async getAll({ search = '' } = {}) {
+    async getAll({ search = '', workspaceId = null } = {}) {
         const user = pb.authStore.model
         if (!user) return []
 
-        const filters = this._buildFilters(search, user.id)
+        const filters = this._buildFilters(search, user.id, workspaceId)
         const filterString = filters.join(' && ')
 
         try {
             const options = {
-                sort: 'name'
+                sort: 'name',
+                skipTotal: false, // Required for older PocketBase servers
             }
 
             if (filterString) {
@@ -135,13 +136,16 @@ class CategoriesService {
      * @param {string} userId - User ID
      * @returns {string[]} Array of filter conditions
      */
-    _buildFilters(search, userId) {
+    _buildFilters(search, userId, workspaceId = null) {
         const filters = []
 
         filters.push(`user_id = "${userId}"`)
 
+        if (workspaceId && workspaceId !== 'all') {
+            filters.push(`(context_id = "${workspaceId}" || context_id = "" || context_id = null)`)
+        }
+
         if (search) {
-            // ✅ SECURITY: Always use escapeFilterValue
             const escaped = escapeFilterValue(search)
             filters.push(`name ~ "${escaped}"`)
         }

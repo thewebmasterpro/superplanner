@@ -53,7 +53,8 @@ class ContactsService {
         const options = {
             sort: 'name',
             requestKey: null, // Disable auto-cancellation to prevent AbortErrors on rapid refetches
-            expand: 'contact_contexts(contact_id).context' // Expand related contexts for display
+            expand: 'contact_contexts(contact_id).context', // Expand related contexts for display
+            skipTotal: false, // Required for older PocketBase servers
         }
 
         if (filterString) {
@@ -200,6 +201,32 @@ class ContactsService {
     async bulkDelete(ids) {
         const promises = ids.map(id => this.delete(id))
         await Promise.all(promises)
+    }
+
+    /**
+     * Send an email to a contact
+     * Uses PocketBase custom endpoint or automation webhook
+     *
+     * @param {Object} data - Email data
+     * @param {string} data.to - Recipient email
+     * @param {string} data.subject - Email subject
+     * @param {string} data.html - Email body (HTML)
+     * @param {string} data.contactId - Contact ID for tracking
+     * @returns {Promise<Object>}
+     */
+    async sendEmail({ to, subject, html, contactId }) {
+        const user = pb.authStore.model
+        if (!user) throw new Error('Not authenticated')
+
+        try {
+            // Try to send via PocketBase custom endpoint
+            return await pb.send('/api/send-email', {
+                method: 'POST',
+                body: { to, subject, html, contactId, userId: user.id }
+            })
+        } catch (error) {
+            throw new Error('Email sending is not configured. Set up an email provider in Settings > Automation.')
+        }
     }
 
     // ==================== PRIVATE HELPERS ====================
