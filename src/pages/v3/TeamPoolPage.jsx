@@ -3,7 +3,7 @@ import DashboardLayoutV3 from '../../components/layout/DashboardLayoutV3'
 import { useUserStore } from '../../stores/userStore'
 import { useTeamPool, useClaimTask } from '../../hooks/useTaskPool'
 import { useUIStore } from '../../stores/uiStore'
-import { Hand, Calendar, AlertCircle, Inbox, Clock, Flag, Loader2 } from 'lucide-react'
+import { Hand, Calendar, AlertCircle, Inbox, Clock, Flag, Loader2, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
@@ -69,6 +69,20 @@ function TeamPoolPageContent() {
         icon={Hand}
         title="Pool de Tâches"
         description={<>Tâches disponibles pour l'équipe <strong>{currentTeam.name}</strong></>}
+        actions={
+          currentTeam.myRole === 'owner' && (
+            <Button
+              onClick={() => {
+                setModalTask({ type: 'task', team_id: currentTeam.id })
+                setTaskModalOpen(true)
+              }}
+              className="gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Créer une tâche pool
+            </Button>
+          )
+        }
       />
 
       {/* Stats */}

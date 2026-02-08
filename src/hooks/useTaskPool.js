@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksService } from '../services/tasks.service'
 import toast from 'react-hot-toast'
-import pb from '../lib/pocketbase'
 
 /**
  * Get team pool tasks (unassigned team tasks)
@@ -10,22 +9,7 @@ import pb from '../lib/pocketbase'
 export function useTeamPool(teamId) {
   return useQuery({
     queryKey: ['tasks', 'pool', teamId],
-    queryFn: async () => {
-      if (!teamId) return []
-
-      // Fetch all tasks and filter client-side for maximum compatibility
-      const allTasks = await pb.collection('tasks').getFullList({
-        sort: '-created'
-      })
-
-      // Filter for team pool tasks
-      return allTasks.filter(t =>
-        t.team_id === teamId &&
-        t.status === 'unassigned' &&
-        !t.deleted_at &&
-        !t.archived_at
-      )
-    },
+    queryFn: () => tasksService.getPoolTasks(teamId),
     enabled: !!teamId,
   })
 }

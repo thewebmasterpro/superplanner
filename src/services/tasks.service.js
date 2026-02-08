@@ -399,6 +399,27 @@ class TasksService {
     return await pb.collection('tasks').update(taskId, updates)
   }
 
+  /**
+   * Fetch pool tasks for a team (unassigned team tasks)
+   *
+   * @param {string} teamId - Team ID
+   * @returns {Promise<Array>} Array of unassigned pool tasks
+   */
+  async getPoolTasks(teamId) {
+    if (!teamId) return []
+
+    try {
+      return await pb.collection('tasks').getFullList({
+        filter: `team_id = "${teamId}" && status = "unassigned" && (deleted_at = "" || deleted_at = null) && (archived_at = "" || archived_at = null)`,
+        sort: '-created',
+        requestKey: null,
+      })
+    } catch (error) {
+      console.error('Failed to fetch pool tasks:', error)
+      return []
+    }
+  }
+
   // ==================== PRIVATE HELPERS ====================
 
   /**
