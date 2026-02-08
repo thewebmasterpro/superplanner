@@ -409,14 +409,31 @@ class TasksService {
     if (!teamId) return []
 
     try {
+      // Try server-side filtering first
       return await pb.collection('tasks').getFullList({
         filter: `team_id = "${teamId}" && status = "unassigned" && (deleted_at = "" || deleted_at = null) && (archived_at = "" || archived_at = null)`,
         sort: '-created',
         requestKey: null,
       })
     } catch (error) {
-      console.error('Failed to fetch pool tasks:', error)
-      return []
+      // Fallback: fetch all accessible tasks and filter client-side
+      // This handles cases where PocketBase API rules don't yet support pool queries
+      console.warn('Pool server filter failed, using client-side fallback:', error.message)
+      try {
+        const allTasks = await pb.collection('tasks').getFullList({
+          sort: '-created',
+          requestKey: null,
+        })
+        return allTasks.filter(t =>
+          t.team_id === teamId &&
+          t.status === 'unassigned' &&
+          !t.deleted_at &&
+          !t.archived_at
+        )
+      } catch (fallbackError) {
+        console.error('Failed to fetch pool tasks:', fallbackError)
+        return []
+      }
     }
   }
 
