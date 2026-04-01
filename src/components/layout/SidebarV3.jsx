@@ -16,8 +16,7 @@ import {
     Globe,
     ChevronDown,
     Check,
-    Trophy,
-    Code2
+    Trophy
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { GlobalSearch } from '../v3/GlobalSearch'
@@ -63,8 +62,7 @@ export default function SidebarV3() {
         { icon: Users, label: 'Équipe', path: '/team' },
         { icon: BarChart, label: 'Statistiques', path: '/stats' },
         { icon: Trophy, label: 'Récompenses', path: '/gamification' },
-        { icon: Code2, label: 'Composants', path: '/components' },
-    { icon: Archive, label: 'Archives', path: '/archive' },
+        { icon: Archive, label: 'Archives', path: '/archive' },
         { icon: Trash2, label: 'Corbeille', path: '/trash' },
         { icon: Settings, label: 'Paramètres', path: '/settings' },
     ]
