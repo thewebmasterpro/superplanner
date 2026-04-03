@@ -21,6 +21,7 @@ const TrashPageV3 = React.lazy(() => import('./pages/v3/TrashPageV3'))
 const ArchivePageV3 = React.lazy(() => import('./pages/v3/ArchivePageV3'))
 const TeamPageV3 = React.lazy(() => import('./pages/v3/TeamPageV3'))
 const GamificationPageV3 = React.lazy(() => import('./pages/GamificationPageV3'))
+const SmsPageV3 = React.lazy(() => import('./pages/v3/SmsPageV3'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -121,6 +122,7 @@ function AppContent() {
           <Route path="/archive" element={<ArchivePageV3 />} />
           <Route path="/team" element={<TeamPageV3 />} />
           <Route path="/gamification" element={<GamificationPageV3 />} />
+          <Route path="/sms" element={<SmsPageV3 />} />
           <Route path="/workspace" element={<Navigate to="/settings" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
